@@ -13,15 +13,15 @@ library(misty)
 
 ### Read in raw data ####
 #### Gender data ####
-gish_y_gi <- read.csv("gish_y_gi.csv", header = T)
+gish_y_gi <- read.csv("./data/gish_y_gi.csv", header = T)
 #### DERS-P for emotion regulation ####
-mh_p_ders <- read.csv("mh_p_ders.csv", header = T)
+mh_p_ders <- read.csv("./data/mh_p_ders.csv", header = T)
 #### CBCL for psychopathology symptoms ####
-mh_p_cbcl <- read.csv("mh_p_cbcl.csv", header = T)
+mh_p_cbcl <- read.csv("./data/mh_p_cbcl.csv", header = T)
 #### Longitudinal tracking data ####
-abcd_y_lt <- read.csv("abcd_y_lt.csv", header = T)
+abcd_y_lt <- read.csv("./data/abcd_y_lt.csv", header = T)
 #### LES for exposure to negative life events
-mh_y_le <- read.csv("mh_y_le.csv", header = T)
+mh_y_le <- read.csv("./data/mh_y_le.csv", header = T)
 
 ### Prepare gender data for analysis ####
 #### Identify gender groups ####
