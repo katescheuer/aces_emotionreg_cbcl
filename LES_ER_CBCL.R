@@ -6,6 +6,7 @@ library(tidyverse)
 library(lme4)
 library(lmerTest)
 library(partR2)
+library(nortest)
 library(psych)
 library(lavaan)
 library(ggpattern)
@@ -96,11 +97,11 @@ cbcldata <-
            cbcl_int = cbcl_scr_syn_internal_t
            ) %>%
     # add column with log-transformed CBCL total problems values
-    mutate(logcbcl_total = log(cbcl_total)) %>%
+    mutate(log_cbcl_total = log(cbcl_total)) %>%
     # add column with log-transformed CBCL internalizing values
-    mutate(logcbcl_int = log(cbcl_int)) %>%
+    mutate(log_cbcl_int = log(cbcl_int)) %>%
     # add column with log-transformed CBCL externalizing values
-    mutate(logcbcl_ext = log(cbcl_ext)) 
+    mutate(log_cbcl_ext = log(cbcl_ext)) 
 
 ### Prepare DERS-P data for analysis ####
 #### Create cumulative score ####
@@ -130,7 +131,7 @@ dersdata <-
     mutate(rev_ders_upset_better_p = 5 + 1 - ders_upset_better_p) %>%
     # add column to sum across all items (using using reverse-scored versions of
     # eight items above) and make one cumulative score
-    mutate(ders6total = rowSums(
+    mutate(ders_total = rowSums(
                           across(!all_of(
                                     c("src_subject_id",
                                       "eventname",
@@ -145,9 +146,9 @@ dersdata <-
                                       "ders_upset_better_p"
                                       ))))) %>%
     # add column for log-transformed cumulative score
-    mutate(logders6total = log(ders6total)) %>%
+    mutate(log_ders_total = log(ders_total)) %>%
     # select only columns relevant to analysis
-    select(src_subject_id,eventname,ders6total,logders6total)
+    select(src_subject_id,eventname,ders_total,log_ders_total)
 
 #### Provide summary statistics for DERS-P data by data collection year ####
 dersdata %>% group_by(eventname) %>% summary()
@@ -184,113 +185,109 @@ alldata <-
   left_join(ledata,by=c("src_subject_id","eventname")) %>%
   # add CBCL data based on subject ID and data collection year
   left_join(cbcldata,by=c("src_subject_id","eventname")) %>%
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-START CODE CLEAN UP HERE, NOTE THAT CUT CMC SO WILL NEED TO FIX NAMES BELOW  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  mutate(gender_cisgirl = if_else(genderid=="cis_girl",1,0)) %>%
-  mutate(gender_gd = if_else(genderid=="gd",1,0)) %>%
-  mutate(gender_cisboy = if_else(genderid=="cis_boy",1,0)) %>%
-  mutate(sex_male = if_else(sex=="male",1,0)) %>%
-  mutate(sex_female = if_else(sex=="female",1,0)) %>%
+  # # add binary indicator column for whether participant is a cis girl
+  # mutate(gender_cisgirl = if_else(genderid=="cis_girl",1,0)) %>%
+  # # add binary indicator column for whether participant is gender diverse
+  # mutate(gender_gd = if_else(genderid=="gd",1,0)) %>%
+  # # add binary indicator column for whether participant is a cis boy
+  # mutate(gender_cisboy = if_else(genderid=="cis_boy",1,0)) %>%
+  # # add binary indicator column for whether participant is male
+  # mutate(sex_male = if_else(sex=="male",1,0)) %>%
+  # # add binary indicator column for whether participant is female
+  # mutate(sex_female = if_else(sex=="female",1,0)) %>%
   # Z score continuous variables
-  mutate(age_ZCMC = as.numeric(scale(age_CMC,scale=TRUE))) %>%
-  mutate(ders6total_ZCMC = as.numeric(scale(ders6total_CMC,scale=TRUE))) %>%
-  mutate(total_bad_le_ZCMC = as.numeric(scale(total_bad_le_CMC,scale=TRUE))) %>%
-  mutate(cbcl_total_ZCMC = as.numeric(scale(cbcl_total_CMC,scale=TRUE))) %>%
-  mutate(cbcl_int_ZCMC = as.numeric(scale(cbcl_int_CMC,scale=TRUE))) %>%
-  mutate(cbcl_ext_ZCMC = as.numeric(scale(cbcl_ext_CMC,scale=TRUE))) %>%
-  mutate(logders6total_ZCMC = as.numeric(scale(logders6total_CMC,scale=TRUE))) %>%
-  mutate(log_total_bad_le_ZCMC = as.numeric(scale(log_total_bad_le_CMC,
-                                                  scale=TRUE))) %>%
-  mutate(logcbcl_total_ZCMC = as.numeric(scale(logcbcl_total_CMC,scale=TRUE))) %>%
-  mutate(logcbcl_int_ZCMC = as.numeric(scale(logcbcl_int_CMC,scale=TRUE))) %>%
-  mutate(logcbcl_ext_ZCMC = as.numeric(scale(logcbcl_ext_CMC,scale=TRUE))) 
+  mutate(across(
+    c(age, ders_total, total_bad_le, 
+      cbcl_total, cbcl_int, cbcl_ext,
+      log_ders_total, log_total_bad_le, log_cbcl_total, 
+      log_cbcl_int, log_cbcl_ext),
+    ~ as.numeric(scale(.)),
+    .names = "Z_{.col}"
+  )) %>%
+  # make genderid, sex, and site factors rather than characters
+  mutate(across(c(genderid, sex, site), as.factor))
 
+### Get general overview of all data ####
+#### See type of each column ####
+str(alldata)
+
+#### See all unique values for each column ####
 map(alldata,unique)
 
-alldata %>% group_by(eventname) %>% count(genderid) %>% mutate(percentage = n / sum(n) * 100)
+#### Get raw number and percentage for each gender group and data collection year
+alldata %>% 
+  group_by(eventname) %>% 
+  count(genderid) %>% 
+  mutate(percentage = n / sum(n) * 100)
 
+#### Create separate data frame for just data from year 4 follow-up visit
 yr4data <- alldata %>% filter(eventname=="4_year_follow_up_y_arm_1")
+
+#### Create separate data frame for just data from year 3 follow-up visit
 yr3data <- alldata %>% filter(eventname=="3_year_follow_up_y_arm_1")
 
+#### Get general summary of values for each column for data from year 4 visit
 yr4data %>% summary()
-yr4data %>% group_by(genderid) %>% count()
 
-### are variables normally distributed? no, none of these are normally distributed
-shapiro.test(yr4data$total_bad_le)
-shapiro.test(yr4data$log_total_bad_le)
-shapiro.test(yr4data$ders6total)
-shapiro.test(yr4data$logders6total)
-shapiro.test(yr4data$ders4total)
-shapiro.test(yr4data$logders4total)
-shapiro.test(yr4data$cbcl_total)
-shapiro.test(yr4data$logcbcl_total)
-shapiro.test(yr4data$cbcl_int)
-shapiro.test(yr4data$logcbcl_int)
-shapiro.test(yr4data$cbcl_ext)
-shapiro.test(yr4data$logcbcl_ext)
+#### Get general summary of values for each column for data from year 3 visit
+yr3data %>% summary()
 
-ggplot(aes(x=total_bad_le),data=yr4data) +
-  geom_histogram()
-# ggplot(aes(x=log_total_bad_le),data=yr4data) +
-#   geom_histogram()
-ggplot(aes(x=ders6total),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=log(logders6total)),data=yr4data) +
-  geom_histogram() #sig diff from normal but actually looks pretty good once transformed
-ggplot(aes(x=ders6total),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=log(logders6total)),data=yr4data) +
-  geom_histogram() #sig diff from normal but actually looks pretty good once transformed
-ggplot(aes(x=cbcl_total),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=log(cbcl_total)),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=cbcl_int),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=log(cbcl_int)),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=cbcl_ext),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=log(cbcl_ext)),data=yr4data) +
-  geom_histogram()
+### Assess normality of distributions of each variable from all data ####
+# p-value < 0.05 suggests data is not normally distributed
+# walk() applies a function, in this case ad.test, to a list
+# cat() makes it print the variable name before each test
+# note: Shapiro-Wilk test only allows up to 5000 samples so using Anderson-
+# Darling test.
+# All variables are non-normally distributed, even after log transformation.
+walk(c("total_bad_le", "log_total_bad_le", 
+       "ders_total", "log_ders_total", 
+       "cbcl_total", "log_cbcl_total", 
+       "cbcl_int", "log_cbcl_int", 
+       "cbcl_ext", "log_cbcl_ext"), 
+     ~ {
+       cat("Variable:", .x, "\n")
+       print(ad.test(alldata[[.x]]))
+     })
 
+### Create basic histogram for each variable ####
+# Store histograms in list in case want to view later
+variable_histograms <- 
+  map(c("total_bad_le", "log_total_bad_le", 
+       "ders_total", "log_ders_total", 
+       "cbcl_total", "log_cbcl_total", 
+       "cbcl_int", "log_cbcl_int", 
+       "cbcl_ext", "log_cbcl_ext"), 
+     ~ ggplot(aes_string(x = .x), data = alldata) + 
+               geom_histogram() +
+               ggtitle(.x)
+             )
+# Print all histograms from stored list
+print(variable_histograms)
 
-yr4data %>% group_by(eventname) %>% count(genderid) %>% mutate(percentage = n / sum(n) * 100)
-yr4data$genderid <- as.factor(yr4data$genderid)
-yr4data$site <- as.factor(yr4data$site)
-# yr4data$lowhighle <- as.factor(yr4data$lowhighle)
-
-corrmat <- yr4data %>% select(c(total_bad_le,ders6total,cbcl_total,cbcl_int,cbcl_ext)) %>% corr.test(adjust="BH")
-corrmat$r
+### Create correlation matrix for all variables from year 4 data ####
+# Make correlation matrix
+# All variables are significantly correlated.
+corrmat <- 
+  # year 4 data only
+  yr4data %>% 
+  # select relevant columns
+  select(c(total_bad_le,ders_total,
+           cbcl_total,cbcl_int,cbcl_ext)) %>% 
+  # run correlation tests for all pairs of variables, adjust using
+  corr.test(adjust="fdr")
+# print correlation matrix, correlation coefficients, and p-values
+# note that values are already rounded to the decimal place which is showing
+print(corrmat,digits=3)
+# See fdr-adjusted p-value for each correlation test
+# note that list gives p values above diagonal, going across rows (ie not down
+# columns) 
 corrmat$p.adj
 
+### Determine whether age differs based only on gender in year 4 data ####
+#### Kruskal-Wallis test to formally test relationship age ~ genderid
+# Test is not significant (p = 0.06381)
 kruskal.test(age ~ genderid, data = yr4data)
-pairwise.wilcox.test(yr4data$age, yr4data$genderid,
-                     p.adjust.method = "BH")
+
 yr4data %>%
   summarise(
     mean_age = mean(age, na.rm = TRUE),
@@ -398,16 +395,16 @@ pairwise.wilcox.test(yr4data$total_bad_le, yr4data$genderid,
                      p.adjust.method = "BH")
 
 
-ggplot(aes(x=ders6total),data=yr4data) +
+ggplot(aes(x=ders_total),data=yr4data) +
   geom_histogram()
-ggplot(aes(x=logders6total),data=yr4data) +
+ggplot(aes(x=log_ders_total),data=yr4data) +
   geom_histogram()
-ggplot(aes(x=genderid,y=ders6total,fill=genderid),data=yr4data) +
+ggplot(aes(x=genderid,y=ders_total,fill=genderid),data=yr4data) +
   geom_boxplot()
-kruskal.test(ders6total ~ genderid, data = yr4data)
-pairwise.wilcox.test(yr4data$ders6total, yr4data$genderid,
+kruskal.test(ders_total ~ genderid, data = yr4data)
+pairwise.wilcox.test(yr4data$ders_total, yr4data$genderid,
                      p.adjust.method = "BH")
-ggplot(yr4data, aes(x = ders6total,fill=genderid)) +
+ggplot(yr4data, aes(x = ders_total,fill=genderid)) +
   geom_density(alpha=0.5,adjust=.9) +
   scale_x_continuous(expand = c(0,0),limits=c(0,145),breaks=seq(0,145,5)) +
   scale_y_continuous(expand = c(0,0),limits = c(0,0.031),breaks=seq(0,0.03,0.005)) +
@@ -415,15 +412,15 @@ ggplot(yr4data, aes(x = ders6total,fill=genderid)) +
   labs(x="Emotion Regulation Difficulties",y="Density",fill="Gender") +
   theme_classic()
 df_proportions <- yr4data %>%
-  mutate(ders6total_bin = cut(ders6total, breaks = seq(0, max(ders6total,na.rm=TRUE)+10, by = 10), right = FALSE)) %>% # Create bins
-  group_by(genderid, ders6total_bin) %>%
+  mutate(ders_total_bin = cut(ders_total, breaks = seq(0, max(ders_total,na.rm=TRUE)+10, by = 10), right = FALSE)) %>% # Create bins
+  group_by(genderid, ders_total_bin) %>%
   count() %>%
   group_by(genderid) %>%
   mutate(proportion = n / sum(n)) %>%
   ungroup() %>%
-  complete(ders6total_bin, genderid, fill = list(n = 0, prop = 0)) %>% # Ensure all combinations are present
+  complete(ders_total_bin, genderid, fill = list(n = 0, prop = 0)) %>% # Ensure all combinations are present
   mutate(proportion = replace_na(proportion,0))
-ggplot(df_proportions, aes(x = ders6total_bin,y=proportion,fill=genderid)) +
+ggplot(df_proportions, aes(x = ders_total_bin,y=proportion,fill=genderid)) +
   # geom_col_pattern(aes(
   #             pattern=genderid,
   #             # pattern_angle = genderid,
@@ -467,21 +464,21 @@ ggplot(df_proportions, aes(x = ders6total_bin,y=proportion,fill=genderid)) +
   # theme(axis.text.x = element_text(angle = 60, hjust=.9))
 yr4data %>%
   summarise(
-    mean_ders6total = mean(ders6total, na.rm = TRUE),
-    sd_ders6total = sd(ders6total, na.rm = TRUE),
-    min_ders6total = min(ders6total, na.rm = TRUE),
-    max_ders6total = max(ders6total, na.rm = TRUE),
-    median_ders6total = median(ders6total, na.rm = TRUE),
+    mean_ders_total = mean(ders_total, na.rm = TRUE),
+    sd_ders_total = sd(ders_total, na.rm = TRUE),
+    min_ders_total = min(ders_total, na.rm = TRUE),
+    max_ders_total = max(ders_total, na.rm = TRUE),
+    median_ders_total = median(ders_total, na.rm = TRUE),
     n = n()
   )
 yr4data %>%
   group_by(genderid) %>%
   summarise(
-    mean_ders6total = mean(ders6total, na.rm = TRUE),
-    sd_ders6total = sd(ders6total, na.rm = TRUE),
-    min_ders6total = min(ders6total, na.rm = TRUE),
-    max_ders6total = max(ders6total, na.rm = TRUE),
-    median_ders6total = median(ders6total, na.rm = TRUE),
+    mean_ders_total = mean(ders_total, na.rm = TRUE),
+    sd_ders_total = sd(ders_total, na.rm = TRUE),
+    min_ders_total = min(ders_total, na.rm = TRUE),
+    max_ders_total = max(ders_total, na.rm = TRUE),
+    median_ders_total = median(ders_total, na.rm = TRUE),
     n = n()
   )
 
@@ -518,7 +515,7 @@ ggplot(df_proportions, aes(x = cbcl_total_bin,y=proportion,fill=genderid)) +
   # scale_fill_discrete(labels=c("Cis boy","Cis girl", "GD")) +
   # labs(x="CBCL Total Problems",y="Proportion of Subjects",fill="Gender") +
   # theme_classic()
-# ggplot(df_proportions, aes(x = ders6total_bin,y=proportion,fill=genderid)) +
+# ggplot(df_proportions, aes(x = ders_total_bin,y=proportion,fill=genderid)) +
   # geom_col_pattern(aes(
   #   pattern=genderid,
   #   # pattern_angle = genderid,
@@ -752,7 +749,7 @@ yr4data %>%
 
 ### scatter plots of ders-p or les vs cbcl scores
 ### without gender
-ggplot(aes(x=ders6total,y=cbcl_total),data=yr4data) +
+ggplot(aes(x=ders_total,y=cbcl_total),data=yr4data) +
   geom_point(size=1) +
   geom_smooth(method="lm",se=FALSE,size=1.25,color="black") +
   scale_x_continuous(expand = c(0,0),breaks=seq(25,150,25),limits = c(25,150)) + 
@@ -760,7 +757,7 @@ ggplot(aes(x=ders6total,y=cbcl_total),data=yr4data) +
   theme_classic()
 ggsave("ders_vs_cbcltotal_nogender.tiff",width=6,height=6,units = "in")
 
-ggplot(aes(x=ders6total,y=cbcl_int),data=yr4data) +
+ggplot(aes(x=ders_total,y=cbcl_int),data=yr4data) +
   geom_point(size=1) +
   geom_smooth(method="lm",se=FALSE,size=1.25,color="black") +
   scale_x_continuous(expand = c(0,0),breaks=seq(25,150,25),limits = c(25,150)) + 
@@ -768,7 +765,7 @@ ggplot(aes(x=ders6total,y=cbcl_int),data=yr4data) +
   theme_classic()
 ggsave("ders_vs_cbclint_nogender.tiff",width=6,height=6,units = "in")
 
-ggplot(aes(x=ders6total,y=cbcl_ext),data=yr4data) +
+ggplot(aes(x=ders_total,y=cbcl_ext),data=yr4data) +
   geom_point(size=1) +
   geom_smooth(method="lm",se=FALSE,size=1.25,color="black") +
   scale_x_continuous(expand = c(0,0),breaks=seq(25,150,25),limits = c(25,150)) + 
@@ -806,7 +803,7 @@ ggplot(aes(x=total_bad_le,y=cbcl_ext),data=les_vs_cbcl_summary_stats) +
 ggsave("les_vs_cbclext_nogender.tiff",width=6,height=6,units = "in")
 
 ### with gender
-ggplot(aes(x=ders6total,y=cbcl_total,
+ggplot(aes(x=ders_total,y=cbcl_total,
            color=genderid,shape=genderid, linetype=genderid),data=yr4data) +
   # geom_point(alpha=0.3,size=1) +
   geom_point(size=2) +
@@ -820,7 +817,7 @@ ggplot(aes(x=ders6total,y=cbcl_total,
   theme(legend.key.width=unit(3,"cm"))
 ggsave("ders_vs_cbcltotal_gender.tiff",width=6,height=6,units = "in")
 
-ggplot(aes(x=ders6total,y=cbcl_int,
+ggplot(aes(x=ders_total,y=cbcl_int,
            color=genderid,shape=genderid,linetype=genderid),data=yr4data) +
   geom_point(alpha=0.3,size=1) +
   geom_smooth(method="lm",se=FALSE,size=1.25) +
@@ -830,7 +827,7 @@ ggplot(aes(x=ders6total,y=cbcl_int,
   theme(legend.position="none")
 ggsave("ders_vs_cbclint_gender.tiff",width=6,height=6,units = "in")
 
-ggplot(aes(x=ders6total,y=cbcl_ext,
+ggplot(aes(x=ders_total,y=cbcl_ext,
            color=genderid,shape=genderid,linetype=genderid),data=yr4data) +
   geom_point(alpha=0.3,size=1) +
   geom_smooth(method="lm",se=FALSE,size=1.25) +
@@ -878,10 +875,10 @@ ggsave("les_vs_cbclext_gender.tiff",width=6,height=6,units = "in")
 ### mediation models with lavaan  ####
 meddata <- yr4data %>% 
               select(src_subject_id,
-                     total_bad_le_ZCMC,ders6total_ZCMC,
+                     total_bad_le_ZCMC,ders_total_ZCMC,
                      cbcl_total_ZCMC,cbcl_int_ZCMC,cbcl_ext_ZCMC,
-                     log_total_bad_le_ZCMC,logders6total_ZCMC,logcbcl_total_ZCMC,
-                     logcbcl_ext_ZCMC,logcbcl_int_ZCMC,
+                     log_total_bad_le_ZCMC,log_ders_total_ZCMC,log_cbcl_total_ZCMC,
+                     log_cbcl_ext_ZCMC,log_cbcl_int_ZCMC,
                      age_ZCMC,site,
                      gender_cisgirl_CMC,gender_gd_CMC,gender_cisboy_CMC,
                      sex_male_CMC,sex_female_CMC,
@@ -891,15 +888,15 @@ meddata <- yr4data %>%
                      gd = gender_gd_CMC,
                      cisboy = gender_cisboy_CMC,
                      LES = total_bad_le_ZCMC,
-                     DERS = ders6total_ZCMC,
+                     DERS = ders_total_ZCMC,
                      totalCBCL = cbcl_total_ZCMC,
                      intCBCL = cbcl_int_ZCMC,
                      extCBCL = cbcl_ext_ZCMC,
                      logLES = log_total_bad_le_ZCMC,
-                     logDERS = logders6total_ZCMC,
-                     logtotalCBCL = logcbcl_total_ZCMC,
-                     logintCBCL = logcbcl_int_ZCMC,
-                     logextCBCL = logcbcl_ext_ZCMC)
+                     logDERS = log_ders_total_ZCMC,
+                     logtotalCBCL = log_cbcl_total_ZCMC,
+                     logintCBCL = log_cbcl_int_ZCMC,
+                     logextCBCL = log_cbcl_ext_ZCMC)
               # mutate(gender_cisgirl = if_else(genderid=="cis_girl",1,0),
               #        gender_gd = if_else(genderid=="gd",1,0)) %>%
               # left_join(select(yr3data,c("src_subject_id","total_bad_le_ZCMC")),
@@ -1909,12 +1906,12 @@ parameterEstimates(sexextfit, boot.ci.type = "bca.simple")
 # ### standard regression without gender ####
 # 
 # #how much does site matter?
-# site_ders6total_reg <- lmer(ders6total ~ (1|site),data=yr4data)
-# variances <- as.data.frame(VarCorr(site_ders6total_reg))
+# site_ders_total_reg <- lmer(ders_total ~ (1|site),data=yr4data)
+# variances <- as.data.frame(VarCorr(site_ders_total_reg))
 # cluster_var = variances[1,'vcov']
 # resid_var = variances[2,'vcov']
 # ICC_Y2 <- cluster_var/(cluster_var + resid_var)
-# ICC_Y2 #site explains 0.0110 variance in ders6total
+# ICC_Y2 #site explains 0.0110 variance in ders_total
 # 
 # site_le_reg <- lmer(total_bad_le ~ (1|site),data=yr4data)
 # variances <- as.data.frame(VarCorr(site_le_reg))
@@ -1945,10 +1942,10 @@ parameterEstimates(sexextfit, boot.ci.type = "bca.simple")
 # ICC_Y2 #site explains 0.0072 variance in cbcl_ext
 # 
 # #do life events affect emotion regulation - yes
-# ders6total_le_reg <- lmer(ders6total ~ total_bad_le + age + (1|site),data=yr4data)
-# summary(ders6total_le_reg)
-# AIC(ders6total_le_reg)
-# partR2(ders6total_le_reg,partvars=c("total_bad_le","age"),R2_type="marginal",nboot=10)
+# ders_total_le_reg <- lmer(ders_total ~ total_bad_le + age + (1|site),data=yr4data)
+# summary(ders_total_le_reg)
+# AIC(ders_total_le_reg)
+# partR2(ders_total_le_reg,partvars=c("total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # #do life events affect cbcl - yes to all
 # cbcltotal_le_reg <- lmer(cbcl_total ~ total_bad_le + age + (1|site),data=yr4data)
@@ -1967,45 +1964,45 @@ parameterEstimates(sexextfit, boot.ci.type = "bca.simple")
 # partR2(cbclext_le_reg,partvars=c("total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # #does emotion regulation affect cbcl - yes to all
-# cbcltotal_ders6total_reg <- lmer(cbcl_total ~ ders6total + age + (1|site),data=yr4data)
-# summary(cbcltotal_ders6total_reg)
-# AIC(cbcltotal_ders6total_reg)
-# partR2(cbcltotal_ders6total_reg,partvars=c("ders6total","age"),R2_type="marginal",nboot=10)
+# cbcltotal_ders_total_reg <- lmer(cbcl_total ~ ders_total + age + (1|site),data=yr4data)
+# summary(cbcltotal_ders_total_reg)
+# AIC(cbcltotal_ders_total_reg)
+# partR2(cbcltotal_ders_total_reg,partvars=c("ders_total","age"),R2_type="marginal",nboot=10)
 # 
-# cbclint_ders6total_reg <- lmer(cbcl_int ~ ders6total + age + (1|site),data=yr4data)
-# summary(cbclint_ders6total_reg)
-# AIC(cbclint_ders6total_reg)
-# partR2(cbclint_ders6total_reg,partvars=c("ders6total","age"),R2_type="marginal",nboot=10)
+# cbclint_ders_total_reg <- lmer(cbcl_int ~ ders_total + age + (1|site),data=yr4data)
+# summary(cbclint_ders_total_reg)
+# AIC(cbclint_ders_total_reg)
+# partR2(cbclint_ders_total_reg,partvars=c("ders_total","age"),R2_type="marginal",nboot=10)
 # 
-# cbclext_ders6total_reg <- lmer(cbcl_ext ~ ders6total + age + (1|site),data=yr4data)
-# summary(cbclext_ders6total_reg)
-# AIC(cbclext_ders6total_reg)
-# partR2(cbclext_ders6total_reg,partvars=c("ders6total","age"),R2_type="marginal",nboot=10)
+# cbclext_ders_total_reg <- lmer(cbcl_ext ~ ders_total + age + (1|site),data=yr4data)
+# summary(cbclext_ders_total_reg)
+# AIC(cbclext_ders_total_reg)
+# partR2(cbclext_ders_total_reg,partvars=c("ders_total","age"),R2_type="marginal",nboot=10)
 # 
 # #do emotion regulation and life events interact to affect cbcl - no to all
-# cbcltotal_le_ders6total_reg <- lmer(cbcl_total ~ ders6total*total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_le_ders6total_reg) #main effect ders and le and age but no interaction
+# cbcltotal_le_ders_total_reg <- lmer(cbcl_total ~ ders_total*total_bad_le + age + (1|site),data=yr4data)
+# summary(cbcltotal_le_ders_total_reg) #main effect ders and le and age but no interaction
 # #no interaction so use just additive model
-# cbcltotal_le_ders6total_reg <- lmer(cbcl_total ~ ders6total+total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_le_ders6total_reg) #main effect ders and le 
-# AIC(cbcltotal_le_ders6total_reg) #main effect ders and le 
-# partR2(cbcltotal_le_ders6total_reg,partvars=c("ders6total","total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbcltotal_le_ders_total_reg <- lmer(cbcl_total ~ ders_total+total_bad_le + age + (1|site),data=yr4data)
+# summary(cbcltotal_le_ders_total_reg) #main effect ders and le 
+# AIC(cbcltotal_le_ders_total_reg) #main effect ders and le 
+# partR2(cbcltotal_le_ders_total_reg,partvars=c("ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
-# cbclint_le_ders6total_reg <- lmer(cbcl_int ~ ders6total*total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_le_ders6total_reg) #main effect ders only and not le or age
+# cbclint_le_ders_total_reg <- lmer(cbcl_int ~ ders_total*total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclint_le_ders_total_reg) #main effect ders only and not le or age
 # #no interaction so use just additive model
-# cbclint_le_ders6total_reg <- lmer(cbcl_int ~ ders6total+total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_le_ders6total_reg) #main effect ders and le but not age
-# AIC(cbclint_le_ders6total_reg) #main effect ders and le but not age
-# partR2(cbclint_le_ders6total_reg,partvars=c("ders6total","total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbclint_le_ders_total_reg <- lmer(cbcl_int ~ ders_total+total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclint_le_ders_total_reg) #main effect ders and le but not age
+# AIC(cbclint_le_ders_total_reg) #main effect ders and le but not age
+# partR2(cbclint_le_ders_total_reg,partvars=c("ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
-# cbclext_le_ders6total_reg <- lmer(cbcl_ext ~ ders6total*total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_le_ders6total_reg) #main effect ders and le and age but no interaction
+# cbclext_le_ders_total_reg <- lmer(cbcl_ext ~ ders_total*total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclext_le_ders_total_reg) #main effect ders and le and age but no interaction
 # #no interaction so use just additive model
-# cbclext_le_ders6total_reg <- lmer(cbcl_ext ~ ders6total+total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_le_ders6total_reg) #main effect ders and le and age 
-# AIC(cbclext_le_ders6total_reg) #main effect ders and le and age 
-# partR2(cbclext_le_ders6total_reg,partvars=c("ders6total","total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbclext_le_ders_total_reg <- lmer(cbcl_ext ~ ders_total+total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclext_le_ders_total_reg) #main effect ders and le and age 
+# AIC(cbclext_le_ders_total_reg) #main effect ders and le and age 
+# partR2(cbclext_le_ders_total_reg,partvars=c("ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # ### standard regression adding in gender ####
 # #does gender affect age - gd 1.1893 months younger than cis boys p = 0.0251
@@ -2017,8 +2014,8 @@ parameterEstimates(sexextfit, boot.ci.type = "bca.simple")
 # summary(le_gender_reg)
 # 
 # #does gender affect emotional regulation problems - same as KW results above
-# ders6total_gender_reg <- lmer(ders6total ~ genderid + age + (1|site),data=yr4data)
-# summary(ders6total_gender_reg)
+# ders_total_gender_reg <- lmer(ders_total ~ genderid + age + (1|site),data=yr4data)
+# summary(ders_total_gender_reg)
 # 
 # #does gender affect cbcl - same as KW results above
 # cbcltotal_gender_reg <- lmer(cbcl_total ~ genderid + age + (1|site),data=yr4data)
@@ -2029,13 +2026,13 @@ parameterEstimates(sexextfit, boot.ci.type = "bca.simple")
 # summary(cbclext_gender_reg)
 # 
 # #do gender and life events interact to affect emotion regulation - yes
-# ders6total_gender_le_reg <- lmer(ders6total ~ genderid*total_bad_le + age + (1|site),data=yr4data)
-# summary(ders6total_gender_le_reg) #main effects cis girl and gd and le but no interactions
+# ders_total_gender_le_reg <- lmer(ders_total ~ genderid*total_bad_le + age + (1|site),data=yr4data)
+# summary(ders_total_gender_le_reg) #main effects cis girl and gd and le but no interactions
 # #no interaction so just do additive model
-# ders6total_gender_le_reg <- lmer(ders6total ~ genderid+total_bad_le + age + (1|site),data=yr4data)
-# summary(ders6total_gender_le_reg) #main effects cis girl and gd and le
-# AIC(ders6total_gender_le_reg) #main effects cis girl and gd and le
-# partR2(ders6total_gender_le_reg,partvars=c("genderid","total_bad_le","age"),R2_type="marginal",nboot=10)
+# ders_total_gender_le_reg <- lmer(ders_total ~ genderid+total_bad_le + age + (1|site),data=yr4data)
+# summary(ders_total_gender_le_reg) #main effects cis girl and gd and le
+# AIC(ders_total_gender_le_reg) #main effects cis girl and gd and le
+# partR2(ders_total_gender_le_reg,partvars=c("genderid","total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # #do gender and life events interact to affect cbcl - main effect but no interactions to all
 # cbcltotal_gender_le_reg <- lmer(cbcl_total ~ genderid*total_bad_le + age + (1|site),data=yr4data)
@@ -2063,108 +2060,108 @@ parameterEstimates(sexextfit, boot.ci.type = "bca.simple")
 # partR2(cbclext_gender_le_reg,partvars=c("genderid","total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # #do gender and emotion regulation interact to affect cbcl - main effects but no interactions to all
-# cbcltotalgender_ders6total_reg <- lmer(cbcl_total ~ genderid*ders6total + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_ders6total_reg) #main effect gd and ders but not cis girl or interaction
+# cbcltotalgender_ders_total_reg <- lmer(cbcl_total ~ genderid*ders_total + age + (1|site),data=yr4data)
+# summary(cbcltotalgender_ders_total_reg) #main effect gd and ders but not cis girl or interaction
 # #no interaction so use just additive model
-# cbcltotalgender_ders6total_reg <- lmer(cbcl_total ~ genderid+ders6total + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_ders6total_reg) #main effect gd and ders but not cis girl or interaction
-# AIC(cbcltotalgender_ders6total_reg) #main effect gd and ders but not cis girl or interaction
-# partR2(cbcltotalgender_ders6total_reg,partvars=c("genderid","ders6total","age"),R2_type="marginal",nboot=10)
+# cbcltotalgender_ders_total_reg <- lmer(cbcl_total ~ genderid+ders_total + age + (1|site),data=yr4data)
+# summary(cbcltotalgender_ders_total_reg) #main effect gd and ders but not cis girl or interaction
+# AIC(cbcltotalgender_ders_total_reg) #main effect gd and ders but not cis girl or interaction
+# partR2(cbcltotalgender_ders_total_reg,partvars=c("genderid","ders_total","age"),R2_type="marginal",nboot=10)
 # 
-# cbclintgender_ders6total_reg <- lmer(cbcl_int ~ genderid*ders6total + age + (1|site),data=yr4data)
-# summary(cbclintgender_ders6total_reg) #main effect ders but not cis girl or gd or interaction
+# cbclintgender_ders_total_reg <- lmer(cbcl_int ~ genderid*ders_total + age + (1|site),data=yr4data)
+# summary(cbclintgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
 # #no interaction so use just additive model
-# cbclintgender_ders6total_reg <- lmer(cbcl_int ~ genderid+ders6total + age + (1|site),data=yr4data)
-# summary(cbclintgender_ders6total_reg) #main effect ders but not cis girl or gd or interaction
-# AIC(cbclintgender_ders6total_reg) #main effect ders but not cis girl or gd or interaction
-# partR2(cbclintgender_ders6total_reg,partvars=c("genderid","ders6total","age"),R2_type="marginal",nboot=10)
+# cbclintgender_ders_total_reg <- lmer(cbcl_int ~ genderid+ders_total + age + (1|site),data=yr4data)
+# summary(cbclintgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
+# AIC(cbclintgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
+# partR2(cbclintgender_ders_total_reg,partvars=c("genderid","ders_total","age"),R2_type="marginal",nboot=10)
 # 
-# cbclextgender_ders6total_reg <- lmer(cbcl_ext ~ genderid*ders6total + age + (1|site),data=yr4data)
-# summary(cbclextgender_ders6total_reg) #main effect ders but not cis girl or gd or interaction
+# cbclextgender_ders_total_reg <- lmer(cbcl_ext ~ genderid*ders_total + age + (1|site),data=yr4data)
+# summary(cbclextgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
 # #no interaction so use just additive model
-# cbclextgender_ders6total_reg <- lmer(cbcl_ext ~ genderid+ders6total + age + (1|site),data=yr4data)
-# summary(cbclextgender_ders6total_reg) #main effect ders but not cis girl or gd or interaction
-# AIC(cbclextgender_ders6total_reg) #main effect ders but not cis girl or gd or interaction
-# partR2(cbclextgender_ders6total_reg,partvars=c("genderid","ders6total","age"),R2_type="marginal",nboot=10)
+# cbclextgender_ders_total_reg <- lmer(cbcl_ext ~ genderid+ders_total + age + (1|site),data=yr4data)
+# summary(cbclextgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
+# AIC(cbclextgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
+# partR2(cbclextgender_ders_total_reg,partvars=c("genderid","ders_total","age"),R2_type="marginal",nboot=10)
 # 
 # #do gender, emotion regulation and life events affect cbcl - 
-# cbcltotalgender_le_ders6total_reg <- lmer(cbcl_total ~ genderid + ders6total + total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_le_ders6total_reg) #cis girl, gd, ders, and le but not age significant
-# AIC(cbcltotalgender_le_ders6total_reg) #cis girl, gd, ders, and le but not age significant
-# partR2(cbcltotalgender_le_ders6total_reg,partvars=c("genderid","ders6total","total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbcltotalgender_le_ders_total_reg <- lmer(cbcl_total ~ genderid + ders_total + total_bad_le + age + (1|site),data=yr4data)
+# summary(cbcltotalgender_le_ders_total_reg) #cis girl, gd, ders, and le but not age significant
+# AIC(cbcltotalgender_le_ders_total_reg) #cis girl, gd, ders, and le but not age significant
+# partR2(cbcltotalgender_le_ders_total_reg,partvars=c("genderid","ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
-# cbclintgender_le_ders6total_reg <- lmer(cbcl_int ~ genderid + ders6total + total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclintgender_le_ders6total_reg) #cis girl, gd, ders, and le but not age significant
-# AIC(cbclintgender_le_ders6total_reg) #cis girl, gd, ders, and le but not age significant
-# partR2(cbclintgender_le_ders6total_reg,partvars=c("genderid","ders6total","total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbclintgender_le_ders_total_reg <- lmer(cbcl_int ~ genderid + ders_total + total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclintgender_le_ders_total_reg) #cis girl, gd, ders, and le but not age significant
+# AIC(cbclintgender_le_ders_total_reg) #cis girl, gd, ders, and le but not age significant
+# partR2(cbclintgender_le_ders_total_reg,partvars=c("genderid","ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
-# cbclextgender_le_ders6total_reg <- lmer(cbcl_ext ~ genderid + ders6total + total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclextgender_le_ders6total_reg) #ders and le and age but not cis girl or gd significant
-# AIC(cbclextgender_le_ders6total_reg) #ders and le and age but not cis girl or gd significant
-# partR2(cbclextgender_le_ders6total_reg,partvars=c("genderid","ders6total","total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbclextgender_le_ders_total_reg <- lmer(cbcl_ext ~ genderid + ders_total + total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclextgender_le_ders_total_reg) #ders and le and age but not cis girl or gd significant
+# AIC(cbclextgender_le_ders_total_reg) #ders and le and age but not cis girl or gd significant
+# partR2(cbclextgender_le_ders_total_reg,partvars=c("genderid","ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # 
 # ### standard regression log transformed les, ders and cbcl, without gender ####
 # #do life events affect emotion regulation - yes
-# logders6total_logle_reg <- lmer(logders6total ~ log_total_bad_le + age + (1|site),data=yr4data)
-# summary(logders6total_logle_reg)
-# AIC(logders6total_logle_reg)
-# partR2(logders6total_logle_reg,partvars=c("log_total_bad_le","age"),R2_type="marginal",nboot=10)
+# log_ders_total_logle_reg <- lmer(log_ders_total ~ log_total_bad_le + age + (1|site),data=yr4data)
+# summary(log_ders_total_logle_reg)
+# AIC(log_ders_total_logle_reg)
+# partR2(log_ders_total_logle_reg,partvars=c("log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # #do life events affect cbcl - yes to all
-# cbcltotal_logle_reg <- lmer(logcbcl_total ~ log_total_bad_le + age + (1|site),data=yr4data)
+# cbcltotal_logle_reg <- lmer(log_cbcl_total ~ log_total_bad_le + age + (1|site),data=yr4data)
 # summary(cbcltotal_logle_reg)
 # AIC(cbcltotal_logle_reg)
 # partR2(cbcltotal_logle_reg,partvars=c("log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
-# cbclint_logle_reg <- lmer(logcbcl_int ~ log_total_bad_le + age + (1|site),data=yr4data)
+# cbclint_logle_reg <- lmer(log_cbcl_int ~ log_total_bad_le + age + (1|site),data=yr4data)
 # summary(cbclint_logle_reg)
 # AIC(cbclint_logle_reg)
 # partR2(cbclint_logle_reg,partvars=c("log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
-# cbclext_logle_reg <- lmer(logcbcl_ext ~ log_total_bad_le + age + (1|site),data=yr4data)
+# cbclext_logle_reg <- lmer(log_cbcl_ext ~ log_total_bad_le + age + (1|site),data=yr4data)
 # summary(cbclext_logle_reg)
 # AIC(cbclext_logle_reg)
 # partR2(cbclext_logle_reg,partvars=c("log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # #does emotion regulation affect cbcl - yes to all
-# cbcltotal_logders6total_reg <- lmer(logcbcl_total ~ logders6total + age + (1|site),data=yr4data)
-# summary(cbcltotal_logders6total_reg)
-# AIC(cbcltotal_logders6total_reg)
-# partR2(cbcltotal_logders6total_reg,partvars=c("logders6total","age"),R2_type="marginal",nboot=10)
+# cbcltotal_log_ders_total_reg <- lmer(log_cbcl_total ~ log_ders_total + age + (1|site),data=yr4data)
+# summary(cbcltotal_log_ders_total_reg)
+# AIC(cbcltotal_log_ders_total_reg)
+# partR2(cbcltotal_log_ders_total_reg,partvars=c("log_ders_total","age"),R2_type="marginal",nboot=10)
 # 
-# cbclint_logders6total_reg <- lmer(logcbcl_int ~ logders6total + age + (1|site),data=yr4data)
-# summary(cbclint_logders6total_reg)
-# AIC(cbclint_logders6total_reg)
-# partR2(cbclint_logders6total_reg,partvars=c("logders6total","age"),R2_type="marginal",nboot=10)
+# cbclint_log_ders_total_reg <- lmer(log_cbcl_int ~ log_ders_total + age + (1|site),data=yr4data)
+# summary(cbclint_log_ders_total_reg)
+# AIC(cbclint_log_ders_total_reg)
+# partR2(cbclint_log_ders_total_reg,partvars=c("log_ders_total","age"),R2_type="marginal",nboot=10)
 # 
-# cbclext_logders6total_reg <- lmer(logcbcl_ext ~ logders6total + age + (1|site),data=yr4data)
-# summary(cbclext_logders6total_reg)
-# AIC(cbclext_logders6total_reg)
-# partR2(cbclext_logders6total_reg,partvars=c("logders6total","age"),R2_type="marginal",nboot=10)
+# cbclext_log_ders_total_reg <- lmer(log_cbcl_ext ~ log_ders_total + age + (1|site),data=yr4data)
+# summary(cbclext_log_ders_total_reg)
+# AIC(cbclext_log_ders_total_reg)
+# partR2(cbclext_log_ders_total_reg,partvars=c("log_ders_total","age"),R2_type="marginal",nboot=10)
 # 
 # #do emotion regulation and life events interact to affect cbcl
-# cbcltotal_le_logders6total_reg <- lmer(logcbcl_total ~ logders6total*log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_le_logders6total_reg) #no sig ixn
-# cbcltotal_le_logders6total_reg <- lmer(logcbcl_total ~ logders6total+log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_le_logders6total_reg) #main effect ders and le 
-# AIC(cbcltotal_le_logders6total_reg) #main effect ders and le 
-# partR2(cbcltotal_le_logders6total_reg,partvars=c("logders6total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbcltotal_le_log_ders_total_reg <- lmer(log_cbcl_total ~ log_ders_total*log_total_bad_le + age + (1|site),data=yr4data)
+# summary(cbcltotal_le_log_ders_total_reg) #no sig ixn
+# cbcltotal_le_log_ders_total_reg <- lmer(log_cbcl_total ~ log_ders_total+log_total_bad_le + age + (1|site),data=yr4data)
+# summary(cbcltotal_le_log_ders_total_reg) #main effect ders and le 
+# AIC(cbcltotal_le_log_ders_total_reg) #main effect ders and le 
+# partR2(cbcltotal_le_log_ders_total_reg,partvars=c("log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # 
-# cbclint_le_logders6total_reg <- lmer(logcbcl_int ~ logders6total*log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_le_logders6total_reg) #sig ixn 
-# cbclint_le_logders6total_reg <- lmer(logcbcl_int ~ logders6total+log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_le_logders6total_reg) #main effect ders and le but not age
-# AIC(cbclint_le_logders6total_reg) #main effect ders and le but not age
-# partR2(cbclint_le_logders6total_reg,partvars=c("logders6total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbclint_le_log_ders_total_reg <- lmer(log_cbcl_int ~ log_ders_total*log_total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclint_le_log_ders_total_reg) #sig ixn 
+# cbclint_le_log_ders_total_reg <- lmer(log_cbcl_int ~ log_ders_total+log_total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclint_le_log_ders_total_reg) #main effect ders and le but not age
+# AIC(cbclint_le_log_ders_total_reg) #main effect ders and le but not age
+# partR2(cbclint_le_log_ders_total_reg,partvars=c("log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
-# cbclext_le_logders6total_reg <- lmer(logcbcl_ext ~ logders6total*log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_le_logders6total_reg) #sig ixn
-# cbclext_le_logders6total_reg <- lmer(logcbcl_ext ~ logders6total+log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_le_logders6total_reg) #main effect ders and le and age 
-# AIC(cbclext_le_logders6total_reg) #main effect ders and le and age 
-# partR2(cbclext_le_logders6total_reg,partvars=c("logders6total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbclext_le_log_ders_total_reg <- lmer(log_cbcl_ext ~ log_ders_total*log_total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclext_le_log_ders_total_reg) #sig ixn
+# cbclext_le_log_ders_total_reg <- lmer(log_cbcl_ext ~ log_ders_total+log_total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclext_le_log_ders_total_reg) #main effect ders and le and age 
+# AIC(cbclext_le_log_ders_total_reg) #main effect ders and le and age 
+# partR2(cbclext_le_log_ders_total_reg,partvars=c("log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # ### standard regression log transformed les, ders and cbcl, adding in gender ####
 # #does gender affect age - gd 1.1893 months younger than cis boys p = 0.0251
@@ -2176,90 +2173,90 @@ parameterEstimates(sexextfit, boot.ci.type = "bca.simple")
 # summary(le_gender_reg)
 # 
 # #does gender affect emotional regulation problems - same as KW results above
-# logders6total_gender_reg <- lmer(logders6total ~ genderid + age + (1|site),data=yr4data)
-# summary(logders6total_gender_reg)
+# log_ders_total_gender_reg <- lmer(log_ders_total ~ genderid + age + (1|site),data=yr4data)
+# summary(log_ders_total_gender_reg)
 # 
 # #does gender affect cbcl - same as KW results above
-# cbcltotal_gender_reg <- lmer(logcbcl_total ~ genderid + age + (1|site),data=yr4data)
+# cbcltotal_gender_reg <- lmer(log_cbcl_total ~ genderid + age + (1|site),data=yr4data)
 # summary(cbcltotal_gender_reg)
-# cbclint_gender_reg <- lmer(logcbcl_int ~ genderid + age + (1|site),data=yr4data)
+# cbclint_gender_reg <- lmer(log_cbcl_int ~ genderid + age + (1|site),data=yr4data)
 # summary(cbclint_gender_reg)
-# cbclext_gender_reg <- lmer(logcbcl_ext ~ genderid + age + (1|site),data=yr4data)
+# cbclext_gender_reg <- lmer(log_cbcl_ext ~ genderid + age + (1|site),data=yr4data)
 # summary(cbclext_gender_reg)
 # 
 # #do gender and life events interact to affect emotion regulation - yes
-# logders6total_gender_le_reg <- lmer(logders6total ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
-# summary(logders6total_gender_le_reg) #main effects cis girl and gd and le but no interactions
+# log_ders_total_gender_le_reg <- lmer(log_ders_total ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
+# summary(log_ders_total_gender_le_reg) #main effects cis girl and gd and le but no interactions
 # #no interaction so just do additive model
-# logders6total_gender_le_reg <- lmer(logders6total ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
-# summary(logders6total_gender_le_reg) #main effects cis girl and gd and le
-# AIC(logders6total_gender_le_reg) #main effects cis girl and gd and le
-# partR2(logders6total_gender_le_reg,partvars=c("genderid","log_total_bad_le","age"),R2_type="marginal",nboot=10)
+# log_ders_total_gender_le_reg <- lmer(log_ders_total ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
+# summary(log_ders_total_gender_le_reg) #main effects cis girl and gd and le
+# AIC(log_ders_total_gender_le_reg) #main effects cis girl and gd and le
+# partR2(log_ders_total_gender_le_reg,partvars=c("genderid","log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # #do gender and life events interact to affect cbcl - main effect but no interactions to all
-# cbcltotal_gender_le_reg <- lmer(logcbcl_total ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
+# cbcltotal_gender_le_reg <- lmer(log_cbcl_total ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
 # summary(cbcltotal_gender_le_reg) #main effect gd and le and age but not cis girl or interaction
 # #no interaction so use just additive model
-# cbcltotal_gender_le_reg <- lmer(logcbcl_total ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
+# cbcltotal_gender_le_reg <- lmer(log_cbcl_total ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
 # summary(cbcltotal_gender_le_reg) #main effect gd and le and age but not cis girl
 # AIC(cbcltotal_gender_le_reg) #main effect gd and le and age but not cis girl
 # partR2(cbcltotal_gender_le_reg,partvars=c("genderid","log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
-# cbclint_gender_le_reg <- lmer(logcbcl_int ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
+# cbclint_gender_le_reg <- lmer(log_cbcl_int ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
 # summary(cbclint_gender_le_reg) #main effect gd and le but not cis girl or age or interaction
 # #no interaction so use just additive model
-# cbclint_gender_le_reg <- lmer(logcbcl_int ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
+# cbclint_gender_le_reg <- lmer(log_cbcl_int ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
 # summary(cbclint_gender_le_reg) #main effect gd and le but not cis girl or age 
 # AIC(cbclint_gender_le_reg) #main effect gd and le but not cis girl or age 
 # partR2(cbclint_gender_le_reg,partvars=c("genderid","log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
-# cbclext_gender_le_reg <- lmer(logcbcl_ext ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
+# cbclext_gender_le_reg <- lmer(log_cbcl_ext ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
 # summary(cbclext_gender_le_reg) #main effect gd and cis girl and le and age but not interaction
 # #no interaction so use just additive model
-# cbclext_gender_le_reg <- lmer(logcbcl_ext ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
+# cbclext_gender_le_reg <- lmer(log_cbcl_ext ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
 # summary(cbclext_gender_le_reg) #main effect gd and cis girl and le and age 
 # AIC(cbclext_gender_le_reg) #main effect gd and cis girl and le and age 
 # partR2(cbclext_gender_le_reg,partvars=c("genderid","log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # #do gender and emotion regulation interact to affect cbcl - main effects but no interactions to all
-# cbcltotalgender_logders6total_reg <- lmer(logcbcl_total ~ genderid*logders6total + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_logders6total_reg) #main effect ders but not gd or cis girl or interaction
+# cbcltotalgender_log_ders_total_reg <- lmer(log_cbcl_total ~ genderid*log_ders_total + age + (1|site),data=yr4data)
+# summary(cbcltotalgender_log_ders_total_reg) #main effect ders but not gd or cis girl or interaction
 # #no interaction so use just additive model
-# cbcltotalgender_logders6total_reg <- lmer(logcbcl_total ~ genderid+logders6total + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_logders6total_reg) #main effect gd and ders and cis girl
-# AIC(cbcltotalgender_logders6total_reg) #main effect gd and ders but not cis girl 
-# partR2(cbcltotalgender_logders6total_reg,partvars=c("genderid","logders6total","age"),R2_type="marginal",nboot=10)
+# cbcltotalgender_log_ders_total_reg <- lmer(log_cbcl_total ~ genderid+log_ders_total + age + (1|site),data=yr4data)
+# summary(cbcltotalgender_log_ders_total_reg) #main effect gd and ders and cis girl
+# AIC(cbcltotalgender_log_ders_total_reg) #main effect gd and ders but not cis girl 
+# partR2(cbcltotalgender_log_ders_total_reg,partvars=c("genderid","log_ders_total","age"),R2_type="marginal",nboot=10)
 # 
-# cbclintgender_logders6total_reg <- lmer(logcbcl_int ~ genderid*logders6total + age + (1|site),data=yr4data)
-# summary(cbclintgender_logders6total_reg) #main effect ders but not cis girl or gd or interaction
+# cbclintgender_log_ders_total_reg <- lmer(log_cbcl_int ~ genderid*log_ders_total + age + (1|site),data=yr4data)
+# summary(cbclintgender_log_ders_total_reg) #main effect ders but not cis girl or gd or interaction
 # #no interaction so use just additive model
-# cbclintgender_logders6total_reg <- lmer(logcbcl_int ~ genderid+logders6total + age + (1|site),data=yr4data)
-# summary(cbclintgender_logders6total_reg) #main effect ders and cis girl and gd 
-# AIC(cbclintgender_logders6total_reg) #main effect ders and cis girl and gd 
-# partR2(cbclintgender_logders6total_reg,partvars=c("genderid","logders6total","age"),R2_type="marginal",nboot=10)
+# cbclintgender_log_ders_total_reg <- lmer(log_cbcl_int ~ genderid+log_ders_total + age + (1|site),data=yr4data)
+# summary(cbclintgender_log_ders_total_reg) #main effect ders and cis girl and gd 
+# AIC(cbclintgender_log_ders_total_reg) #main effect ders and cis girl and gd 
+# partR2(cbclintgender_log_ders_total_reg,partvars=c("genderid","log_ders_total","age"),R2_type="marginal",nboot=10)
 # 
-# cbclextgender_logders6total_reg <- lmer(logcbcl_ext ~ genderid*logders6total + age + (1|site),data=yr4data)
-# summary(cbclextgender_logders6total_reg) 
+# cbclextgender_log_ders_total_reg <- lmer(log_cbcl_ext ~ genderid*log_ders_total + age + (1|site),data=yr4data)
+# summary(cbclextgender_log_ders_total_reg) 
 # #no interaction so use just additive model
-# cbclextgender_logders6total_reg <- lmer(logcbcl_ext ~ genderid+logders6total + age + (1|site),data=yr4data)
-# summary(cbclextgender_logders6total_reg) #main effect ders but not cis girl or gd 
-# AIC(cbclextgender_logders6total_reg) #main effect ders but not cis girl or gd 
-# partR2(cbclextgender_logders6total_reg,partvars=c("genderid","logders6total","age"),R2_type="marginal",nboot=10)
+# cbclextgender_log_ders_total_reg <- lmer(log_cbcl_ext ~ genderid+log_ders_total + age + (1|site),data=yr4data)
+# summary(cbclextgender_log_ders_total_reg) #main effect ders but not cis girl or gd 
+# AIC(cbclextgender_log_ders_total_reg) #main effect ders but not cis girl or gd 
+# partR2(cbclextgender_log_ders_total_reg,partvars=c("genderid","log_ders_total","age"),R2_type="marginal",nboot=10)
 # 
 # #do gender, emotion regulation and life events affect cbcl - 
-# cbcltotalgender_le_logders6total_reg <- lmer(logcbcl_total ~ genderid + logders6total + log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_le_logders6total_reg) #cis girl, gd, ders, and le and age significant
-# AIC(cbcltotalgender_le_logders6total_reg) #cis girl, gd, ders, and le and age significant
-# partR2(cbcltotalgender_le_logders6total_reg,partvars=c("genderid","logders6total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbcltotalgender_le_log_ders_total_reg <- lmer(log_cbcl_total ~ genderid + log_ders_total + log_total_bad_le + age + (1|site),data=yr4data)
+# summary(cbcltotalgender_le_log_ders_total_reg) #cis girl, gd, ders, and le and age significant
+# AIC(cbcltotalgender_le_log_ders_total_reg) #cis girl, gd, ders, and le and age significant
+# partR2(cbcltotalgender_le_log_ders_total_reg,partvars=c("genderid","log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
-# cbclintgender_le_logders6total_reg <- lmer(logcbcl_int ~ genderid + logders6total + log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclintgender_le_logders6total_reg) #cis girl, gd, ders, and le but not age significant
-# AIC(cbclintgender_le_logders6total_reg) #cis girl, gd, ders, and le but not age significant
-# partR2(cbclintgender_le_logders6total_reg,partvars=c("genderid","logders6total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbclintgender_le_log_ders_total_reg <- lmer(log_cbcl_int ~ genderid + log_ders_total + log_total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclintgender_le_log_ders_total_reg) #cis girl, gd, ders, and le but not age significant
+# AIC(cbclintgender_le_log_ders_total_reg) #cis girl, gd, ders, and le but not age significant
+# partR2(cbclintgender_le_log_ders_total_reg,partvars=c("genderid","log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
-# cbclextgender_le_logders6total_reg <- lmer(logcbcl_ext ~ genderid + logders6total + log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclextgender_le_logders6total_reg) #ders and le and age and cis girl but not gd significant
-# AIC(cbclextgender_le_logders6total_reg) #ders and le and age and cis girl but not gd significant
-# partR2(cbclextgender_le_logders6total_reg,partvars=c("genderid","logders6total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
+# cbclextgender_le_log_ders_total_reg <- lmer(log_cbcl_ext ~ genderid + log_ders_total + log_total_bad_le + age + (1|site),data=yr4data)
+# summary(cbclextgender_le_log_ders_total_reg) #ders and le and age and cis girl but not gd significant
+# AIC(cbclextgender_le_log_ders_total_reg) #ders and le and age and cis girl but not gd significant
+# partR2(cbclextgender_le_log_ders_total_reg,partvars=c("genderid","log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
 # 
 # 
