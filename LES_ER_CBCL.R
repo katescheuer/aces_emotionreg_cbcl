@@ -39,6 +39,8 @@ genderdata <-
                     kbi_sex_assigned_at_birth==777 ~ "dont_know",
                     kbi_sex_assigned_at_birth==999 ~ "refuse"
                     )) %>%
+    # make binary column for whether or not participant is female
+    mutate(sex_female = if_else(sex=="female",1,0)) %>%
     # convert numeric gender values to human-readable character strings
     mutate(gender = case_when(
                       kbi_gender==1 ~ "boy",
@@ -71,8 +73,15 @@ genderdata <-
                         kbi_gender==3 & kbi_y_trans_id==2 ~ "gd", #"nb",
                         kbi_gender==3 & kbi_y_trans_id==3 ~ "gd" #"nb"
                         )) %>%
+    # make binary column for whether or not participant is cis girl
+    mutate(gender_cisgirl = if_else(genderid=="cis_girl",1,0)) %>%
+    # make binary column for whether or not participant is gender diverse
+    mutate(gender_gd = if_else(genderid=="gd",1,0)) %>%
+    # make binary column for whether or not participant is cis boy
+    mutate(gender_cisboy = if_else(genderid=="cis_boy",1,0)) %>%
     # keep only columns relevant to analysis
-    select(src_subject_id,eventname,sex,gender,trans,genderid) %>%
+    select(src_subject_id,eventname,sex,gender,trans,sex_female,
+           genderid,gender_cisgirl,gender_gd,gender_cisboy) %>%
     # remove subjects who refused to answer and/or did not understand gender
     # or trans questions
     filter(genderid!="refuse",
@@ -961,1391 +970,450 @@ alldata %>%
     n = n()
   )
 
+### Establish relationships between all pairs of variables individually ####
+#### DERS ~ LES + age + (1|site) ####
+# DERS scores differ significantly based on LES (p = 7.11e-12) but not based on
+# age (p = 0.0616).
+ders_les_reg <- lmer(Z_ders_total ~ Z_total_bad_le + Z_age + 
+                     (1|site),
+                     data=yr4data)
+summary(ders_les_reg)
+
+#### CBCL total problems ~ LES + age + (1|site) ####
+# CBCL total problems scores differ significantly based on LES (p < 2e-16) and
+# based on age (p = 0.0016)
+cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_total_bad_le + Z_age + 
+                           (1|site),
+                           data=yr4data)
+summary(cbcl_total_les_reg)
+
+#### CBCL internalizing ~ LES + age + (1|site) ####
+# CBCL internalizing scores differ significantly based on LES (p < 2e-16) but
+# not based on age (p = 0.241)
+cbcl_int_les_reg <- lmer(Z_cbcl_int ~ Z_total_bad_le + Z_age + 
+                             (1|site),
+                           data=yr4data)
+summary(cbcl_int_les_reg)
+
+#### CBCL externalizing ~ LES + age + (1|site) ####
+# CBCL externalizing scores differ significantly based on LES (p < 2e-16) and
+# based on age (p = 0.000322)
+cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_total_bad_le + Z_age + 
+                           (1|site),
+                         data=yr4data)
+summary(cbcl_ext_les_reg)
+
+#### CBCL total problems ~ DERS + age + (1|site) ####
+# CBCL total problems scores differ significantly based on DERS (p < 2e-16) but
+# not based on age (p = 0.122)
+cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_ders_total + Z_age + 
+                             (1|site),
+                           data=yr4data)
+summary(cbcl_total_les_reg)
+
+#### CBCL internalizing ~ DERS + age + (1|site) ####
+# CBCL internalizing scores differ significantly based on DERS (p < 2e-16) but
+# not based on age (p = 0.698)
+cbcl_int_les_reg <- lmer(Z_cbcl_int ~ Z_ders_total + Z_age + 
+                           (1|site),
+                         data=yr4data)
+summary(cbcl_int_les_reg)
+
+#### CBCL externalizing ~ DERS + age + (1|site) ####
+# CBCL externalizing scores differ significantly based on DERS (p < 2e-16) and
+# based on age (p = 0.0421)
+cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_ders_total + Z_age + 
+                           (1|site),
+                         data=yr4data)
+summary(cbcl_ext_les_reg)
+
 ### Mediation models with lavaan  ####
-meddata <- yr4data %>% 
-              select(src_subject_id,
-                     total_bad_le_ZCMC,ders_total_ZCMC,
-                     cbcl_total_ZCMC,cbcl_int_ZCMC,cbcl_ext_ZCMC,
-                     log_total_bad_le_ZCMC,log_ders_total_ZCMC,log_cbcl_total_ZCMC,
-                     log_cbcl_ext_ZCMC,log_cbcl_int_ZCMC,
-                     age_ZCMC,site,
-                     gender_cisgirl_CMC,gender_gd_CMC,gender_cisboy_CMC,
-                     sex_male_CMC,sex_female_CMC,
-                     genderid,sex) %>%
-              rename(age = age_ZCMC,
-                     cisgirl = gender_cisgirl_CMC,
-                     gd = gender_gd_CMC,
-                     cisboy = gender_cisboy_CMC,
-                     LES = total_bad_le_ZCMC,
-                     DERS = ders_total_ZCMC,
-                     totalCBCL = cbcl_total_ZCMC,
-                     intCBCL = cbcl_int_ZCMC,
-                     extCBCL = cbcl_ext_ZCMC,
-                     logLES = log_total_bad_le_ZCMC,
-                     logDERS = log_ders_total_ZCMC,
-                     logtotalCBCL = log_cbcl_total_ZCMC,
-                     logintCBCL = log_cbcl_int_ZCMC,
-                     logextCBCL = log_cbcl_ext_ZCMC)
-              # mutate(gender_cisgirl = if_else(genderid=="cis_girl",1,0),
-              #        gender_gd = if_else(genderid=="gd",1,0)) %>%
-              # left_join(select(yr3data,c("src_subject_id","total_bad_le_ZCMC")),
-              #           by=c("src_subject_id")) %>%
-              # rename(yr3LES = total_bad_le_ZCMC)
+#### Select only data for mediation analysis ####
 
-sexmeddata <- meddata %>%
-                filter(sex!="refuse",sex!="dont_know")
+###############################################################################
+#################### FOR ANALYSIS USING ALL YEAR 4 DATA #######################
+###############################################################################
 
-### establishing relationships between all pairs of variables before mediation
-#do life events affect emotion regulation - yes
-DERS_le_reg <- lmer(DERS ~ LES + age + (1|site),data=meddata)
-summary(DERS_le_reg)
-# AIC(DERS_le_reg)
-# partR2(DERS_le_reg,partvars=c("LES","age"),R2_type="marginal",nboot=10)
+med_data <- 
+  yr4data %>%
+  select(src_subject_id,
+         gender_cisboy,
+         gender_cisgirl,
+         gender_gd,
+         sex,
+         sex_female,
+         site,
+         Z_age,
+         Z_total_bad_le,
+         Z_ders_total,
+         Z_cbcl_total,
+         Z_cbcl_int,
+         Z_cbcl_ext) %>%
+  rename(
+         age = Z_age,
+         cisboy = gender_cisboy,
+         cisgirl = gender_cisgirl,
+         gd = gender_gd,
+         female = sex_female,
+         LES = Z_total_bad_le,
+         DERS = Z_ders_total,
+         totalCBCL = Z_cbcl_total,
+         intCBCL = Z_cbcl_int,
+         extCBCL = Z_cbcl_ext
+  )
 
-#do life events affect cbcl - yes to all
-cbcltotal_le_reg <- lmer(totalCBCL ~ LES + age + (1|site),data=meddata)
-summary(cbcltotal_le_reg)
-# AIC(cbcltotal_le_reg)
-# partR2(cbcltotal_le_reg,partvars=c("LES","age"),R2_type="marginal",nboot=10)
+sex_med_data <- med_data %>% filter(sex!="refuse",sex!="dont_know")
 
-cbclint_le_reg <- lmer(intCBCL ~ LES + age + (1|site),data=meddata)
-summary(cbclint_le_reg)
-# AIC(cbclint_le_reg)
-# partR2(cbclint_le_reg,partvars=c("LES","age"),R2_type="marginal",nboot=10)
+###############################################################################
+# FOR ANALYSIS USING YEAR 3 LES & DERS WITH YEAR 4 OUTCOMES, GENDER, & COVARIATES ###############################################################################
 
-cbclext_le_reg <- lmer(extCBCL ~ LES + age + (1|site),data=meddata)
-summary(cbclext_le_reg)
-# AIC(cbclext_le_reg)
-# partR2(cbclext_le_reg,partvars=c("LES","age"),R2_type="marginal",nboot=10)
+med_data <- 
+  yr4data %>%
+  # CBCL outcomes, gender, and covariates from year 4
+  select(src_subject_id,
+         gender_cisboy,
+         gender_cisgirl,
+         gender_gd,
+         sex,
+         sex_female,
+         site,
+         Z_age,
+         # Z_total_bad_le,
+         # Z_ders_total,
+         Z_cbcl_total,
+         Z_cbcl_int,
+         Z_cbcl_ext) %>%
+  # LES and DERS from year 3
+  left_join(select(yr3data,c(src_subject_id,
+                             Z_total_bad_le,Z_ders_total)),
+            by=c("src_subject_id")) %>%
+  rename(
+    age = Z_age,
+    cisboy = gender_cisboy,
+    cisgirl = gender_cisgirl,
+    gd = gender_gd,
+    female = sex_female,
+    LES = Z_total_bad_le,
+    DERS = Z_ders_total,
+    totalCBCL = Z_cbcl_total,
+    intCBCL = Z_cbcl_int,
+    extCBCL = Z_cbcl_ext
+  )
 
-#does emotion regulation affect cbcl - yes to all
-cbcltotal_DERS_reg <- lmer(totalCBCL ~ DERS + age + (1|site),data=meddata)
-summary(cbcltotal_DERS_reg)
-# AIC(cbcltotal_DERS_reg)
-# partR2(cbcltotal_DERS_reg,partvars=c("DERS","age"),R2_type="marginal",nboot=10)
+sex_med_data <- med_data %>% filter(sex!="refuse",sex!="dont_know")
 
-cbclint_DERS_reg <- lmer(intCBCL ~ DERS + age + (1|site),data=meddata)
-summary(cbclint_DERS_reg)
-# AIC(cbclint_DERS_reg)
-# partR2(cbclint_DERS_reg,partvars=c("DERS","age"),R2_type="marginal",nboot=10)
+###############################################################################
+############# FOR ANALYSIS USING LOG TRANSFORMED YEAR 4 DATA ##################
+###############################################################################
 
-cbclext_DERS_reg <- lmer(extCBCL ~ DERS + age + (1|site),data=meddata)
-summary(cbclext_DERS_reg)
-# AIC(cbclext_DERS_reg)
-# partR2(cbclext_DERS_reg,partvars=c("DERS","age"),R2_type="marginal",nboot=10)
+med_data <- 
+  yr4data %>%
+  select(src_subject_id,
+         gender_cisboy,
+         gender_cisgirl,
+         gender_gd,
+         sex,
+         sex_female,
+         site,
+         Z_age,
+         Z_log_total_bad_le,
+         Z_log_ders_total,
+         Z_log_cbcl_total,
+         Z_log_cbcl_int,
+         Z_log_cbcl_ext) %>%
+  rename(
+    age = Z_age,
+    cisboy = gender_cisboy,
+    cisgirl = gender_cisgirl,
+    gd = gender_gd,
+    female = sex_female,
+    LES = Z_log_total_bad_le,
+    DERS = Z_log_ders_total,
+    totalCBCL = Z_log_cbcl_total,
+    intCBCL = Z_log_cbcl_int,
+    extCBCL = Z_log_cbcl_ext
+  )
 
+sex_med_data <- med_data %>% filter(sex!="refuse",sex!="dont_know")
+###############################################################################
 
-### not transformed variables (all year 4)
-### total problems cbcl
-nogendertotalmodel <- ' # direct effect
-             totalCBCL~ c*LES + age
-           # mediator
-             DERS ~ a*LES  + age
-           # indirect effect
-             totalCBCL~ b*DERS
-           # indirect effect (a*b)
-             ab := a*b
-           # total effect
-             total := c + (a*b)         '
-nogendertotalfit <- sem(nogendertotalmodel, data = meddata, meanstructure = TRUE,
+#### Run mediation analysis ####
+##### CBCL total problems ####
+###### Without gender or sex ####
+nogendertotalmodel <- 
+    ' # direct effect
+        totalCBCL~ c*LES + age
+      # mediator
+        DERS ~ a*LES  + age
+      # indirect effect
+        totalCBCL~ b*DERS
+      # indirect effect (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+nogendertotalfit <- sem(nogendertotalmodel, 
+                        data = med_data, 
+                        meanstructure = TRUE,
                         se = "robust.cluster",
-                        cluster = "site"
-                        )
-summary(nogendertotalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
+                        cluster = "site")
+summary(nogendertotalfit, fit.measures=T, 
+        standardized=T, ci=TRUE, rsquare=TRUE)
 parameterEstimates(nogendertotalfit, boot.ci.type = "bca.simple")
 
-
-# gender
-# using cis boys as the comparison group
-gendertotalmodel_compcisboy <- ' # direct effect 
-             totalCBCL~ c*LES + cisgirl + gd + age + LES:cisgirl + LES:gd
-           # mediator 
-             DERS ~ a*LES  + cisgirl + gd + age + LES:cisgirl + LES:gd
-           # indirect effect 
-             totalCBCL~ b*DERS
-           # indirect effect w mediator (a*b)
-             ab := a*b
-           # total effect
-             total := c + (a*b)
-'
-# using cis girls as the comparison group
-gendertotalmodel_compcisgirl <- ' # direct effect 
-             totalCBCL~ c*LES + cisboy + gd + age + LES:cisboy + LES:gd
-           # mediator 
-             DERS ~ a*LES  + cisboy + gd + age + LES:cisboy + LES:gd
-           # indirect effect 
-             totalCBCL~ b*DERS
-           # indirect effect w mediator (a*b)
-             ab := a*b
-           # total effect
-             total := c + (a*b)
-'
-gendertotalfit_compcisboy <- sem(gendertotalmodel_compcisboy, data = meddata, 
+###### With gender, using cis boys as the comparison group ####
+gendertotalmodel_compcisboy <- 
+   ' # direct effect 
+       totalCBCL~ c*LES + cisgirl + gd + age + LES:cisgirl + LES:gd
+     # mediator 
+       DERS ~ a*LES  + cisgirl + gd + age + LES:cisgirl + LES:gd
+     # indirect effect 
+       totalCBCL~ b*DERS
+     # indirect effect w mediator (a*b)
+       ab := a*b
+     # total effect
+       total := c + (a*b) '
+gendertotalfit_compcisboy <- sem(gendertotalmodel_compcisboy, 
+                                 data = med_data, 
                                  meanstructure = TRUE,
                                  se = "robust.cluster",
                                  cluster = "site")
-summary(gendertotalfit_compcisboy, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-parameterEstimates(gendertotalmodel_compcisboy, boot.ci.type = "bca.simple")
+summary(gendertotalfit_compcisboy, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
+parameterEstimates(gendertotalfit_compcisboy, boot.ci.type = "bca.simple")
 
-gendertotalfit_compcisgirl <- sem(gendertotalmodel_compcisgirl, data = meddata, 
-                                 meanstructure = TRUE,
-                                 se = "robust.cluster",
-                                 cluster = "site")
-summary(gendertotalfit_compcisgirl, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
+###### With gender, using cis girls as the comparison group ####
+gendertotalmodel_compcisgirl <- 
+    ' # direct effect 
+        totalCBCL~ c*LES + cisboy + gd + age + LES:cisboy + LES:gd
+      # mediator 
+        DERS ~ a*LES  + cisboy + gd + age + LES:cisboy + LES:gd
+      # indirect effect 
+        totalCBCL~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+gendertotalfit_compcisgirl <- sem(gendertotalmodel_compcisgirl, 
+                                  data = med_data, 
+                                  meanstructure = TRUE,
+                                  se = "robust.cluster",
+                                  cluster = "site")
+summary(gendertotalfit_compcisgirl, 
+        fit.measures=T, standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
 parameterEstimates(gendertotalfit_compcisgirl, boot.ci.type = "bca.simple")
 
-# sex
-sextotalmodel <- ' # direct effect
-             totalCBCL~ c*LES + sex_female_CMC + age + LES:sex_female_CMC
-           # mediator
-             DERS ~ a*LES  + sex_female_CMC + age + LES:sex_female_CMC
-           # indirect effect
-             totalCBCL~ b*DERS
-           # indirect effect w mediator (a*b)
-             ab := a*b
-           # total effect
-             total := c + (a*b)
-'
-sextotalfit <- sem(sextotalmodel, data = sexmeddata, meanstructure = TRUE,
-                      se = "robust.cluster",
-                      cluster = "site"
-                   )
-summary(sextotalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
+###### With sex ####
+sextotalmodel <- 
+    ' # direct effect
+        totalCBCL~ c*LES + female + age + LES:female
+      # mediator
+        DERS ~ a*LES  + female + age + LES:female
+      # indirect effect
+        totalCBCL~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+sextotalfit <- sem(sextotalmodel, 
+                   data = sex_med_data, 
+                   meanstructure = TRUE,
+                   se = "robust.cluster",
+                   cluster = "site")
+summary(sextotalfit, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
 parameterEstimates(sextotalfit, boot.ci.type = "bca.simple")
 
-### internalizing cbcl
-nogenderintmodel <- ' # direct effect
-             intCBCL~ c*LES + age
-           # mediator
-             DERS ~ a*LES  + age
-           # indirect effect
-             intCBCL~ b*DERS
-           # indirect effect (a*b)
-             ab := a*b
-           # int effect
-             int := c + (a*b)         '
-nogenderintfit <- sem(nogenderintmodel, data = meddata, meanstructure = TRUE,
+##### CBCL internalizing ####
+###### Without gender or sex ####
+nogenderintmodel <- 
+  ' # direct effect
+        intCBCL~ c*LES + age
+      # mediator
+        DERS ~ a*LES  + age
+      # indirect effect
+        intCBCL~ b*DERS
+      # indirect effect (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+nogenderintfit <- sem(nogenderintmodel, 
+                        data = med_data, 
+                        meanstructure = TRUE,
                         se = "robust.cluster",
-                        cluster = "site"
-)
-summary(nogenderintfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
+                        cluster = "site")
+summary(nogenderintfit, fit.measures=T, 
+        standardized=T, ci=TRUE, rsquare=TRUE)
 parameterEstimates(nogenderintfit, boot.ci.type = "bca.simple")
 
-# gender
-# using cis boys as the comparison group
-genderintmodel_compcisboy <- ' 
-            # direct effect 
-             intCBCL~ c*LES + cisgirl + gd + age + LES:cisgirl + LES:gd
-           # mediator 
-             DERS ~ a*LES  + cisgirl + gd + age + LES:cisgirl + LES:gd
-           # indirect effect 
-             intCBCL~ b*DERS
-           # indirect effect w mediator (a*b)
-             ab := a*b
-           # int effect
-             int := c + (a*b)
-'
-# using cis girls as the comparison group
-genderintmodel_compcisgirl <- ' # direct effect 
-             intCBCL~ c*LES + cisboy + gd + age + LES:cisboy + LES:gd
-           # mediator 
-             DERS ~ a*LES  + cisboy + gd + age + LES:cisboy + LES:gd
-           # indirect effect 
-             intCBCL~ b*DERS
-           # indirect effect w mediator (a*b)
-             ab := a*b
-           # int effect
-             int := c + (a*b)
-'
-genderintfit_compcisboy <- sem(genderintmodel_compcisboy, data = meddata, 
+###### With gender, using cis boys as the comparison group ####
+genderintmodel_compcisboy <- 
+  ' # direct effect 
+       intCBCL~ c*LES + cisgirl + gd + age + LES:cisgirl + LES:gd
+     # mediator 
+       DERS ~ a*LES  + cisgirl + gd + age + LES:cisgirl + LES:gd
+     # indirect effect 
+       intCBCL~ b*DERS
+     # indirect effect w mediator (a*b)
+       ab := a*b
+     # total effect
+       total := c + (a*b) '
+genderintfit_compcisboy <- sem(genderintmodel_compcisboy, 
+                                 data = med_data, 
                                  meanstructure = TRUE,
                                  se = "robust.cluster",
                                  cluster = "site")
-summary(genderintfit_compcisboy, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
+summary(genderintfit_compcisboy, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
 parameterEstimates(genderintfit_compcisboy, boot.ci.type = "bca.simple")
 
-genderintfit_compcisgirl <- sem(genderintmodel_compcisgirl, data = meddata, 
+###### With gender, using cis girls as the comparison group ####
+genderintmodel_compcisgirl <- 
+  ' # direct effect 
+        intCBCL~ c*LES + cisboy + gd + age + LES:cisboy + LES:gd
+      # mediator 
+        DERS ~ a*LES  + cisboy + gd + age + LES:cisboy + LES:gd
+      # indirect effect 
+        intCBCL~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+genderintfit_compcisgirl <- sem(genderintmodel_compcisgirl, 
+                                  data = med_data, 
                                   meanstructure = TRUE,
                                   se = "robust.cluster",
                                   cluster = "site")
-summary(genderintfit_compcisgirl, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
+summary(genderintfit_compcisgirl, 
+        fit.measures=T, standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
 parameterEstimates(genderintfit_compcisgirl, boot.ci.type = "bca.simple")
 
-# sex
-sexintmodel <- ' # direct effect
-             intCBCL~ c*LES + sex_female_CMC + age + LES:sex_female_CMC
-           # mediator
-             DERS ~ a*LES  + sex_female_CMC + age + LES:sex_female_CMC
-           # indirect effect
-             intCBCL~ b*DERS
-           # indirect effect w mediator (a*b)
-             ab := a*b
-           # int effect
-             int := c + (a*b)
-'
-sexintfit <- sem(sexintmodel, data = sexmeddata, meanstructure = TRUE,
+###### With sex ####
+sexintmodel <- 
+  ' # direct effect
+        intCBCL~ c*LES + female + age + LES:female
+      # mediator
+        DERS ~ a*LES  + female + age + LES:female
+      # indirect effect
+        intCBCL~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+sexintfit <- sem(sexintmodel, 
+                   data = sex_med_data, 
+                   meanstructure = TRUE,
                    se = "robust.cluster",
-                   cluster = "site"
-)
-summary(sexintfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
+                   cluster = "site")
+summary(sexintfit, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
 parameterEstimates(sexintfit, boot.ci.type = "bca.simple")
 
-### externalizing cbcl
-nogenderextmodel <- ' # direct effect
-             extCBCL~ c*LES + age
-           # mediator
-             DERS ~ a*LES  + age
-           # indirect effect
-             extCBCL~ b*DERS
-           # indirect effect (a*b)
-             ab := a*b
-           # ext effect
-             ext := c + (a*b)         '
-nogenderextfit <- sem(nogenderextmodel, data = meddata, meanstructure = TRUE,
-                        se = "robust.cluster",
-                        cluster = "site"
-)
-summary(nogenderextfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
+##### CBCL externalizing ####
+###### Without gender or sex ####
+nogenderextmodel <- 
+  ' # direct effect
+        extCBCL~ c*LES + age
+      # mediator
+        DERS ~ a*LES  + age
+      # indirect effect
+        extCBCL~ b*DERS
+      # indirect effect (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+nogenderextfit <- sem(nogenderextmodel, 
+                      data = med_data, 
+                      meanstructure = TRUE,
+                      se = "robust.cluster",
+                      cluster = "site")
+summary(nogenderextfit, fit.measures=T, 
+        standardized=T, ci=TRUE, rsquare=TRUE)
 parameterEstimates(nogenderextfit, boot.ci.type = "bca.simple")
 
-# gender
-# using cis boys as the comparison group
-genderextmodel_compcisboy <- ' # direct effect 
-             extCBCL~ c*LES + cisgirl + gd + age + LES:cisgirl + LES:gd
-           # mediator 
-             DERS ~ a*LES  + cisgirl + gd + age + LES:cisgirl + LES:gd
-           # indirect effect 
-             extCBCL~ b*DERS
-           # indirect effect w mediator (a*b)
-             ab := a*b
-           # ext effect
-             ext := c + (a*b)
-'
-# using cis girls as the comparison group
-genderextmodel_compcisgirl <- ' # direct effect 
-             extCBCL~ c*LES + cisboy + gd + age + LES:cisboy + LES:gd
-           # mediator 
-             DERS ~ a*LES  + cisboy + gd + age + LES:cisboy + LES:gd
-           # indirect effect 
-             extCBCL~ b*DERS
-           # indirect effect w mediator (a*b)
-             ab := a*b
-           # ext effect
-             ext := c + (a*b)
-'
-genderextfit_compcisboy <- sem(genderextmodel_compcisboy, data = meddata, 
-                                 meanstructure = TRUE,
-                                 se = "robust.cluster",
-                                 cluster = "site")
-summary(genderextfit_compcisboy, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
+###### With gender, using cis boys as the comparison group ####
+genderextmodel_compcisboy <- 
+  ' # direct effect 
+       extCBCL~ c*LES + cisgirl + gd + age + LES:cisgirl + LES:gd
+     # mediator 
+       DERS ~ a*LES  + cisgirl + gd + age + LES:cisgirl + LES:gd
+     # indirect effect 
+       extCBCL~ b*DERS
+     # indirect effect w mediator (a*b)
+       ab := a*b
+     # total effect
+       total := c + (a*b) '
+genderextfit_compcisboy <- sem(genderextmodel_compcisboy, 
+                               data = med_data, 
+                               meanstructure = TRUE,
+                               se = "robust.cluster",
+                               cluster = "site")
+summary(genderextfit_compcisboy, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
 parameterEstimates(genderextfit_compcisboy, boot.ci.type = "bca.simple")
 
-genderextfit_compcisgirl <- sem(genderextmodel_compcisgirl, data = meddata, 
-                                  meanstructure = TRUE,
-                                  se = "robust.cluster",
-                                  cluster = "site")
-summary(genderextfit_compcisgirl, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
+###### With gender, using cis girls as the comparison group ####
+genderextmodel_compcisgirl <- 
+  ' # direct effect 
+        extCBCL~ c*LES + cisboy + gd + age + LES:cisboy + LES:gd
+      # mediator 
+        DERS ~ a*LES  + cisboy + gd + age + LES:cisboy + LES:gd
+      # indirect effect 
+        extCBCL~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+genderextfit_compcisgirl <- sem(genderextmodel_compcisgirl, 
+                                data = med_data, 
+                                meanstructure = TRUE,
+                                se = "robust.cluster",
+                                cluster = "site")
+summary(genderextfit_compcisgirl, 
+        fit.measures=T, standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
 parameterEstimates(genderextfit_compcisgirl, boot.ci.type = "bca.simple")
 
-# sex
-sexextmodel <- ' # direct effect
-             extCBCL~ c*LES + sex_female_CMC + age + LES:sex_female_CMC
-           # mediator
-             DERS ~ a*LES  + sex_female_CMC + age + LES:sex_female_CMC
-           # indirect effect
-             extCBCL~ b*DERS
-           # indirect effect w mediator (a*b)
-             ab := a*b
-           # ext effect
-             ext := c + (a*b)
-'
-sexextfit <- sem(sexextmodel, data = sexmeddata, meanstructure = TRUE,
-                   se = "robust.cluster",
-                   cluster = "site"
-)
-summary(sexextfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
+###### With sex ####
+sexextmodel <- 
+  ' # direct effect
+        extCBCL~ c*LES + female + age + LES:female
+      # mediator
+        DERS ~ a*LES  + female + age + LES:female
+      # indirect effect
+        extCBCL~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+sexextfit <- sem(sexextmodel, 
+                 data = sex_med_data, 
+                 meanstructure = TRUE,
+                 se = "robust.cluster",
+                 cluster = "site")
+summary(sexextfit, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
 parameterEstimates(sexextfit, boot.ci.type = "bca.simple")
 
-
-# ### log transformed variables (all yr 4) ####
-# ### total problems cbcl
-# nogendertotalmodel <- ' # direct effect
-#              logtotalCBCL~ c*logLES + c1*age
-#            # mediator
-#              logDERS ~ a*logLES  + a1*age
-#            # indirect effect
-#              logtotalCBCL~ b*logDERS
-#            # indirect effect (a*b)
-#              ab := a*b
-#            # total effect
-#              total := c + (a*b)         '
-# nogendertotalfit <- sem(nogendertotalmodel, data = meddata, meanstructure = TRUE,
-#                         # se = "boot",
-#                         # bootstrap = 500,
-#                         se = "robust.cluster",
-#                         cluster = "site"
-# )
-# summary(nogendertotalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# # semPaths(object = nogendertotalfit, whatLabels = "std") #make diagram with standardized coefficients on edges
-# 
-# # unconstrained gender
-# gendertotalmodel <- ' # direct effect 
-#              logtotalCBCL~ c("c1","c2","c3")*logLES + c("m1","m2","m3")*age
-#            # mediator 
-#              logDERS ~ c("a1","a2","a3")*logLES  + c("n1","n2","n3")*age
-#            # indirect effect 
-#              logtotalCBCL~ c("b1","b2","b3")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#              a3b3 := a3*b3
-#            # total effect
-#              total1 := c1 + (a1*b1)
-#              total2 := c2 + (a2*b2)
-#              total3 := c3 + (a3*b3)
-# '
-# gendertotalfit <- sem(gendertotalmodel, data = meddata, meanstructure = TRUE,
-#                       # se = "boot",
-#                       # bootstrap = 500,
-#                       group="genderid",
-#                       se = "robust.cluster",
-#                       cluster = "site")
-# summary(gendertotalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained gender
-# gender_constall_totalmodel <- ' # direct effect 
-#              logtotalCBCL~ c("c1","c1","c1")*logLES + c("m1","m1","m1")*age
-#            # mediator 
-#              logDERS ~ c("a1","a1","a1")*logLES  + c("n1","n1","n1")*age
-#            # indirect effect 
-#              logtotalCBCL~ c("b1","b1","b1")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#              a3b3 := a1*b1
-#            # total effect
-#              total1 := c1 + (a1*b1)
-#              total2 := c1 + (a1*b1)
-#              total3 := c1 + (a1*b1)
-# '
-# gender_constall_totalfit <- sem(gender_constall_totalmodel, data = meddata, meanstructure = TRUE,
-#                                 # se = "boot",
-#                                 # bootstrap = 500,
-#                                 group="genderid",
-#                                 se = "robust.cluster",
-#                                 cluster = "site")
-# summary(gender_constall_totalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of gender
-# anova(gendertotalfit, gender_constall_totalfit)
-# 
-# # unconstrained sex
-# sextotalmodel <- ' # direct effect
-#              logtotalCBCL~ c("c1","c2")*logLES + c("m1","m2")*age
-#            # mediator
-#              logDERS ~ c("a1","a2")*logLES  + c("n1","n2")*age
-#            # indirect effect
-#              logtotalCBCL~ c("b1","b2")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#            # total effect
-#              total1 := c1 + (a1*b1)
-#              total2 := c2 + (a2*b2)
-# '
-# sextotalfit <- sem(sextotalmodel, data = sexmeddata, meanstructure = TRUE,
-#                    # se = "boot",
-#                    # bootstrap = 500,
-#                    group="sex",
-#                    se = "robust.cluster",
-#                    cluster = "site"
-# )
-# summary(sextotalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained sex
-# sex_constall_totalmodel <- ' # direct effect 
-#              logtotalCBCL~ c("c1","c1")*logLES + c("m1","m1")*age
-#            # mediator 
-#              logDERS ~ c("a1","a1")*logLES  + c("n1","n1")*age
-#            # indirect effect 
-#              logtotalCBCL~ c("b1","b1")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#            # total effect
-#              total1 := c1 + (a1*b1)
-#              total2 := c1 + (a1*b1)
-# '
-# sex_constall_totalfit <- sem(sex_constall_totalmodel, data = sexmeddata, meanstructure = TRUE,
-#                              # se = "boot",
-#                              # bootstrap = 500,
-#                              group="sex",
-#                              se = "robust.cluster",
-#                              cluster = "site")
-# summary(sex_constall_totalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of sex
-# anova(sextotalfit, sex_constall_totalfit)
-# 
-# #do the constrained models for gender and sex significantly differ? no
-# anova(gender_constall_totalfit,sex_constall_totalfit)
-# 
-# ### internalizing cbcl
-# nogenderintmodel <- ' # direct effect
-#              logintCBCL~ c*logLES + c1*age
-#            # mediator
-#              logDERS ~ a*logLES  + m1*age
-#            # indirect effect
-#              logintCBCL~ b*logDERS
-#            # indirect effect (a*b)
-#              ab := a*b
-#            # total effect
-#              total := c + (a*b)         '
-# nogenderintfit <- sem(nogenderintmodel, data = meddata, meanstructure = TRUE,
-#                       # se = "boot", 
-#                       # bootstrap = 500
-#                       se = "robust.cluster",
-#                       cluster = "site")
-# summary(nogenderintfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# # unconstrained
-# genderintmodel <- ' # direct effect 
-#              logintCBCL~ c("c1","c2","c3")*logLES + c("m1","m2","m3")*age
-#            # mediator 
-#              logDERS ~ c("a1","a2","a3")*logLES  + c("n1","n2","n3")*age
-#            # indirect effect 
-#              logintCBCL~ c("b1","b2","b3")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#              a3b3 := a3*b3
-#            # int effect
-#              int1 := c1 + (a1*b1)
-#              int2 := c2 + (a2*b2)
-#              int3 := c3 + (a3*b3)
-# '
-# genderintfit <- sem(genderintmodel, data = meddata, meanstructure = TRUE,
-#                     # se = "boot",
-#                     # bootstrap = 500,
-#                     group="genderid",
-#                     se = "robust.cluster",
-#                     cluster = "site")
-# summary(genderintfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained
-# gender_constall_intmodel <- ' # direct effect 
-#              logintCBCL~ c("c1","c1","c1")*logLES + c("m1","m1","m1")*age
-#            # mediator 
-#              logDERS ~ c("a1","a1","a1")*logLES  + c("n1","n1","n1")*age
-#            # indirect effect 
-#              logintCBCL~ c("b1","b1","b1")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#              a3b3 := a1*b1
-#            # int effect
-#              int1 := c1 + (a1*b1)
-#              int2 := c1 + (a1*b1)
-#              int3 := c1 + (a1*b1)
-# '
-# gender_constall_intfit <- sem(gender_constall_intmodel, data = meddata, meanstructure = TRUE,
-#                               # se = "boot",
-#                               # bootstrap = 500,
-#                               group="genderid",
-#                               se = "robust.cluster",
-#                               cluster = "site")
-# summary(gender_constall_intfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of gender
-# anova(genderintfit, gender_constall_intfit)
-# 
-# # unconstrained sex
-# sexintmodel <- ' # direct effect
-#              logintCBCL~ c("c1","c2")*logLES + c("m1","m2")*age
-#            # mediator
-#              logDERS ~ c("a1","a2")*logLES  + c("n1","n2")*age
-#            # indirect effect
-#              logintCBCL~ c("b1","b2")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#            # int effect
-#              int1 := c1 + (a1*b1)
-#              int2 := c2 + (a2*b2)
-# '
-# sexintfit <- sem(sexintmodel, data = sexmeddata, meanstructure = TRUE,
-#                  # se = "boot",
-#                  # bootstrap = 500,
-#                  group="sex",
-#                  se = "robust.cluster",
-#                  cluster = "site"
-# )
-# summary(sexintfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained sex
-# sex_constall_intmodel <- ' # direct effect 
-#              logintCBCL~ c("c1","c1")*logLES + c("m1","m1")*age
-#            # mediator 
-#              logDERS ~ c("a1","a1")*logLES  + c("n1","n1")*age
-#            # indirect effect 
-#              logintCBCL~ c("b1","b1")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#            # int effect
-#              int1 := c1 + (a1*b1)
-#              int2 := c1 + (a1*b1)
-# '
-# sex_constall_intfit <- sem(sex_constall_intmodel, data = sexmeddata, meanstructure = TRUE,
-#                            # se = "boot",
-#                            # bootstrap = 500,
-#                            group="sex",
-#                            se = "robust.cluster",
-#                            cluster = "site")
-# summary(sex_constall_intfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of sex
-# anova(sexintfit, sex_constall_intfit)
-# 
-# #do the constrained models for gender and sex significantly differ? no
-# anova(gender_constall_intfit,sex_constall_intfit)
-# 
-# ### externalizing cbcl
-# nogenderextmodel <- ' # direct effect
-#              logextCBCL~ c*logLES + c1*age
-#            # mediator
-#              logDERS ~ a*logLES  + m1*age
-#            # indirect effect
-#              logextCBCL~ b*logDERS
-#            # indirect effect (a*b)
-#              ab := a*b
-#            # total effect
-#              total := c + (a*b)         '
-# nogenderextfit <- sem(nogenderextmodel, data = meddata, meanstructure = TRUE,
-#                       # se = "boot", 
-#                       # bootstrap = 500,
-#                       se = "robust.cluster",
-#                       cluster = "site")
-# summary(nogenderextfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# # unconstrained
-# genderextmodel <- ' # direct effect 
-#              logextCBCL~ c("c1","c2","c3")*logLES + c("m1","m2","m3")*age
-#            # mediator 
-#              logDERS ~ c("a1","a2","a3")*logLES  + c("n1","n2","n3")*age
-#            # indirect effect 
-#              logextCBCL~ c("b1","b2","b3")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#              a3b3 := a3*b3
-#            # ext effect
-#              ext1 := c1 + (a1*b1)
-#              ext2 := c2 + (a2*b2)
-#              ext3 := c3 + (a3*b3)
-# '
-# genderextfit <- sem(genderextmodel, data = meddata, meanstructure = TRUE,
-#                     # se = "boot",
-#                     # bootstrap = 500,
-#                     group="genderid",
-#                     se = "robust.cluster",
-#                     cluster = "site")
-# summary(genderextfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained
-# gender_constall_extmodel <- ' # direct effect 
-#              logextCBCL~ c("c1","c1","c1")*logLES + c("m1","m1","m1")*age
-#            # mediator 
-#              logDERS ~ c("a1","a1","a1")*logLES  + c("n1","n1","n1")*age
-#            # indirect effect 
-#              logextCBCL~ c("b1","b1","b1")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#              a3b3 := a1*b1
-#            # ext effect
-#              ext1 := c1 + (a1*b1)
-#              ext2 := c1 + (a1*b1)
-#              ext3 := c1 + (a1*b1)
-# '
-# gender_constall_extfit <- sem(gender_constall_extmodel, data = meddata, meanstructure = TRUE,
-#                               # se = "boot",
-#                               # bootstrap = 500,
-#                               group="genderid",
-#                               se = "robust.cluster",
-#                               cluster = "site")
-# summary(gender_constall_extfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of gender
-# anova(genderextfit, gender_constall_extfit)
-# 
-# # unconstrained sex
-# sexextmodel <- ' # direct effect
-#              logextCBCL~ c("c1","c2")*logLES + c("m1","m2")*age
-#            # mediator
-#              logDERS ~ c("a1","a2")*logLES  + c("n1","n2")*age
-#            # indirect effect
-#              logextCBCL~ c("b1","b2")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#            # ext effect
-#              ext1 := c1 + (a1*b1)
-#              ext2 := c2 + (a2*b2)
-# '
-# sexextfit <- sem(sexextmodel, data = sexmeddata, meanstructure = TRUE,
-#                  # se = "boot",
-#                  # bootstrap = 500,
-#                  group="sex",
-#                  se = "robust.cluster",
-#                  cluster = "site"
-# )
-# summary(sexextfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained sex
-# sex_constall_extmodel <- ' # direct effect 
-#              logextCBCL~ c("c1","c1")*logLES + c("m1","m1")*age
-#            # mediator 
-#              logDERS ~ c("a1","a1")*logLES  + c("n1","n1")*age
-#            # indirect effect 
-#              logextCBCL~ c("b1","b1")*logDERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#            # ext effect
-#              ext1 := c1 + (a1*b1)
-#              ext2 := c1 + (a1*b1)
-# '
-# sex_constall_extfit <- sem(sex_constall_extmodel, data = sexmeddata, meanstructure = TRUE,
-#                            # se = "boot",
-#                            # bootstrap = 500,
-#                            group="sex",
-#                            se = "robust.cluster",
-#                            cluster = "site")
-# summary(sex_constall_extfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of sex
-# anova(sexextfit, sex_constall_extfit)
-# 
-# #do the constrained models for gender and sex significantly differ? no
-# anova(gender_constall_extfit,sex_constall_extfit)
-# 
-# 
-# ### not transformed variables (yr3 year 3, DERS and CBCL year 4)
-# ### total problems cbcl
-# nogendertotalmodel <- ' # direct effect
-#              totalCBCL~ c*yr3LES + c1*age
-#            # mediator
-#              DERS ~ a*yr3LES  + a1*age
-#            # indirect effect
-#              totalCBCL~ b*DERS
-#            # indirect effect (a*b)
-#              ab := a*b
-#            # total effect
-#              total := c + (a*b)         '
-# nogendertotalfit <- sem(nogendertotalmodel, data = meddata, meanstructure = TRUE,
-#                         # se = "boot",
-#                         # bootstrap = 500,
-#                         se = "robust.cluster",
-#                         cluster = "site"
-# )
-# summary(nogendertotalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# # semPaths(object = nogendertotalfit, whatLabels = "std") #make diagram with standardized coefficients on edges
-# 
-# # unconstrained gender
-# gendertotalmodel <- ' # direct effect 
-#              totalCBCL~ c("c1","c2","c3")*yr3LES + c("m1","m2","m3")*age
-#            # mediator 
-#              DERS ~ c("a1","a2","a3")*yr3LES  + c("n1","n2","n3")*age
-#            # indirect effect 
-#              totalCBCL~ c("b1","b2","b3")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#              a3b3 := a3*b3
-#            # total effect
-#              total1 := c1 + (a1*b1)
-#              total2 := c2 + (a2*b2)
-#              total3 := c3 + (a3*b3)
-# '
-# gendertotalfit <- sem(gendertotalmodel, data = meddata, meanstructure = TRUE,
-#                       # se = "boot",
-#                       # bootstrap = 500,
-#                       group="genderid",
-#                       se = "robust.cluster",
-#                       cluster = "site")
-# summary(gendertotalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained gender
-# gender_constall_totalmodel <- ' # direct effect 
-#              totalCBCL~ c("c1","c1","c1")*yr3LES + c("m1","m1","m1")*age
-#            # mediator 
-#              DERS ~ c("a1","a1","a1")*yr3LES  + c("n1","n1","n1")*age
-#            # indirect effect 
-#              totalCBCL~ c("b1","b1","b1")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#              a3b3 := a1*b1
-#            # total effect
-#              total1 := c1 + (a1*b1)
-#              total2 := c1 + (a1*b1)
-#              total3 := c1 + (a1*b1)
-# '
-# gender_constall_totalfit <- sem(gender_constall_totalmodel, data = meddata, meanstructure = TRUE,
-#                                 # se = "boot",
-#                                 # bootstrap = 500,
-#                                 group="genderid",
-#                                 se = "robust.cluster",
-#                                 cluster = "site")
-# summary(gender_constall_totalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of gender
-# anova(gendertotalfit, gender_constall_totalfit)
-# 
-# #do the model without gender and the constrained models for gender significantly differ? no
-# anova(nogendertotalfit,gender_constall_totalfit)
-# 
-# # unconstrained sex
-# sextotalmodel <- ' # direct effect
-#              totalCBCL~ c("c1","c2")*yr3LES + c("m1","m2")*age
-#            # mediator
-#              DERS ~ c("a1","a2")*yr3LES  + c("n1","n2")*age
-#            # indirect effect
-#              totalCBCL~ c("b1","b2")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#            # total effect
-#              total1 := c1 + (a1*b1)
-#              total2 := c2 + (a2*b2)
-# '
-# sextotalfit <- sem(sextotalmodel, data = sexmeddata, meanstructure = TRUE,
-#                    # se = "boot",
-#                    # bootstrap = 500,
-#                    group="sex",
-#                    se = "robust.cluster",
-#                    cluster = "site"
-# )
-# summary(sextotalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained sex
-# sex_constall_totalmodel <- ' # direct effect 
-#              totalCBCL~ c("c1","c1")*yr3LES + c("m1","m1")*age
-#            # mediator 
-#              DERS ~ c("a1","a1")*yr3LES  + c("n1","n1")*age
-#            # indirect effect 
-#              totalCBCL~ c("b1","b1")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#            # total effect
-#              total1 := c1 + (a1*b1)
-#              total2 := c1 + (a1*b1)
-# '
-# sex_constall_totalfit <- sem(sex_constall_totalmodel, data = sexmeddata, meanstructure = TRUE,
-#                              # se = "boot",
-#                              # bootstrap = 500,
-#                              group="sex",
-#                              se = "robust.cluster",
-#                              cluster = "site")
-# summary(sex_constall_totalfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of sex
-# anova(sextotalfit, sex_constall_totalfit)
-# 
-# #do the constrained models for gender and sex significantly differ? no
-# anova(gender_constall_totalfit,sex_constall_totalfit)
-# 
-# ### internalizing cbcl
-# nogenderintmodel <- ' # direct effect
-#              intCBCL~ c*yr3LES + c1*age
-#            # mediator
-#              DERS ~ a*yr3LES  + m1*age
-#            # indirect effect
-#              intCBCL~ b*DERS
-#            # indirect effect (a*b)
-#              ab := a*b
-#            # total effect
-#              total := c + (a*b)         '
-# nogenderintfit <- sem(nogenderintmodel, data = meddata, meanstructure = TRUE,
-#                       # se = "boot", 
-#                       # bootstrap = 500
-#                       se = "robust.cluster",
-#                       cluster = "site")
-# summary(nogenderintfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# # unconstrained
-# genderintmodel <- ' # direct effect 
-#              intCBCL~ c("c1","c2","c3")*yr3LES + c("m1","m2","m3")*age
-#            # mediator 
-#              DERS ~ c("a1","a2","a3")*yr3LES  + c("n1","n2","n3")*age
-#            # indirect effect 
-#              intCBCL~ c("b1","b2","b3")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#              a3b3 := a3*b3
-#            # int effect
-#              int1 := c1 + (a1*b1)
-#              int2 := c2 + (a2*b2)
-#              int3 := c3 + (a3*b3)
-# '
-# genderintfit <- sem(genderintmodel, data = meddata, meanstructure = TRUE,
-#                     # se = "boot",
-#                     # bootstrap = 500,
-#                     group="genderid",
-#                     se = "robust.cluster",
-#                     cluster = "site")
-# summary(genderintfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained
-# gender_constall_intmodel <- ' # direct effect 
-#              intCBCL~ c("c1","c1","c1")*yr3LES + c("m1","m1","m1")*age
-#            # mediator 
-#              DERS ~ c("a1","a1","a1")*yr3LES  + c("n1","n1","n1")*age
-#            # indirect effect 
-#              intCBCL~ c("b1","b1","b1")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#              a3b3 := a1*b1
-#            # int effect
-#              int1 := c1 + (a1*b1)
-#              int2 := c1 + (a1*b1)
-#              int3 := c1 + (a1*b1)
-# '
-# gender_constall_intfit <- sem(gender_constall_intmodel, data = meddata, meanstructure = TRUE,
-#                               # se = "boot",
-#                               # bootstrap = 500,
-#                               group="genderid",
-#                               se = "robust.cluster",
-#                               cluster = "site")
-# summary(gender_constall_intfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of gender
-# anova(genderintfit, gender_constall_intfit)
-# 
-# #do the model without gender and the constrained models for gender significantly differ? no
-# anova(nogenderintfit,gender_constall_intfit)
-# 
-# # unconstrained sex
-# sexintmodel <- ' # direct effect
-#              intCBCL~ c("c1","c2")*yr3LES + c("m1","m2")*age
-#            # mediator
-#              DERS ~ c("a1","a2")*yr3LES  + c("n1","n2")*age
-#            # indirect effect
-#              intCBCL~ c("b1","b2")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#            # int effect
-#              int1 := c1 + (a1*b1)
-#              int2 := c2 + (a2*b2)
-# '
-# sexintfit <- sem(sexintmodel, data = sexmeddata, meanstructure = TRUE,
-#                  # se = "boot",
-#                  # bootstrap = 500,
-#                  group="sex",
-#                  se = "robust.cluster",
-#                  cluster = "site"
-# )
-# summary(sexintfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained sex
-# sex_constall_intmodel <- ' # direct effect 
-#              intCBCL~ c("c1","c1")*yr3LES + c("m1","m1")*age
-#            # mediator 
-#              DERS ~ c("a1","a1")*yr3LES  + c("n1","n1")*age
-#            # indirect effect 
-#              intCBCL~ c("b1","b1")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#            # int effect
-#              int1 := c1 + (a1*b1)
-#              int2 := c1 + (a1*b1)
-# '
-# sex_constall_intfit <- sem(sex_constall_intmodel, data = sexmeddata, meanstructure = TRUE,
-#                            # se = "boot",
-#                            # bootstrap = 500,
-#                            group="sex",
-#                            se = "robust.cluster",
-#                            cluster = "site")
-# summary(sex_constall_intfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of sex
-# anova(sexintfit, sex_constall_intfit)
-# 
-# #do the constrained models for gender and sex significantly differ? no
-# anova(gender_constall_intfit,sex_constall_intfit)
-# 
-# ### externalizing cbcl
-# nogenderextmodel <- ' # direct effect
-#              extCBCL~ c*yr3LES + c1*age
-#            # mediator
-#              DERS ~ a*yr3LES  + m1*age
-#            # indirect effect
-#              extCBCL~ b*DERS
-#            # indirect effect (a*b)
-#              ab := a*b
-#            # total effect
-#              total := c + (a*b)         '
-# nogenderextfit <- sem(nogenderextmodel, data = meddata, meanstructure = TRUE,
-#                       # se = "boot", 
-#                       # bootstrap = 500,
-#                       se = "robust.cluster",
-#                       cluster = "site")
-# summary(nogenderextfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# # unconstrained
-# genderextmodel <- ' # direct effect 
-#              extCBCL~ c("c1","c2","c3")*yr3LES + c("m1","m2","m3")*age
-#            # mediator 
-#              DERS ~ c("a1","a2","a3")*yr3LES  + c("n1","n2","n3")*age
-#            # indirect effect 
-#              extCBCL~ c("b1","b2","b3")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#              a3b3 := a3*b3
-#            # ext effect
-#              ext1 := c1 + (a1*b1)
-#              ext2 := c2 + (a2*b2)
-#              ext3 := c3 + (a3*b3)
-# '
-# genderextfit <- sem(genderextmodel, data = meddata, meanstructure = TRUE,
-#                     # se = "boot",
-#                     # bootstrap = 500,
-#                     group="genderid",
-#                     se = "robust.cluster",
-#                     cluster = "site")
-# summary(genderextfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained
-# gender_constall_extmodel <- ' # direct effect 
-#              extCBCL~ c("c1","c1","c1")*yr3LES + c("m1","m1","m1")*age
-#            # mediator 
-#              DERS ~ c("a1","a1","a1")*yr3LES  + c("n1","n1","n1")*age
-#            # indirect effect 
-#              extCBCL~ c("b1","b1","b1")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#              a3b3 := a1*b1
-#            # ext effect
-#              ext1 := c1 + (a1*b1)
-#              ext2 := c1 + (a1*b1)
-#              ext3 := c1 + (a1*b1)
-# '
-# gender_constall_extfit <- sem(gender_constall_extmodel, data = meddata, meanstructure = TRUE,
-#                               # se = "boot",
-#                               # bootstrap = 500,
-#                               group="genderid",
-#                               se = "robust.cluster",
-#                               cluster = "site")
-# summary(gender_constall_extfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of gender
-# anova(genderextfit, gender_constall_extfit)
-# 
-# #do the model without gender and the constrained models for gender significantly differ? no
-# anova(nogenderextfit,gender_constall_extfit)
-# 
-# # unconstrained sex
-# sexextmodel <- ' # direct effect
-#              extCBCL~ c("c1","c2")*yr3LES + c("m1","m2")*age
-#            # mediator
-#              DERS ~ c("a1","a2")*yr3LES  + c("n1","n2")*age
-#            # indirect effect
-#              extCBCL~ c("b1","b2")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a2*b2
-#            # ext effect
-#              ext1 := c1 + (a1*b1)
-#              ext2 := c2 + (a2*b2)
-# '
-# sexextfit <- sem(sexextmodel, data = sexmeddata, meanstructure = TRUE,
-#                  # se = "boot",
-#                  # bootstrap = 500,
-#                  group="sex",
-#                  se = "robust.cluster",
-#                  cluster = "site"
-# )
-# summary(sexextfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# 
-# #all constrained sex
-# sex_constall_extmodel <- ' # direct effect 
-#              extCBCL~ c("c1","c1")*yr3LES + c("m1","m1")*age
-#            # mediator 
-#              DERS ~ c("a1","a1")*yr3LES  + c("n1","n1")*age
-#            # indirect effect 
-#              extCBCL~ c("b1","b1")*DERS
-#            # indirect effect w mediator (a*b)
-#              a1b1 := a1*b1
-#              a2b2 := a1*b1
-#            # ext effect
-#              ext1 := c1 + (a1*b1)
-#              ext2 := c1 + (a1*b1)
-# '
-# sex_constall_extfit <- sem(sex_constall_extmodel, data = sexmeddata, meanstructure = TRUE,
-#                            # se = "boot",
-#                            # bootstrap = 500,
-#                            group="sex",
-#                            se = "robust.cluster",
-#                            cluster = "site")
-# summary(sex_constall_extfit, fit.measures=T, standardized=T, ci=TRUE, rsquare=TRUE)
-# #fully constrained and fully unconstrained models are not sig diff so no effect of sex
-# anova(sexextfit, sex_constall_extfit)
-# 
-# #do the constrained models for gender and sex significantly differ? no
-# anova(gender_constall_extfit,sex_constall_extfit)
-# 
-# 
-# ### standard regression without gender ####
-# 
-# #how much does site matter?
-# site_ders_total_reg <- lmer(ders_total ~ (1|site),data=yr4data)
-# variances <- as.data.frame(VarCorr(site_ders_total_reg))
-# cluster_var = variances[1,'vcov']
-# resid_var = variances[2,'vcov']
-# ICC_Y2 <- cluster_var/(cluster_var + resid_var)
-# ICC_Y2 #site explains 0.0110 variance in ders_total
-# 
-# site_le_reg <- lmer(total_bad_le ~ (1|site),data=yr4data)
-# variances <- as.data.frame(VarCorr(site_le_reg))
-# cluster_var = variances[1,'vcov']
-# resid_var = variances[2,'vcov']
-# ICC_Y2 <- cluster_var/(cluster_var + resid_var)
-# ICC_Y2 #site explains 0.0106 variance in total_bad_le
-# 
-# site_cbcl_total_reg <- lmer(cbcl_total ~ (1|site),data=yr4data)
-# variances <- as.data.frame(VarCorr(site_cbcl_total_reg))
-# cluster_var = variances[1,'vcov']
-# resid_var = variances[2,'vcov']
-# ICC_Y2 <- cluster_var/(cluster_var + resid_var)
-# ICC_Y2 #site explains 0.0081 variance in cbcl_total
-# 
-# site_cbcl_int_reg <- lmer(cbcl_int ~ (1|site),data=yr4data)
-# variances <- as.data.frame(VarCorr(site_cbcl_int_reg))
-# cluster_var = variances[1,'vcov']
-# resid_var = variances[2,'vcov']
-# ICC_Y2 <- cluster_var/(cluster_var + resid_var)
-# ICC_Y2 #site explains 0.0050 variance in cbcl_int
-# 
-# site_cbcl_ext_reg <- lmer(cbcl_ext ~ (1|site),data=yr4data)
-# variances <- as.data.frame(VarCorr(site_cbcl_ext_reg))
-# cluster_var = variances[1,'vcov']
-# resid_var = variances[2,'vcov']
-# ICC_Y2 <- cluster_var/(cluster_var + resid_var)
-# ICC_Y2 #site explains 0.0072 variance in cbcl_ext
-# 
-# #do life events affect emotion regulation - yes
-# ders_total_le_reg <- lmer(ders_total ~ total_bad_le + age + (1|site),data=yr4data)
-# summary(ders_total_le_reg)
-# AIC(ders_total_le_reg)
-# partR2(ders_total_le_reg,partvars=c("total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# #do life events affect cbcl - yes to all
-# cbcltotal_le_reg <- lmer(cbcl_total ~ total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_le_reg)
-# AIC(cbcltotal_le_reg)
-# partR2(cbcltotal_le_reg,partvars=c("total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclint_le_reg <- lmer(cbcl_int ~ total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_le_reg)
-# AIC(cbclint_le_reg)
-# partR2(cbclint_le_reg,partvars=c("total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclext_le_reg <- lmer(cbcl_ext ~ total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_le_reg)
-# AIC(cbclext_le_reg)
-# partR2(cbclext_le_reg,partvars=c("total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# #does emotion regulation affect cbcl - yes to all
-# cbcltotal_ders_total_reg <- lmer(cbcl_total ~ ders_total + age + (1|site),data=yr4data)
-# summary(cbcltotal_ders_total_reg)
-# AIC(cbcltotal_ders_total_reg)
-# partR2(cbcltotal_ders_total_reg,partvars=c("ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# cbclint_ders_total_reg <- lmer(cbcl_int ~ ders_total + age + (1|site),data=yr4data)
-# summary(cbclint_ders_total_reg)
-# AIC(cbclint_ders_total_reg)
-# partR2(cbclint_ders_total_reg,partvars=c("ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# cbclext_ders_total_reg <- lmer(cbcl_ext ~ ders_total + age + (1|site),data=yr4data)
-# summary(cbclext_ders_total_reg)
-# AIC(cbclext_ders_total_reg)
-# partR2(cbclext_ders_total_reg,partvars=c("ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# #do emotion regulation and life events interact to affect cbcl - no to all
-# cbcltotal_le_ders_total_reg <- lmer(cbcl_total ~ ders_total*total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_le_ders_total_reg) #main effect ders and le and age but no interaction
-# #no interaction so use just additive model
-# cbcltotal_le_ders_total_reg <- lmer(cbcl_total ~ ders_total+total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_le_ders_total_reg) #main effect ders and le 
-# AIC(cbcltotal_le_ders_total_reg) #main effect ders and le 
-# partR2(cbcltotal_le_ders_total_reg,partvars=c("ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclint_le_ders_total_reg <- lmer(cbcl_int ~ ders_total*total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_le_ders_total_reg) #main effect ders only and not le or age
-# #no interaction so use just additive model
-# cbclint_le_ders_total_reg <- lmer(cbcl_int ~ ders_total+total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_le_ders_total_reg) #main effect ders and le but not age
-# AIC(cbclint_le_ders_total_reg) #main effect ders and le but not age
-# partR2(cbclint_le_ders_total_reg,partvars=c("ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclext_le_ders_total_reg <- lmer(cbcl_ext ~ ders_total*total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_le_ders_total_reg) #main effect ders and le and age but no interaction
-# #no interaction so use just additive model
-# cbclext_le_ders_total_reg <- lmer(cbcl_ext ~ ders_total+total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_le_ders_total_reg) #main effect ders and le and age 
-# AIC(cbclext_le_ders_total_reg) #main effect ders and le and age 
-# partR2(cbclext_le_ders_total_reg,partvars=c("ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# ### standard regression adding in gender ####
-# #does gender affect age - gd 1.1893 months younger than cis boys p = 0.0251
-# age_gender_reg <- lmer(age ~ genderid +(1|site),data=yr4data)
-# summary(age_gender_reg)
-# 
-# #does gender affect life events - same as KW results above
-# le_gender_reg <- lmer(total_bad_le ~ genderid + age + (1|site),data=yr4data)
-# summary(le_gender_reg)
-# 
-# #does gender affect emotional regulation problems - same as KW results above
-# ders_total_gender_reg <- lmer(ders_total ~ genderid + age + (1|site),data=yr4data)
-# summary(ders_total_gender_reg)
-# 
-# #does gender affect cbcl - same as KW results above
-# cbcltotal_gender_reg <- lmer(cbcl_total ~ genderid + age + (1|site),data=yr4data)
-# summary(cbcltotal_gender_reg)
-# cbclint_gender_reg <- lmer(cbcl_int ~ genderid + age + (1|site),data=yr4data)
-# summary(cbclint_gender_reg)
-# cbclext_gender_reg <- lmer(cbcl_ext ~ genderid + age + (1|site),data=yr4data)
-# summary(cbclext_gender_reg)
-# 
-# #do gender and life events interact to affect emotion regulation - yes
-# ders_total_gender_le_reg <- lmer(ders_total ~ genderid*total_bad_le + age + (1|site),data=yr4data)
-# summary(ders_total_gender_le_reg) #main effects cis girl and gd and le but no interactions
-# #no interaction so just do additive model
-# ders_total_gender_le_reg <- lmer(ders_total ~ genderid+total_bad_le + age + (1|site),data=yr4data)
-# summary(ders_total_gender_le_reg) #main effects cis girl and gd and le
-# AIC(ders_total_gender_le_reg) #main effects cis girl and gd and le
-# partR2(ders_total_gender_le_reg,partvars=c("genderid","total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# #do gender and life events interact to affect cbcl - main effect but no interactions to all
-# cbcltotal_gender_le_reg <- lmer(cbcl_total ~ genderid*total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_gender_le_reg) #main effect gd and le and age but not cis girl or interaction
-# #no interaction so use just additive model
-# cbcltotal_gender_le_reg <- lmer(cbcl_total ~ genderid+total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_gender_le_reg) #main effect gd and le and age but not cis girl
-# AIC(cbcltotal_gender_le_reg) #main effect gd and le and age but not cis girl
-# partR2(cbcltotal_gender_le_reg,partvars=c("genderid","total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclint_gender_le_reg <- lmer(cbcl_int ~ genderid*total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_gender_le_reg) #main effect gd and le but not cis girl or age or interaction
-# #no interaction so use just additive model
-# cbclint_gender_le_reg <- lmer(cbcl_int ~ genderid+total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_gender_le_reg) #main effect gd and cis girl and le but not age 
-# AIC(cbclint_gender_le_reg) #main effect gd and cis girl and le but not age 
-# partR2(cbclint_gender_le_reg,partvars=c("genderid","total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclext_gender_le_reg <- lmer(cbcl_ext ~ genderid*total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_gender_le_reg) #main effect gd and cis girl and le and age but not interaction
-# #no interaction so use just additive model
-# cbclext_gender_le_reg <- lmer(cbcl_ext ~ genderid+total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_gender_le_reg) #main effect gd and cis girl and le and age 
-# AIC(cbclext_gender_le_reg) #main effect gd and cis girl and le and age 
-# partR2(cbclext_gender_le_reg,partvars=c("genderid","total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# #do gender and emotion regulation interact to affect cbcl - main effects but no interactions to all
-# cbcltotalgender_ders_total_reg <- lmer(cbcl_total ~ genderid*ders_total + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_ders_total_reg) #main effect gd and ders but not cis girl or interaction
-# #no interaction so use just additive model
-# cbcltotalgender_ders_total_reg <- lmer(cbcl_total ~ genderid+ders_total + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_ders_total_reg) #main effect gd and ders but not cis girl or interaction
-# AIC(cbcltotalgender_ders_total_reg) #main effect gd and ders but not cis girl or interaction
-# partR2(cbcltotalgender_ders_total_reg,partvars=c("genderid","ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# cbclintgender_ders_total_reg <- lmer(cbcl_int ~ genderid*ders_total + age + (1|site),data=yr4data)
-# summary(cbclintgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
-# #no interaction so use just additive model
-# cbclintgender_ders_total_reg <- lmer(cbcl_int ~ genderid+ders_total + age + (1|site),data=yr4data)
-# summary(cbclintgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
-# AIC(cbclintgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
-# partR2(cbclintgender_ders_total_reg,partvars=c("genderid","ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# cbclextgender_ders_total_reg <- lmer(cbcl_ext ~ genderid*ders_total + age + (1|site),data=yr4data)
-# summary(cbclextgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
-# #no interaction so use just additive model
-# cbclextgender_ders_total_reg <- lmer(cbcl_ext ~ genderid+ders_total + age + (1|site),data=yr4data)
-# summary(cbclextgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
-# AIC(cbclextgender_ders_total_reg) #main effect ders but not cis girl or gd or interaction
-# partR2(cbclextgender_ders_total_reg,partvars=c("genderid","ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# #do gender, emotion regulation and life events affect cbcl - 
-# cbcltotalgender_le_ders_total_reg <- lmer(cbcl_total ~ genderid + ders_total + total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_le_ders_total_reg) #cis girl, gd, ders, and le but not age significant
-# AIC(cbcltotalgender_le_ders_total_reg) #cis girl, gd, ders, and le but not age significant
-# partR2(cbcltotalgender_le_ders_total_reg,partvars=c("genderid","ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclintgender_le_ders_total_reg <- lmer(cbcl_int ~ genderid + ders_total + total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclintgender_le_ders_total_reg) #cis girl, gd, ders, and le but not age significant
-# AIC(cbclintgender_le_ders_total_reg) #cis girl, gd, ders, and le but not age significant
-# partR2(cbclintgender_le_ders_total_reg,partvars=c("genderid","ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclextgender_le_ders_total_reg <- lmer(cbcl_ext ~ genderid + ders_total + total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclextgender_le_ders_total_reg) #ders and le and age but not cis girl or gd significant
-# AIC(cbclextgender_le_ders_total_reg) #ders and le and age but not cis girl or gd significant
-# partR2(cbclextgender_le_ders_total_reg,partvars=c("genderid","ders_total","total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# 
-# ### standard regression log transformed les, ders and cbcl, without gender ####
-# #do life events affect emotion regulation - yes
-# log_ders_total_logle_reg <- lmer(log_ders_total ~ log_total_bad_le + age + (1|site),data=yr4data)
-# summary(log_ders_total_logle_reg)
-# AIC(log_ders_total_logle_reg)
-# partR2(log_ders_total_logle_reg,partvars=c("log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# #do life events affect cbcl - yes to all
-# cbcltotal_logle_reg <- lmer(log_cbcl_total ~ log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_logle_reg)
-# AIC(cbcltotal_logle_reg)
-# partR2(cbcltotal_logle_reg,partvars=c("log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclint_logle_reg <- lmer(log_cbcl_int ~ log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_logle_reg)
-# AIC(cbclint_logle_reg)
-# partR2(cbclint_logle_reg,partvars=c("log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclext_logle_reg <- lmer(log_cbcl_ext ~ log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_logle_reg)
-# AIC(cbclext_logle_reg)
-# partR2(cbclext_logle_reg,partvars=c("log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# #does emotion regulation affect cbcl - yes to all
-# cbcltotal_log_ders_total_reg <- lmer(log_cbcl_total ~ log_ders_total + age + (1|site),data=yr4data)
-# summary(cbcltotal_log_ders_total_reg)
-# AIC(cbcltotal_log_ders_total_reg)
-# partR2(cbcltotal_log_ders_total_reg,partvars=c("log_ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# cbclint_log_ders_total_reg <- lmer(log_cbcl_int ~ log_ders_total + age + (1|site),data=yr4data)
-# summary(cbclint_log_ders_total_reg)
-# AIC(cbclint_log_ders_total_reg)
-# partR2(cbclint_log_ders_total_reg,partvars=c("log_ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# cbclext_log_ders_total_reg <- lmer(log_cbcl_ext ~ log_ders_total + age + (1|site),data=yr4data)
-# summary(cbclext_log_ders_total_reg)
-# AIC(cbclext_log_ders_total_reg)
-# partR2(cbclext_log_ders_total_reg,partvars=c("log_ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# #do emotion regulation and life events interact to affect cbcl
-# cbcltotal_le_log_ders_total_reg <- lmer(log_cbcl_total ~ log_ders_total*log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_le_log_ders_total_reg) #no sig ixn
-# cbcltotal_le_log_ders_total_reg <- lmer(log_cbcl_total ~ log_ders_total+log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_le_log_ders_total_reg) #main effect ders and le 
-# AIC(cbcltotal_le_log_ders_total_reg) #main effect ders and le 
-# partR2(cbcltotal_le_log_ders_total_reg,partvars=c("log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# 
-# cbclint_le_log_ders_total_reg <- lmer(log_cbcl_int ~ log_ders_total*log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_le_log_ders_total_reg) #sig ixn 
-# cbclint_le_log_ders_total_reg <- lmer(log_cbcl_int ~ log_ders_total+log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_le_log_ders_total_reg) #main effect ders and le but not age
-# AIC(cbclint_le_log_ders_total_reg) #main effect ders and le but not age
-# partR2(cbclint_le_log_ders_total_reg,partvars=c("log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclext_le_log_ders_total_reg <- lmer(log_cbcl_ext ~ log_ders_total*log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_le_log_ders_total_reg) #sig ixn
-# cbclext_le_log_ders_total_reg <- lmer(log_cbcl_ext ~ log_ders_total+log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_le_log_ders_total_reg) #main effect ders and le and age 
-# AIC(cbclext_le_log_ders_total_reg) #main effect ders and le and age 
-# partR2(cbclext_le_log_ders_total_reg,partvars=c("log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# ### standard regression log transformed les, ders and cbcl, adding in gender ####
-# #does gender affect age - gd 1.1893 months younger than cis boys p = 0.0251
-# age_gender_reg <- lmer(age ~ genderid +(1|site),data=yr4data)
-# summary(age_gender_reg)
-# 
-# #does gender affect life events - same as KW results above
-# le_gender_reg <- lmer(log_total_bad_le ~ genderid + age + (1|site),data=yr4data)
-# summary(le_gender_reg)
-# 
-# #does gender affect emotional regulation problems - same as KW results above
-# log_ders_total_gender_reg <- lmer(log_ders_total ~ genderid + age + (1|site),data=yr4data)
-# summary(log_ders_total_gender_reg)
-# 
-# #does gender affect cbcl - same as KW results above
-# cbcltotal_gender_reg <- lmer(log_cbcl_total ~ genderid + age + (1|site),data=yr4data)
-# summary(cbcltotal_gender_reg)
-# cbclint_gender_reg <- lmer(log_cbcl_int ~ genderid + age + (1|site),data=yr4data)
-# summary(cbclint_gender_reg)
-# cbclext_gender_reg <- lmer(log_cbcl_ext ~ genderid + age + (1|site),data=yr4data)
-# summary(cbclext_gender_reg)
-# 
-# #do gender and life events interact to affect emotion regulation - yes
-# log_ders_total_gender_le_reg <- lmer(log_ders_total ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
-# summary(log_ders_total_gender_le_reg) #main effects cis girl and gd and le but no interactions
-# #no interaction so just do additive model
-# log_ders_total_gender_le_reg <- lmer(log_ders_total ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
-# summary(log_ders_total_gender_le_reg) #main effects cis girl and gd and le
-# AIC(log_ders_total_gender_le_reg) #main effects cis girl and gd and le
-# partR2(log_ders_total_gender_le_reg,partvars=c("genderid","log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# #do gender and life events interact to affect cbcl - main effect but no interactions to all
-# cbcltotal_gender_le_reg <- lmer(log_cbcl_total ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_gender_le_reg) #main effect gd and le and age but not cis girl or interaction
-# #no interaction so use just additive model
-# cbcltotal_gender_le_reg <- lmer(log_cbcl_total ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotal_gender_le_reg) #main effect gd and le and age but not cis girl
-# AIC(cbcltotal_gender_le_reg) #main effect gd and le and age but not cis girl
-# partR2(cbcltotal_gender_le_reg,partvars=c("genderid","log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclint_gender_le_reg <- lmer(log_cbcl_int ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_gender_le_reg) #main effect gd and le but not cis girl or age or interaction
-# #no interaction so use just additive model
-# cbclint_gender_le_reg <- lmer(log_cbcl_int ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclint_gender_le_reg) #main effect gd and le but not cis girl or age 
-# AIC(cbclint_gender_le_reg) #main effect gd and le but not cis girl or age 
-# partR2(cbclint_gender_le_reg,partvars=c("genderid","log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclext_gender_le_reg <- lmer(log_cbcl_ext ~ genderid*log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_gender_le_reg) #main effect gd and cis girl and le and age but not interaction
-# #no interaction so use just additive model
-# cbclext_gender_le_reg <- lmer(log_cbcl_ext ~ genderid+log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclext_gender_le_reg) #main effect gd and cis girl and le and age 
-# AIC(cbclext_gender_le_reg) #main effect gd and cis girl and le and age 
-# partR2(cbclext_gender_le_reg,partvars=c("genderid","log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# #do gender and emotion regulation interact to affect cbcl - main effects but no interactions to all
-# cbcltotalgender_log_ders_total_reg <- lmer(log_cbcl_total ~ genderid*log_ders_total + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_log_ders_total_reg) #main effect ders but not gd or cis girl or interaction
-# #no interaction so use just additive model
-# cbcltotalgender_log_ders_total_reg <- lmer(log_cbcl_total ~ genderid+log_ders_total + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_log_ders_total_reg) #main effect gd and ders and cis girl
-# AIC(cbcltotalgender_log_ders_total_reg) #main effect gd and ders but not cis girl 
-# partR2(cbcltotalgender_log_ders_total_reg,partvars=c("genderid","log_ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# cbclintgender_log_ders_total_reg <- lmer(log_cbcl_int ~ genderid*log_ders_total + age + (1|site),data=yr4data)
-# summary(cbclintgender_log_ders_total_reg) #main effect ders but not cis girl or gd or interaction
-# #no interaction so use just additive model
-# cbclintgender_log_ders_total_reg <- lmer(log_cbcl_int ~ genderid+log_ders_total + age + (1|site),data=yr4data)
-# summary(cbclintgender_log_ders_total_reg) #main effect ders and cis girl and gd 
-# AIC(cbclintgender_log_ders_total_reg) #main effect ders and cis girl and gd 
-# partR2(cbclintgender_log_ders_total_reg,partvars=c("genderid","log_ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# cbclextgender_log_ders_total_reg <- lmer(log_cbcl_ext ~ genderid*log_ders_total + age + (1|site),data=yr4data)
-# summary(cbclextgender_log_ders_total_reg) 
-# #no interaction so use just additive model
-# cbclextgender_log_ders_total_reg <- lmer(log_cbcl_ext ~ genderid+log_ders_total + age + (1|site),data=yr4data)
-# summary(cbclextgender_log_ders_total_reg) #main effect ders but not cis girl or gd 
-# AIC(cbclextgender_log_ders_total_reg) #main effect ders but not cis girl or gd 
-# partR2(cbclextgender_log_ders_total_reg,partvars=c("genderid","log_ders_total","age"),R2_type="marginal",nboot=10)
-# 
-# #do gender, emotion regulation and life events affect cbcl - 
-# cbcltotalgender_le_log_ders_total_reg <- lmer(log_cbcl_total ~ genderid + log_ders_total + log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbcltotalgender_le_log_ders_total_reg) #cis girl, gd, ders, and le and age significant
-# AIC(cbcltotalgender_le_log_ders_total_reg) #cis girl, gd, ders, and le and age significant
-# partR2(cbcltotalgender_le_log_ders_total_reg,partvars=c("genderid","log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclintgender_le_log_ders_total_reg <- lmer(log_cbcl_int ~ genderid + log_ders_total + log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclintgender_le_log_ders_total_reg) #cis girl, gd, ders, and le but not age significant
-# AIC(cbclintgender_le_log_ders_total_reg) #cis girl, gd, ders, and le but not age significant
-# partR2(cbclintgender_le_log_ders_total_reg,partvars=c("genderid","log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# cbclextgender_le_log_ders_total_reg <- lmer(log_cbcl_ext ~ genderid + log_ders_total + log_total_bad_le + age + (1|site),data=yr4data)
-# summary(cbclextgender_le_log_ders_total_reg) #ders and le and age and cis girl but not gd significant
-# AIC(cbclextgender_le_log_ders_total_reg) #ders and le and age and cis girl but not gd significant
-# partR2(cbclextgender_le_log_ders_total_reg,partvars=c("genderid","log_ders_total","log_total_bad_le","age"),R2_type="marginal",nboot=10)
-# 
-# 
