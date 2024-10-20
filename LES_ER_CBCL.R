@@ -185,16 +185,6 @@ alldata <-
   left_join(ledata,by=c("src_subject_id","eventname")) %>%
   # add CBCL data based on subject ID and data collection year
   left_join(cbcldata,by=c("src_subject_id","eventname")) %>%
-  # # add binary indicator column for whether participant is a cis girl
-  # mutate(gender_cisgirl = if_else(genderid=="cis_girl",1,0)) %>%
-  # # add binary indicator column for whether participant is gender diverse
-  # mutate(gender_gd = if_else(genderid=="gd",1,0)) %>%
-  # # add binary indicator column for whether participant is a cis boy
-  # mutate(gender_cisboy = if_else(genderid=="cis_boy",1,0)) %>%
-  # # add binary indicator column for whether participant is male
-  # mutate(sex_male = if_else(sex=="male",1,0)) %>%
-  # # add binary indicator column for whether participant is female
-  # mutate(sex_female = if_else(sex=="female",1,0)) %>%
   # Z score continuous variables
   mutate(across(
     c(age, ders_total, total_bad_le, 
@@ -283,496 +273,34 @@ print(corrmat,digits=3)
 # columns) 
 corrmat$p.adj
 
-### Determine whether age differs based only on gender in year 4 data ####
-#### Kruskal-Wallis test to formally test relationship age ~ genderid
-# Test is not significant (p = 0.06381)
-kruskal.test(age ~ genderid, data = yr4data)
+### Plot variables against each other ####
+#### Without gender
+##### Scatterplots of DERS vs CBCL total problems, internalizing, externalizing ####
+# 240 total points removed due to NA for DERS (n=238) or CBCL (n=63) values
+outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext")
+ders_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  ders_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]]),data=yr4data) +
+                  geom_point(size=1) +
+                  geom_smooth(method="lm",
+                              se=FALSE,
+                              size=1.25,color="black") +
+                  scale_x_continuous(expand = c(0,0),
+                                     breaks=seq(25,150,25),
+                                     limits = c(25,155)) +
+                  scale_y_continuous(expand = c(0,0),
+                                     breaks=seq(0,100,20),
+                                     limits = c(0,100)) +
+                  theme_classic()
+  ders_plot_list[[outcome]] <- ders_plot
+  # Save plot
+  # ggsave(paste0("ders_vs_",outcome,"_nogender.tiff"),
+  #        width=6,height=6,units = "in")
+}
 
-yr4data %>%
-  summarise(
-    mean_age = mean(age, na.rm = TRUE),
-    sd_age = sd(age, na.rm = TRUE),
-    min_age = min(age, na.rm = TRUE),
-    max_age = max(age, na.rm = TRUE),
-    median_age = median(age, na.rm = TRUE),
-    n = n()
-  )
-yr4data %>%
-  group_by(genderid) %>%
-  summarise(
-    mean_age = mean(age, na.rm = TRUE),
-    sd_age = sd(age, na.rm = TRUE),
-    min_age = min(age, na.rm = TRUE),
-    max_age = max(age, na.rm = TRUE),
-    median_age = median(age, na.rm = TRUE),
-    n = n()
-  )
-
-ggplot(aes(x=total_bad_le),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=log_total_bad_le),data=yr4data) +
-  geom_histogram()
-
-ggplot(yr4data, aes(x = total_bad_le,fill=genderid)) +
-  geom_histogram(position="dodge")
-ggplot(yr4data, aes(x = total_bad_le,fill=genderid)) +
-  geom_density(alpha=0.5,adjust=1.5) +
-  scale_x_continuous(expand = c(0,0),limits = c(0,15),breaks=seq(0,15,1)) +
-  scale_y_continuous(expand = c(0,0),limits = c(0,0.3),breaks=seq(0,0.3,0.05)) +
-  scale_fill_discrete(labels=c("Cis boy","Cis girl", "GD")) +
-  labs(x="Negative Life Events",y="Proportion of Subjects",fill="Gender") +
-  theme_classic()
-df_proportions <- yr4data %>%
-  group_by(genderid, total_bad_le) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup() %>%
-  complete(total_bad_le, genderid, fill = list(n = 0, prop = 0)) %>% # Ensure all combinations are present
-  mutate(proportion = replace_na(proportion,0))
-ggplot(df_proportions, aes(x=total_bad_le,y=proportion, fill=genderid)) +
-  # geom_col_pattern(aes(pattern=genderid),position="dodge") +
-  # geom_bar_pattern(aes(
-  # geom_col_pattern(aes(
-  #                      pattern=genderid,
-  #                      # pattern_angle = genderid,
-  #                      # binwidth=1.5
-  #                      pattern_spacing = genderid,
-  #                      fill=genderid
-  #                      # bins=15
-  #                      ),
-  #                      # pattern_spacing = 0.02,
-  #                      # pattern_spacing = 0.01,
-  #                      fill="white",
-  #                      color="black",
-  #                      pattern_fill="black",
-  #                      pattern_color="black",
-  #                      # binwidth=1,
-  #                      # bins=15,
-  #                      position="dodge"
-  #                      # position=position_dodge(width=0.7)
-  #                      # width=0.7
-  #                      ) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_x_continuous(expand = c(0,0),breaks = seq(min(df_proportions$total_bad_le),
-      max(df_proportions$total_bad_le), by = 1)) + # X-axis ticks by 1
-  scale_y_continuous(expand = c(0,0),breaks=seq(0,0.3,by=0.05),limits=c(0,0.30)) +
-  # scale_pattern_manual(values=c("weave","crosshatch","stripe")) +
-  # scale_pattern_type_manual(values=c("hexagonal","triangle","pythagorean")) +
-  # scale_pattern_density_manual(values=c(0.1,0.3,0.5)) +
-  scale_fill_manual(values=c("white","darkgray","black")) +
-  # scale_fill_discrete(labels=c("Cis boy","Cis girl", "GD")) +
-  # labs(x="Number of Negative Life Events",y="Proportion of Subjects",pattern="Gender") +
-  theme_classic()
-# ggsave("SuppFig1A.tiff",width=7,height=3,unit="in")
-
-
-ggplot(aes(x=genderid,y=total_bad_le),data=yr4data) +
-  # geom_violin(aes(fill=genderid)) +
-  geom_boxplot() 
-yr4data %>%
-  summarise(
-    mean_total_bad_le = mean(total_bad_le, na.rm = TRUE),
-    sd_total_bad_le = sd(total_bad_le, na.rm = TRUE),
-    min_total_bad_le = min(total_bad_le, na.rm = TRUE),
-    max_total_bad_le = max(total_bad_le, na.rm = TRUE),
-    median_total_bad_le = median(total_bad_le, na.rm = TRUE),
-    n = n()
-  )
-yr4data %>%
-  group_by(genderid) %>%
-  summarise(
-    mean_total_bad_le = mean(total_bad_le, na.rm = TRUE),
-    sd_total_bad_le = sd(total_bad_le, na.rm = TRUE),
-    min_total_bad_le = min(total_bad_le, na.rm = TRUE),
-    max_total_bad_le = max(total_bad_le, na.rm = TRUE),
-    median_total_bad_le = median(total_bad_le, na.rm = TRUE),
-    n = n()
-  )
-
-kruskal.test(total_bad_le ~ genderid, data = yr4data)
-pairwise.wilcox.test(yr4data$total_bad_le, yr4data$genderid,
-                     p.adjust.method = "BH")
-
-
-ggplot(aes(x=ders_total),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=log_ders_total),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=genderid,y=ders_total,fill=genderid),data=yr4data) +
-  geom_boxplot()
-kruskal.test(ders_total ~ genderid, data = yr4data)
-pairwise.wilcox.test(yr4data$ders_total, yr4data$genderid,
-                     p.adjust.method = "BH")
-ggplot(yr4data, aes(x = ders_total,fill=genderid)) +
-  geom_density(alpha=0.5,adjust=.9) +
-  scale_x_continuous(expand = c(0,0),limits=c(0,145),breaks=seq(0,145,5)) +
-  scale_y_continuous(expand = c(0,0),limits = c(0,0.031),breaks=seq(0,0.03,0.005)) +
-  scale_fill_discrete(labels=c("Cis boy","Cis girl", "GD")) +
-  labs(x="Emotion Regulation Difficulties",y="Density",fill="Gender") +
-  theme_classic()
-df_proportions <- yr4data %>%
-  mutate(ders_total_bin = cut(ders_total, breaks = seq(0, max(ders_total,na.rm=TRUE)+10, by = 10), right = FALSE)) %>% # Create bins
-  group_by(genderid, ders_total_bin) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup() %>%
-  complete(ders_total_bin, genderid, fill = list(n = 0, prop = 0)) %>% # Ensure all combinations are present
-  mutate(proportion = replace_na(proportion,0))
-ggplot(df_proportions, aes(x = ders_total_bin,y=proportion,fill=genderid)) +
-  # geom_col_pattern(aes(
-  #             pattern=genderid,
-  #             # pattern_angle = genderid,
-  #             # binwidth=1.5
-  #             pattern_spacing = genderid,
-  #             fill=genderid
-  #             # bins=15
-  #           ),
-  #           # pattern_spacing = 0.02,
-  #           # pattern_spacing = 0.01,
-  #           fill="white",
-  #           color="black",
-  #           pattern_fill="black",
-  #           pattern_color="black",
-  #           # binwidth=1,
-  #           # bins=15,
-  #           position="dodge"
-  #           # position=position_dodge(width=0.7)
-  #           # width=0.7
-  #           ) +
-          geom_bar(stat="identity",position="dodge",color="black") +
-          scale_fill_manual(values=c("white","darkgray","black")) +
-          scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59","60-69",
-                                      "70-79","80-89","90-99","100-109","110-119","120-129",
-                                      "130-139")) +
-          scale_y_continuous(expand = c(0,0),breaks=seq(min(df_proportions$proportion),
-                                                        0.3,
-                                                        by=0.05),limits = c(0,0.3)) +
-            theme_classic()
-# ggsave("SuppFig1B.tiff",width=8,height=3,unit="in")
-  # geom_bar(stat="identity",position="dodge") + 
-  # scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59","60-69",
-  #                             "70-79","80-89","90-99","100-109","110-119","120-129",
-  #                             "130-139")) +
-  # scale_y_continuous(expand = c(0,0),breaks=seq(min(df_proportions$proportion),
-  #                                               max(df_proportions$proportion),
-  #                                               by=0.05)) + 
-  # scale_fill_discrete(labels=c("Cis boy","Cis girl", "GD")) +
-  # labs(x="Emotion Regulation Difficulties",y="Proportion of Subjects",fill="Gender") +
-  # theme_classic() +
-  # theme(axis.text.x = element_text(angle = 60, hjust=.9))
-yr4data %>%
-  summarise(
-    mean_ders_total = mean(ders_total, na.rm = TRUE),
-    sd_ders_total = sd(ders_total, na.rm = TRUE),
-    min_ders_total = min(ders_total, na.rm = TRUE),
-    max_ders_total = max(ders_total, na.rm = TRUE),
-    median_ders_total = median(ders_total, na.rm = TRUE),
-    n = n()
-  )
-yr4data %>%
-  group_by(genderid) %>%
-  summarise(
-    mean_ders_total = mean(ders_total, na.rm = TRUE),
-    sd_ders_total = sd(ders_total, na.rm = TRUE),
-    min_ders_total = min(ders_total, na.rm = TRUE),
-    max_ders_total = max(ders_total, na.rm = TRUE),
-    median_ders_total = median(ders_total, na.rm = TRUE),
-    n = n()
-  )
-
-ggplot(aes(x=cbcl_total),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=genderid,y=cbcl_total,fill=genderid),data=yr4data) +
-  geom_boxplot()
-kruskal.test(cbcl_total ~ genderid, data = yr4data)
-pairwise.wilcox.test(yr4data$cbcl_total, yr4data$genderid,
-                     p.adjust.method = "BH")
-ggplot(yr4data, aes(x = cbcl_total,fill=genderid)) +
-  geom_density(alpha=0.5,adjust=1) +
-  scale_x_continuous(expand = c(0,0),breaks=(seq(0,100,10)),limits = c(0,100)) +
-  scale_y_continuous(expand = c(0,0),limits = c(0,0.04),breaks=seq(0,0.04,0.005)) +
-  scale_fill_discrete(labels=c("Cis boy","Cis girl", "GD")) +
-  labs(x="CBCL Total Problems",y="Density",fill="Gender") +
-  theme_classic()
-df_proportions <- yr4data %>%
-  mutate(cbcl_total_bin = cut(cbcl_total, breaks = seq(0, 100, by = 10), right = FALSE)) %>% # Create bins
-  group_by(genderid, cbcl_total_bin) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup() %>%
-  complete(cbcl_total_bin, genderid, fill = list(n = 0, prop = 0)) %>% # Ensure all combinations are present
-  mutate(proportion = replace_na(proportion,0))
-ggplot(df_proportions, aes(x = cbcl_total_bin,y=proportion,fill=genderid)) +
-  # geom_bar(stat="identity",position="dodge") + 
-  # scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59","60-69",
-  #                           "70-79","80-89","90-99")) +
-  # scale_y_continuous(expand = c(0,0),breaks=seq(min(df_proportions$proportion),
-  #                                               max(df_proportions$proportion),
-  #                                               by=0.05)) + 
-  # scale_fill_discrete(labels=c("Cis boy","Cis girl", "GD")) +
-  # labs(x="CBCL Total Problems",y="Proportion of Subjects",fill="Gender") +
-  # theme_classic()
-# ggplot(df_proportions, aes(x = ders_total_bin,y=proportion,fill=genderid)) +
-  # geom_col_pattern(aes(
-  #   pattern=genderid,
-  #   # pattern_angle = genderid,
-  #   # binwidth=1.5
-  #   pattern_spacing = genderid,
-  #   fill=genderid
-  #   # bins=15
-  # ),
-  # # pattern_spacing = 0.02,
-  # # pattern_spacing = 0.01,
-  # fill="white",
-  # color="black",
-  # pattern_fill="black",
-  # pattern_color="black",
-  # # binwidth=1,
-  # # bins=15,
-  # position="dodge"
-  # # position=position_dodge(width=0.7)
-  # # width=0.7
-  # ) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_fill_manual(values=c("white","darkgray","black")) +
-  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59","60-69",
-                            "70-79","80-89","90-99")) +
-  scale_y_continuous(expand = c(0,0),breaks=seq(min(df_proportions$proportion),
-                                                0.4,
-                                                by=0.05),limits = c(0,0.4)) + 
-  # scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59","60-69",
-  #                           "70-79","80-89","90-99","100-109","110-119","120-129",
-  #                           "130-139")) +
-  # scale_y_continuous(expand = c(0,0),breaks=seq(min(df_proportions$proportion),
-  #                                               max(df_proportions$proportion),
-  #                                               by=0.05)) +
-  theme_classic()
-# ggsave("SuppFig1C.tiff",width=5.45,height=3.5,unit="in")
-yr4data %>%
-  summarise(
-    mean_cbcl_total = mean(cbcl_total, na.rm = TRUE),
-    sd_cbcl_total = sd(cbcl_total, na.rm = TRUE),
-    min_cbcl_total = min(cbcl_total, na.rm = TRUE),
-    max_cbcl_total = max(cbcl_total, na.rm = TRUE),
-    median_cbcl_total = median(cbcl_total, na.rm = TRUE),
-    n = n()
-  )
-yr4data %>%
-  group_by(genderid) %>%
-  summarise(
-    mean_cbcl_total = mean(cbcl_total, na.rm = TRUE),
-    sd_cbcl_total = sd(cbcl_total, na.rm = TRUE),
-    min_cbcl_total = min(cbcl_total, na.rm = TRUE),
-    max_cbcl_total = max(cbcl_total, na.rm = TRUE),
-    median_cbcl_total = median(cbcl_total, na.rm = TRUE),
-    n = n()
-  )
-
-ggplot(aes(x=cbcl_int),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=genderid,y=cbcl_int,fill=genderid),data=yr4data) +
-  geom_boxplot()
-kruskal.test(cbcl_int ~ genderid, data = yr4data)
-pairwise.wilcox.test(yr4data$cbcl_int, yr4data$genderid,
-                     p.adjust.method = "BH")
-ggplot(yr4data, aes(x = cbcl_int,fill=genderid)) +
-  geom_density(alpha=0.5,adjust=1) +
-  scale_x_continuous(expand = c(0,0),breaks=(seq(0,100,10)),limits = c(0,100)) +
-  scale_y_continuous(expand = c(0,0),limits = c(0,0.05),breaks=seq(0,0.05,0.005)) +
-  scale_fill_discrete(labels=c("Cis boy","Cis girl", "GD")) +
-  labs(x="CBCL Internalizing",y="Density",fill="Gender") +
-  theme_classic()
-df_proportions <- yr4data %>%
-  mutate(cbcl_int_bin = cut(cbcl_int, breaks = seq(0, 100, by = 10), right = FALSE)) %>% # Create bins
-  group_by(genderid, cbcl_int_bin) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup() %>%
-  complete(cbcl_int_bin, genderid, fill = list(n = 0, prop = 0)) %>% # Ensure all combinations are present
-  mutate(proportion = replace_na(proportion,0))
-ggplot(df_proportions, aes(x = cbcl_int_bin,y=proportion,fill=genderid)) +
-  # geom_col_pattern(aes(
-  #   pattern=genderid,
-  #   # pattern_angle = genderid,
-  #   # binwidth=1.5
-  #   pattern_spacing = genderid,
-  #   fill=genderid
-  #   # bins=15
-  # ),
-  # # pattern_spacing = 0.02,
-  # # pattern_spacing = 0.01,
-  # fill="white",
-  # color="black",
-  # pattern_fill="black",
-  # pattern_color="black",
-  # # binwidth=1,
-  # # bins=15,
-  # position="dodge"
-  # # position=position_dodge(width=0.7)
-  # # width=0.7
-  # ) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_fill_manual(values=c("white","darkgray","black")) +
-  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59","60-69",
-                            "70-79","80-89","90-99")) +
-  scale_y_continuous(expand = c(0,0),breaks=seq(min(df_proportions$proportion),
-                                                0.4,
-                                                by=0.05),limits = c(0,0.4)) +
-  # scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59","60-69",
-  #                           "70-79","80-89","90-99","100-109","110-119","120-129",
-  #                           "130-139")) +
-  # scale_y_continuous(expand = c(0,0),breaks=seq(min(df_proportions$proportion),
-  #                                               max(df_proportions$proportion),
-  #                                               by=0.05)) +
-  theme_classic()
-# ggsave("SuppFig1D.tiff",width=5.45,height=3.5,unit="in")
-# geom_bar(stat="identity",position="dodge") + 
-#   scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59","60-69",
-#                             "70-79","80-89","90-99")) +
-#   scale_y_continuous(expand = c(0,0),breaks=seq(min(df_proportions$proportion),
-#                                                 max(df_proportions$proportion),
-#                                                 by=0.05)) + 
-#   scale_fill_discrete(labels=c("Cis boy","Cis girl", "GD")) +
-#   labs(x="CBCL Internalizing",y="Proportion of Subjects",fill="Gender") +
-#   theme_classic()
-yr4data %>%
-  summarise(
-    mean_cbcl_int = mean(cbcl_int, na.rm = TRUE),
-    sd_cbcl_int = sd(cbcl_int, na.rm = TRUE),
-    min_cbcl_int = min(cbcl_int, na.rm = TRUE),
-    max_cbcl_int = max(cbcl_int, na.rm = TRUE),
-    median_cbcl_int = median(cbcl_int, na.rm = TRUE),
-    n = n()
-  )
-yr4data %>%
-  group_by(genderid) %>%
-  summarise(
-    mean_cbcl_int = mean(cbcl_int, na.rm = TRUE),
-    sd_cbcl_int = sd(cbcl_int, na.rm = TRUE),
-    min_cbcl_int = min(cbcl_int, na.rm = TRUE),
-    max_cbcl_int = max(cbcl_int, na.rm = TRUE),
-    median_cbcl_int = median(cbcl_int, na.rm = TRUE),
-    n = n()
-  )
-
-ggplot(aes(x=cbcl_ext),data=yr4data) +
-  geom_histogram()
-ggplot(aes(x=genderid,y=cbcl_ext,fill=genderid),data=yr4data) +
-  geom_boxplot()
-kruskal.test(cbcl_ext ~ genderid, data = yr4data)
-pairwise.wilcox.test(yr4data$cbcl_ext, yr4data$genderid,
-                     p.adjust.method = "BH")
-ggplot(yr4data, aes(x = cbcl_ext,fill=genderid)) +
-  geom_density(alpha=0.5,adjust=1) +
-  scale_x_continuous(expand = c(0,0),breaks=(seq(0,100,10)),limits = c(0,100)) +
-  scale_y_continuous(expand = c(0,0),limits = c(0,0.09),breaks=seq(0,0.09,0.005)) +
-  scale_fill_discrete(labels=c("Cis boy","Cis girl", "GD")) +
-  labs(x="CBCL Externalizing",y="Density",fill="Gender") +
-  theme_classic()
-df_proportions <- yr4data %>%
-  mutate(cbcl_ext_bin = cut(cbcl_ext, breaks = seq(0, 100, by = 10), right = FALSE)) %>% # Create bins
-  group_by(genderid, cbcl_ext_bin) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(proportion = n / sum(n)) %>%
-  ungroup() %>%
-  complete(cbcl_ext_bin, genderid, fill = list(n = 0, prop = 0)) %>% # Ensure all combinations are present
-  mutate(proportion = replace_na(proportion,0))
-ggplot(df_proportions, aes(x = cbcl_ext_bin,y=proportion,fill=genderid)) +
-  # geom_col_pattern(aes(
-  #   pattern=genderid,
-  #   # pattern_angle = genderid,
-  #   # binwidth=1.5
-  #   pattern_spacing = genderid,
-  #   fill=genderid
-  #   # bins=15
-  # ),
-  # # pattern_spacing = 0.02,
-  # # pattern_spacing = 0.01,
-  # fill="white",
-  # color="black",
-  # pattern_fill="black",
-  # pattern_color="black",
-  # # binwidth=1,
-  # # bins=15,
-  # position="dodge"
-  # # position=position_dodge(width=0.7)
-  # # width=0.7
-  # ) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_fill_manual(values=c("white","darkgray","black")) +
-  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59","60-69",
-                            "70-79","80-89","90-99")) +
-  scale_y_continuous(expand = c(0,0),breaks=seq(min(df_proportions$proportion),
-                                                0.4,
-                                                by=0.05),limits = c(0,0.401)) + 
-  # scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59","60-69",
-  #                           "70-79","80-89","90-99","100-109","110-119","120-129",
-  #                           "130-139")) +
-  # scale_y_continuous(expand = c(0,0),breaks=seq(min(df_proportions$proportion),
-  #                                               max(df_proportions$proportion),
-  #                                               by=0.05)) +
-  theme_classic()
-ggsave("SuppFig1E.tiff",width=5.45,height=3.5,unit="in")
-# geom_bar(stat="identity",position="dodge") + 
-#   scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59","60-69",
-#                             "70-79","80-89","90-99")) +
-#   scale_y_continuous(expand = c(0,0),breaks=seq(min(df_proportions$proportion),
-#                                                 max(df_proportions$proportion),
-#                                                 by=0.05)) + 
-#   scale_fill_discrete(labels=c("Cis boy","Cis girl", "GD")) +
-#   labs(x="CBCL Externalizing",y="Proportion of Subjects",fill="Gender") +
-#   theme_classic()
-yr4data %>%
-  summarise(
-    mean_cbcl_ext = mean(cbcl_ext, na.rm = TRUE),
-    sd_cbcl_ext = sd(cbcl_ext, na.rm = TRUE),
-    min_cbcl_ext = min(cbcl_ext, na.rm = TRUE),
-    max_cbcl_ext = max(cbcl_ext, na.rm = TRUE),
-    median_cbcl_ext = median(cbcl_ext, na.rm = TRUE),
-    n = n()
-  )
-yr4data %>%
-  group_by(genderid) %>%
-  summarise(
-    mean_cbcl_ext = mean(cbcl_ext, na.rm = TRUE),
-    sd_cbcl_ext = sd(cbcl_ext, na.rm = TRUE),
-    min_cbcl_ext = min(cbcl_ext, na.rm = TRUE),
-    max_cbcl_ext = max(cbcl_ext, na.rm = TRUE),
-    median_cbcl_ext = median(cbcl_ext, na.rm = TRUE),
-    n = n()
-  )
-
-### scatter plots of ders-p or les vs cbcl scores
-### without gender
-ggplot(aes(x=ders_total,y=cbcl_total),data=yr4data) +
-  geom_point(size=1) +
-  geom_smooth(method="lm",se=FALSE,size=1.25,color="black") +
-  scale_x_continuous(expand = c(0,0),breaks=seq(25,150,25),limits = c(25,150)) + 
-  scale_y_continuous(expand = c(0,0),breaks=seq(0,100,20),limits = c(0,100)) + 
-  theme_classic()
-ggsave("ders_vs_cbcltotal_nogender.tiff",width=6,height=6,units = "in")
-
-ggplot(aes(x=ders_total,y=cbcl_int),data=yr4data) +
-  geom_point(size=1) +
-  geom_smooth(method="lm",se=FALSE,size=1.25,color="black") +
-  scale_x_continuous(expand = c(0,0),breaks=seq(25,150,25),limits = c(25,150)) + 
-  scale_y_continuous(expand = c(0,0),breaks=seq(0,100,20),limits = c(0,100)) + 
-  theme_classic()
-ggsave("ders_vs_cbclint_nogender.tiff",width=6,height=6,units = "in")
-
-ggplot(aes(x=ders_total,y=cbcl_ext),data=yr4data) +
-  geom_point(size=1) +
-  geom_smooth(method="lm",se=FALSE,size=1.25,color="black") +
-  scale_x_continuous(expand = c(0,0),breaks=seq(25,150,25),limits = c(25,150)) + 
-  scale_y_continuous(expand = c(0,0),breaks=seq(0,100,20),limits = c(0,100)) + 
-  theme_classic()
-ggsave("ders_vs_cbclext_nogender.tiff",width=6,height=6,units = "in")
-
+##### Barplots of LES vs CBCL total problems, internalizing, and externalizing ####
+###### Create table with summary stats for barplot ####
 les_vs_cbcl_summary_stats <- yr4data %>% 
   group_by(total_bad_le) %>% 
   summarise(cbcl_total=mean(cbcl_total,na.rm=TRUE),
@@ -781,98 +309,659 @@ les_vs_cbcl_summary_stats <- yr4data %>%
             n=n(),
             .groups="drop") %>%
   complete(total_bad_le)
-ggplot(aes(x=total_bad_le,y=cbcl_total),data=les_vs_cbcl_summary_stats) +
-  geom_bar(stat="identity",position="dodge",color="black",width=0.75) +
-  scale_y_continuous(expand=c(0,0),breaks=seq(0,80,10),limits = c(0,80)) +
-  scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0)) +
+###### Create barplots ####
+outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext")
+les_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  les_plot <- ggplot(aes(x=total_bad_le,y=.data[[outcome]]),
+                     data=les_vs_cbcl_summary_stats) +
+                geom_bar(stat="identity",
+                         position="dodge",
+                         color="black",width=0.75) +
+                scale_y_continuous(expand=c(0,0),
+                                   breaks=seq(0,80,10),limits = c(0,80)) +
+                scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0)) +
+                theme_classic()
+  les_plot_list[[outcome]] <- les_plot
+  # Save plot
+  # ggsave(paste0("les_vs_",outcome,"_nogender.tiff"),
+  #        width=6,height=6,units = "in")
+}
+
+#### With gender
+##### Scatterplots of DERS vs CBCL total problems, internalizing, externalizing ####
+# 240 total points removed due to NA for DERS (n=238) or CBCL (n=63) values
+outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext")
+ders_gender_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  ders_gender_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]],
+                                 color=genderid,
+                                 shape=genderid),
+                             data=yr4data) +
+    geom_point(size=1) +
+    geom_smooth(method="lm",
+                se=FALSE,
+                size=1.25) +
+    scale_x_continuous(expand = c(0,0),
+                       breaks=seq(25,150,25),
+                       limits = c(25,155)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks=seq(0,100,20),
+                       limits = c(0,100)) +
+    theme_classic()
+  ders_gender_plot_list[[outcome]] <- ders_gender_plot
+  # Save plot
+  # ggsave(paste0("ders_vs_",outcome,"_gender.tiff"),
+  #        width=6,height=6,units = "in")
+}
+
+##### Barplots of LES vs CBCL total problems, internalizing, and externalizing ####
+###### Create table with summary stats for barplot ####
+les_vs_cbcl_w_gender_summary_stats <- 
+  yr4data %>% 
+  group_by(total_bad_le,genderid) %>% 
+  summarise(cbcl_total=mean(cbcl_total,na.rm=TRUE),
+            cbcl_int=mean(cbcl_int,na.rm=TRUE),
+            cbcl_ext=mean(cbcl_ext,na.rm=TRUE),
+            n=n(),
+            .groups="drop") %>%
+  # ensure all combinations of gender and number of bad events are
+  # present so can be included on plot
+  complete(total_bad_le, genderid, fill = list(n = 0, prop = 0)) %>% 
+  mutate(total_bad_le = replace_na(total_bad_le,0))
+###### Create barplots ####
+outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext")
+les_gender_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  les_plot <- ggplot(aes(x=total_bad_le,y=.data[[outcome]],
+                         color=genderid,
+                         fill=genderid),
+                     data=les_vs_cbcl_w_gender_summary_stats) +
+    geom_bar(stat="identity",
+             position="dodge",
+             width=0.75) +
+    scale_y_continuous(expand=c(0,0),
+                       breaks=seq(0,80,10),limits = c(0,80)) +
+    scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0)) +
+    theme_classic()
+  les_gender_plot_list[[outcome]] <- les_plot
+  # Save plot
+  # ggsave(paste0("les_vs_",outcome,"_nogender.tiff"),
+  #        width=6,height=6,units = "in")
+}
+
+### Determine whether age differs based only on gender ####
+#### Full data set ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether age differs 
+# significantly based on gender group
+# Test is significant (p = 4.61e-06)
+kruskal.test(age ~ genderid, data = alldata)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on age
+pairwise.wilcox.test(alldata$total_bad_le, alldata$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 3 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether age differs
+# significantly based on gender group
+# Test is significant (p = 0.002622)
+kruskal.test(age ~ genderid, data = yr3data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on age
+pairwise.wilcox.test(yr3data$total_bad_le, yr3data$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 4 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether age differs
+# significantly based on gender group
+# Test is not significant (p = 0.06381)
+kruskal.test(age ~ genderid, data = yr4data)
+
+#### Get summary statistics for age ####
+##### Summary statistics for full data set ####
+alldata %>%
+  group_by(genderid) %>%
+  summarise(
+    mean_age = mean(age, na.rm = TRUE),
+    sd_age = sd(age, na.rm = TRUE),
+    min_age = min(age, na.rm = TRUE),
+    max_age = max(age, na.rm = TRUE),
+    median_age = median(age, na.rm = TRUE),
+    n = n()
+  )
+
+##### Summary statistics for by year ####
+alldata %>%
+  group_by(eventname,genderid) %>%
+  summarise(
+    mean_age = mean(age, na.rm = TRUE),
+    sd_age = sd(age, na.rm = TRUE),
+    min_age = min(age, na.rm = TRUE),
+    max_age = max(age, na.rm = TRUE),
+    median_age = median(age, na.rm = TRUE),
+    n = n()
+  )
+
+
+### Determine whether LES differs based only on gender ####
+#### Full data set ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether total_bad_le
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(total_bad_le ~ genderid, data = alldata)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on total_bad_le
+pairwise.wilcox.test(alldata$total_bad_le, alldata$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 3 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether total_bad_le
+# differs significantly based on gender group
+# Test is significant (p = 3.333e-05)
+kruskal.test(total_bad_le ~ genderid, data = yr3data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on total_bad_le
+pairwise.wilcox.test(yr3data$total_bad_le, yr3data$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 4 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether total_bad_le
+# differs significantly based on gender group
+# Test is significant (p = 3.653e-15)
+kruskal.test(total_bad_le ~ genderid, data = yr4data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on total_bad_le
+pairwise.wilcox.test(yr4data$total_bad_le, yr4data$genderid,
+                     p.adjust.method = "fdr")
+
+##### Create bar graph of LES by gender group ####
+# Use LES on x-axis and proportion of subjects with a given LES score for 
+# each specific gender group (rather than raw number of subjects per gender
+# group) so that differences in GD group are more clear despite having a
+# much smaller sample size
+# Create data frame with proportions rather than raw numbers
+les_df_proportions <- 
+  yr4data %>%
+  group_by(genderid, total_bad_le) %>%
+  count() %>%
+  group_by(genderid) %>%
+  mutate(yr4_proportion = n / sum(n)) %>%
+  ungroup() %>%
+  # ensure all combinations of gender and number of bad events are
+  # present so can be included on plot
+  complete(total_bad_le, genderid, fill = list(n = 0, prop = 0)) %>% 
+  mutate(yr4_proportion = replace_na(yr4_proportion,0))
+# Make actual bar graph
+ggplot(les_df_proportions, 
+       aes(x=total_bad_le,y=yr4_proportion, fill=genderid)) +
+  geom_bar(stat="identity",position="dodge",color="black") +
+  scale_x_continuous(expand = c(0,0),
+                     breaks = seq(min(les_df_proportions$total_bad_le),
+                     max(les_df_proportions$total_bad_le), by = 1)) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(0,0.3,by=0.05),
+                     limits=c(0,0.30)) +
   theme_classic()
-ggsave("les_vs_cbcltotal_nogender.tiff",width=6,height=6,units = "in")
+# Save bar graph
+# ggsave("LES_by_gender.tiff",width=7,height=3,unit="in")
 
-ggplot(aes(x=total_bad_le,y=cbcl_int),data=les_vs_cbcl_summary_stats) +
-  geom_bar(stat="identity",position="dodge",color="black",width=0.75) +
-  scale_y_continuous(expand=c(0,0),breaks=seq(0,80,10),limits = c(0,80)) +
-  scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0)) +
+#### Get summary statistics for LES ####
+##### Summary statistics for full data set ####
+alldata %>%
+  group_by(genderid) %>%
+  summarise(
+    mean_total_bad_le = mean(total_bad_le, na.rm = TRUE),
+    sd_total_bad_le = sd(total_bad_le, na.rm = TRUE),
+    min_total_bad_le = min(total_bad_le, na.rm = TRUE),
+    max_total_bad_le = max(total_bad_le, na.rm = TRUE),
+    median_total_bad_le = median(total_bad_le, na.rm = TRUE),
+    n = n()
+  )
+
+##### Summary statistics for by year ####
+alldata %>%
+  group_by(eventname,genderid) %>%
+  summarise(
+    mean_total_bad_le = mean(total_bad_le, na.rm = TRUE),
+    sd_total_bad_le = sd(total_bad_le, na.rm = TRUE),
+    min_total_bad_le = min(total_bad_le, na.rm = TRUE),
+    max_total_bad_le = max(total_bad_le, na.rm = TRUE),
+    median_total_bad_le = median(total_bad_le, na.rm = TRUE),
+    n = n()
+  )
+
+### Determine whether DERS differs based only on gender ####
+#### Full data set ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether ders_total
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(ders_total ~ genderid, data = alldata)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on ders_total
+pairwise.wilcox.test(alldata$ders_total, alldata$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 3 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether ders_total
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(ders_total ~ genderid, data = yr3data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on ders_total
+pairwise.wilcox.test(yr3data$ders_total, yr3data$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 4 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether ders_total
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(ders_total ~ genderid, data = yr4data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on ders_total
+pairwise.wilcox.test(yr4data$ders_total, yr4data$genderid,
+                     p.adjust.method = "fdr")
+
+##### Create bar graph of LES by gender group ####
+# Use DERS on x-axis and proportion of subjects with a given DERS score for
+# each specific gender group (rather than raw number of subjects per gender
+# group) so that differences in GD group are more clear despite having a
+# much smaller sample size
+# Create data frame with proportions rather than raw numbers
+ders_df_proportions <- 
+  yr4data %>%
+  # create bins
+  mutate(ders_total_bin = 
+           cut(ders_total, 
+               breaks = seq(0, 
+                        max(ders_total,na.rm=TRUE)+10, by = 10), 
+               right = FALSE)) %>% 
+  group_by(genderid, ders_total_bin) %>%
+  count() %>%
+  group_by(genderid) %>%
+  mutate(yr4_proportion = n / sum(n)) %>%
+  ungroup() %>%
+  # ensure all combinations of gender and number of bad events are
+  # present so can be included on plot
+  complete(ders_total_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
+  mutate(yr4_proportion = replace_na(yr4_proportion,0))
+
+# Make actual bar graph
+ggplot(ders_df_proportions, 
+       aes(x = ders_total_bin,y=yr4_proportion,fill=genderid)) +
+  geom_bar(stat="identity",position="dodge",color="black") +
+  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59",
+                            "60-69","70-79","80-89","90-99","100-109",
+                            "110-119","120-129","130-139")) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(min(ders_df_proportions$yr4_proportion),
+                                      0.3,
+                                      by=0.05),limits = c(0,0.3)) +
   theme_classic()
-ggsave("les_vs_cbclint_nogender.tiff",width=6,height=6,units = "in")
 
-ggplot(aes(x=total_bad_le,y=cbcl_ext),data=les_vs_cbcl_summary_stats) +
-  geom_bar(stat="identity",position="dodge",color="black",width=0.75) +
-  scale_y_continuous(expand=c(0,0),breaks=seq(0,80,10),limits = c(0,80)) +
-  scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0)) +
+# Save bar graph
+# ggsave("DERS_by_gender.tiff",width=7,height=3,unit="in")
+
+#### Get summary statistics for DERS ####
+##### Summary statistics for full data set ####
+alldata %>%
+  group_by(genderid) %>%
+  summarise(
+    mean_ders_total = mean(ders_total, na.rm = TRUE),
+    sd_ders_total = sd(ders_total, na.rm = TRUE),
+    min_ders_total = min(ders_total, na.rm = TRUE),
+    max_ders_total = max(ders_total, na.rm = TRUE),
+    median_ders_total = median(ders_total, na.rm = TRUE),
+    n = n()
+  )
+
+##### Summary statistics for by year ####
+alldata %>%
+  group_by(eventname,genderid) %>%
+  summarise(
+    mean_ders_total = mean(ders_total, na.rm = TRUE),
+    sd_ders_total = sd(ders_total, na.rm = TRUE),
+    min_ders_total = min(ders_total, na.rm = TRUE),
+    max_ders_total = max(ders_total, na.rm = TRUE),
+    median_ders_total = median(ders_total, na.rm = TRUE),
+    n = n()
+  )
+
+### Determine whether CBCL total problems differs based only on gender ####
+#### Full data set ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether cbcl_total
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(cbcl_total ~ genderid, data = alldata)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on cbcl_total
+pairwise.wilcox.test(alldata$cbcl_total, alldata$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 3 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether cbcl_total
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(cbcl_total ~ genderid, data = yr3data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on cbcl_total
+pairwise.wilcox.test(yr3data$cbcl_total, yr3data$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 4 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether cbcl_total
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(cbcl_total ~ genderid, data = yr4data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# GD youth are significantly different from cis girls and cis boys, but the
+# difference between cis girls and cis boys is not significant.
+pairwise.wilcox.test(yr4data$cbcl_total, yr4data$genderid,
+                     p.adjust.method = "fdr")
+
+##### Create bar graph of CBCL total problems by gender group ####
+# Use CBCL total problems on x-axis and proportion of subjects with a given
+# CBCL total problems score for each specific gender group (rather than raw 
+# number of subjects per gender group) so that differences in GD group are 
+# more clear despite having a much smaller sample size
+# Create data frame with proportions rather than raw numbers
+cbcl_total_df_proportions <- yr4data %>%
+  # Create bins
+  mutate(cbcl_total_bin = cut(cbcl_total, 
+                              breaks = seq(0, 100, by = 10), 
+                              right = FALSE)) %>% # Create bins
+  group_by(genderid, cbcl_total_bin) %>%
+  count() %>%
+  group_by(genderid) %>%
+  mutate(yr4_proportion = n / sum(n)) %>%
+  ungroup() %>%
+  # ensure all combinations of gender and number of bad events are
+  # present so can be included on plot
+  complete(cbcl_total_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
+  mutate(yr4_proportion = replace_na(yr4_proportion,0))
+# Make actual bar graph
+ggplot(cbcl_total_df_proportions, 
+       aes(x = cbcl_total_bin,y=yr4_proportion,fill=genderid)) +
+  geom_bar(stat="identity",position="dodge",color="black") +
+  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49",
+                            "50-59","60-69","70-79","80-89","90-99")) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(
+                       min(cbcl_total_df_proportions$yr4_proportion),
+                       0.4,
+                       by=0.05),limits = c(0,0.4)) + 
   theme_classic()
-ggsave("les_vs_cbclext_nogender.tiff",width=6,height=6,units = "in")
 
-### with gender
-ggplot(aes(x=ders_total,y=cbcl_total,
-           color=genderid,shape=genderid, linetype=genderid),data=yr4data) +
-  # geom_point(alpha=0.3,size=1) +
-  geom_point(size=2) +
-  # geom_smooth(method="lm",se=FALSE,size=1.25) +
-  geom_smooth(method="lm",se=FALSE) +
-  # scale_color_manual(values=c("gray","gray1","black")) +
-  scale_x_continuous(expand = c(0,0),breaks=seq(25,150,25),limits = c(25,150)) + 
-  scale_y_continuous(expand = c(0,0),breaks=seq(0,100,20),limits = c(0,100)) + 
-  theme_classic() +
-  # theme(legend.position="none")
-  theme(legend.key.width=unit(3,"cm"))
-ggsave("ders_vs_cbcltotal_gender.tiff",width=6,height=6,units = "in")
+# Save bar graph
+# ggsave("CBCL_total_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
 
-ggplot(aes(x=ders_total,y=cbcl_int,
-           color=genderid,shape=genderid,linetype=genderid),data=yr4data) +
-  geom_point(alpha=0.3,size=1) +
-  geom_smooth(method="lm",se=FALSE,size=1.25) +
-  scale_x_continuous(expand = c(0,0),breaks=seq(25,150,25),limits = c(25,150)) + 
-  scale_y_continuous(expand = c(0,0),breaks=seq(0,100,20),limits = c(0,100)) + 
-  theme_classic() +
-  theme(legend.position="none")
-ggsave("ders_vs_cbclint_gender.tiff",width=6,height=6,units = "in")
+#### Get summary statistics for CBCL total problems ####
+##### Summary statistics for full data set ####
+alldata %>%
+  group_by(genderid) %>%
+  summarise(
+    mean_cbcl_total = mean(cbcl_total, na.rm = TRUE),
+    sd_cbcl_total = sd(cbcl_total, na.rm = TRUE),
+    min_cbcl_total = min(cbcl_total, na.rm = TRUE),
+    max_cbcl_total = max(cbcl_total, na.rm = TRUE),
+    median_cbcl_total = median(cbcl_total, na.rm = TRUE),
+    n = n()
+  )
 
-ggplot(aes(x=ders_total,y=cbcl_ext,
-           color=genderid,shape=genderid,linetype=genderid),data=yr4data) +
-  geom_point(alpha=0.3,size=1) +
-  geom_smooth(method="lm",se=FALSE,size=1.25) +
-  scale_x_continuous(expand = c(0,0),breaks=seq(25,150,25),limits = c(25,150)) + 
-  scale_y_continuous(expand = c(0,0),breaks=seq(0,100,20),limits = c(0,100)) + 
-  theme_classic() +
-  theme(legend.position="none")
-ggsave("ders_vs_cbclext_gender.tiff",width=6,height=6,units = "in")
+##### Summary statistics for by year ####
+alldata %>%
+  group_by(eventname,genderid) %>%
+  summarise(
+    mean_cbcl_total = mean(cbcl_total, na.rm = TRUE),
+    sd_cbcl_total = sd(cbcl_total, na.rm = TRUE),
+    min_cbcl_total = min(cbcl_total, na.rm = TRUE),
+    max_cbcl_total = max(cbcl_total, na.rm = TRUE),
+    median_cbcl_total = median(cbcl_total, na.rm = TRUE),
+    n = n()
+  )
 
-les_vs_cbcl_summary_stats <- yr4data %>% 
-                              group_by(total_bad_le,genderid) %>% 
-                              summarise(cbcl_total=mean(cbcl_total,na.rm=TRUE),
-                                        cbcl_int=mean(cbcl_int,na.rm=TRUE),
-                                        cbcl_ext=mean(cbcl_ext,na.rm=TRUE),
-                                        n=n(),
-                                        .groups="drop") %>%
-                              complete(total_bad_le,genderid)
-ggplot(aes(x=total_bad_le,y=cbcl_total,fill=genderid),data=les_vs_cbcl_summary_stats) +
-  geom_bar(stat="identity",position="dodge",color="black",width=0.75) +
-  # scale_fill_manual(values=c("white","darkgray","black")) +
-  scale_y_continuous(expand=c(0,0),breaks=seq(0,80,10),limits = c(0,80)) +
-  scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0)) +
-  theme_classic() + 
-  theme(legend.position="none")
-ggsave("les_vs_cbcltotal_gender.tiff",width=6,height=6,units = "in")
+### Determine whether CBCL internalizing differs based only on gender ####
+#### Full data set ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether cbcl_int
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(cbcl_int ~ genderid, data = alldata)
 
-ggplot(aes(x=total_bad_le,y=cbcl_int,fill=genderid),data=les_vs_cbcl_summary_stats) +
-  geom_bar(stat="identity",position="dodge",color="black",width=0.75) +
-  # scale_fill_manual(values=c("white","darkgray","black")) +
-  scale_y_continuous(expand=c(0,0),breaks=seq(0,80,10),limits = c(0,80)) +
-  scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0)) +
-  theme_classic() +
-  theme(legend.position="none")
-ggsave("les_vs_cbclint_gender.tiff",width=6,height=6,units = "in")
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on cbcl_int
+pairwise.wilcox.test(alldata$cbcl_int, alldata$genderid,
+                     p.adjust.method = "fdr")
 
-ggplot(aes(x=total_bad_le,y=cbcl_ext,fill=genderid),data=les_vs_cbcl_summary_stats) +
-  geom_bar(stat="identity",position="dodge",color="black",width=0.75) +
-  # scale_fill_manual(values=c("white","darkgray","black")) +
-  scale_y_continuous(expand=c(0,0),breaks=seq(0,80,10),limits = c(0,80)) +
-  scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0)) +
-  theme_classic() +
-  theme(legend.position="none")
-ggsave("les_vs_cbclext_gender.tiff",width=6,height=6,units = "in")
+#### Year 3 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether cbcl_int
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(cbcl_int ~ genderid, data = yr3data)
 
-### mediation models with lavaan  ####
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on cbcl_int
+pairwise.wilcox.test(yr3data$cbcl_int, yr3data$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 4 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether cbcl_int
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(cbcl_int ~ genderid, data = yr4data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# GD youth are significantly different from cis girls and cis boys, but the
+# difference between cis girls and cis boys is not significant.
+pairwise.wilcox.test(yr4data$cbcl_int, yr4data$genderid,
+                     p.adjust.method = "fdr")
+
+##### Create bar graph of CBCL internalizing by gender group ####
+# Use CBCL internalizing on x-axis and proportion of subjects with a given
+# CBCL internalizing score for each specific gender group (rather than raw 
+# number of subjects per gender group) so that differences in GD group are 
+# more clear despite having a much smaller sample size
+# Create data frame with proportions rather than raw numbers
+cbcl_int_df_proportions <- 
+  yr4data %>%
+  # Create bins
+  mutate(cbcl_int_bin = cut(cbcl_int, 
+                              breaks = seq(0, 100, by = 10), 
+                              right = FALSE)) %>% # Create bins
+  group_by(genderid, cbcl_int_bin) %>%
+  count() %>%
+  group_by(genderid) %>%
+  mutate(yr4_proportion = n / sum(n)) %>%
+  ungroup() %>%
+  # ensure all combinations of gender and number of bad events are
+  # present so can be included on plot
+  complete(cbcl_int_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
+  mutate(yr4_proportion = replace_na(yr4_proportion,0))
+# Make actual bar graph
+ggplot(cbcl_int_df_proportions, 
+       aes(x = cbcl_int_bin,y=yr4_proportion,fill=genderid)) +
+  geom_bar(stat="identity",position="dodge",color="black") +
+  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49",
+                            "50-59","60-69","70-79","80-89","90-99")) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(
+                       min(cbcl_int_df_proportions$yr4_proportion),
+                       0.4,
+                       by=0.05),limits = c(0,0.4)) + 
+  theme_classic()
+
+# Save bar graph
+# ggsave("cbcl_int_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
+
+#### Get summary statistics for CBCL total problems ####
+##### Summary statistics for full data set ####
+alldata %>%
+  group_by(genderid) %>%
+  summarise(
+    mean_cbcl_int = mean(cbcl_int, na.rm = TRUE),
+    sd_cbcl_int = sd(cbcl_int, na.rm = TRUE),
+    min_cbcl_int = min(cbcl_int, na.rm = TRUE),
+    max_cbcl_int = max(cbcl_int, na.rm = TRUE),
+    median_cbcl_int = median(cbcl_int, na.rm = TRUE),
+    n = n()
+  )
+
+##### Summary statistics for by year ####
+alldata %>%
+  group_by(eventname,genderid) %>%
+  summarise(
+    mean_cbcl_int = mean(cbcl_int, na.rm = TRUE),
+    sd_cbcl_int = sd(cbcl_int, na.rm = TRUE),
+    min_cbcl_int = min(cbcl_int, na.rm = TRUE),
+    max_cbcl_int = max(cbcl_int, na.rm = TRUE),
+    median_cbcl_int = median(cbcl_int, na.rm = TRUE),
+    n = n()
+  )
+
+### Determine whether CBCL externalizing differs based only on gender ####
+#### Full data set ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether cbcl_ext
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(cbcl_ext ~ genderid, data = alldata)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on cbcl_ext
+pairwise.wilcox.test(alldata$cbcl_ext, alldata$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 3 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether cbcl_ext
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(cbcl_ext ~ genderid, data = yr3data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on cbcl_ext
+pairwise.wilcox.test(yr3data$cbcl_ext, yr3data$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 4 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether cbcl_ext
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(cbcl_ext ~ genderid, data = yr4data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on cbcl_ext
+pairwise.wilcox.test(yr4data$cbcl_ext, yr4data$genderid,
+                     p.adjust.method = "fdr")
+
+##### Create bar graph of CBCL internalizing by gender group ####
+# Use CBCL internalizing on x-axis and proportion of subjects with a given
+# CBCL internalizing score for each specific gender group (rather than raw 
+# number of subjects per gender group) so that differences in GD group are 
+# more clear despite having a much smaller sample size
+# Create data frame with proportions rather than raw numbers
+cbcl_ext_df_proportions <- 
+  yr4data %>%
+  # Create bins
+  mutate(cbcl_ext_bin = cut(cbcl_ext, 
+                            breaks = seq(0, 100, by = 10), 
+                            right = FALSE)) %>% # Create bins
+  group_by(genderid, cbcl_ext_bin) %>%
+  count() %>%
+  group_by(genderid) %>%
+  mutate(yr4_proportion = n / sum(n)) %>%
+  ungroup() %>%
+  # ensure all combinations of gender and number of bad events are
+  # present so can be included on plot
+  complete(cbcl_ext_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
+  mutate(yr4_proportion = replace_na(yr4_proportion,0))
+# Make actual bar graph
+ggplot(cbcl_ext_df_proportions, 
+       aes(x = cbcl_ext_bin,y=yr4_proportion,fill=genderid)) +
+  geom_bar(stat="identity",position="dodge",color="black") +
+  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49",
+                            "50-59","60-69","70-79","80-89","90-99")) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(
+                       min(cbcl_ext_df_proportions$yr4_proportion),
+                       0.4,
+                       by=0.05),limits = c(0,0.4)) + 
+  theme_classic()
+
+# Save bar graph
+# ggsave("cbcl_ext_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
+
+#### Get summary statistics for CBCL total problems ####
+##### Summary statistics for full data set ####
+alldata %>%
+  group_by(genderid) %>%
+  summarise(
+    mean_cbcl_ext = mean(cbcl_ext, na.rm = TRUE),
+    sd_cbcl_ext = sd(cbcl_ext, na.rm = TRUE),
+    min_cbcl_ext = min(cbcl_ext, na.rm = TRUE),
+    max_cbcl_ext = max(cbcl_ext, na.rm = TRUE),
+    median_cbcl_ext = median(cbcl_ext, na.rm = TRUE),
+    n = n()
+  )
+
+##### Summary statistics for by year ####
+alldata %>%
+  group_by(eventname,genderid) %>%
+  summarise(
+    mean_cbcl_ext = mean(cbcl_ext, na.rm = TRUE),
+    sd_cbcl_ext = sd(cbcl_ext, na.rm = TRUE),
+    min_cbcl_ext = min(cbcl_ext, na.rm = TRUE),
+    max_cbcl_ext = max(cbcl_ext, na.rm = TRUE),
+    median_cbcl_ext = median(cbcl_ext, na.rm = TRUE),
+    n = n()
+  )
+
+### Mediation models with lavaan  ####
 meddata <- yr4data %>% 
               select(src_subject_id,
                      total_bad_le_ZCMC,ders_total_ZCMC,
