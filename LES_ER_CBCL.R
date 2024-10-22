@@ -204,7 +204,11 @@ alldata <-
     .names = "Z_{.col}"
   )) %>%
   # make genderid, sex, and site factors rather than characters
-  mutate(across(c(genderid, sex, site), as.factor))
+  mutate(across(c(genderid, sex, site), as.factor)) %>%
+  # remove subjects without LES or DERS or CBCL data
+  filter(!is.na(ders_total), !is.na(total_bad_le),
+         !is.na(cbcl_total), !is.na(cbcl_int),
+         !is.na(cbcl_ext))
 
 ### Get general overview of all data ####
 #### See type of each column ####
