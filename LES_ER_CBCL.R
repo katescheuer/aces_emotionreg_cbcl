@@ -168,28 +168,45 @@ dersdata %>% group_by(eventname) %>% summary()
 les_item_stems <- c("died","injured","crime","friend","friend_injur",
                     "financial","sud","ill","injur","argue","job","away",
                     "arrest","friend_died","mh","sib","victim","separ",
-                    "law","school","move","jail","step","new_job","new_sib",
-                    "foster_care","hit","homeless","hospitalized",
-                    "lockdown","shot","deported")
-ledata <- 
+                    "law","school","move","jail","step","new_job","new_sib"
+                    # "foster_care","hit","homeless","hospitalized",
+                    # "lockdown","shot","deported"
+                    )
+
+# Fix column names with typos so consistent with overall pattern for each stem
+ledata <-
     # raw LES data
-    mh_y_le %>% 
-    # fix column name with typo where original column was 
-    # le_friend_injur_past_yr_y but to be consistent with other column names
-    # should be ple_friend_injur_past_yr_y
+    mh_y_le %>%
+    # rename columns with typos (from raw ABCD names)
     rename(ple_friend_injur_past_yr_y = le_friend_injur_past_yr_y) %>%
-    # remove rows where individual items are all NA
-    # note that these will be coded as 0 rather than NA in the column
-    # corresponding to total number of bad events ie ple_died_past_yr_y
-    filter(!is.na(ple_died_y)) %>%
-    # add column for whether life event was negative and occurred but not 
-    # within year prior to time point, ie if event ever occurred (ple_XXX_y==1) 
-    # but not within past year (ple_XXX_past_yr_y==0) and was considered "mostly
-    # bad" (ple_XXX_fu_y==2)
-    mutate(past_died = if_else(ple_died_y==1 & 
-                               ple_died_past_yr_y==0 &
-                               ple_died_fu_y==2, 
-                               1, 0)) %>%
+    rename(ple_injur_past_yr_y = ple_injur_y_past_yr_y) 
+
+# For each item stem, remove rows with NA for the whether the event was/was not
+# experienced (ie ple_XXX_y where XXX is the stem). Also, for each stem, create
+# a column for whether the event was experienced but not within the past year.
+for (stem in les_item_stems) {
+  # Generate column names for given stem
+  ple_y_col <- paste0("ple_", stem, "_y")
+  ple_past_yr_col <- paste0("ple_", stem, "_past_yr_y")
+  ple_fu_col <- paste0("ple_", stem, "_fu_y")
+  
+  ledata <- 
+    ledata %>%
+    # remove rows with NA for whether the event was/was not experienced
+    filter(!is.na(.data[[ple_y_col]])) %>%
+    # add row for whether event was ever experienced (ie ple_XXX_y==1) and was
+    # negative (ie ple_XXX_fu_y==2) but was not experienced in past year
+    # (ie ple_XXX_past_yr_col==0)
+    mutate(!!paste0("past_", stem) := if_else(
+      .data[[ple_y_col]] == 1 & 
+        .data[[ple_past_yr_col]] == 0 & 
+        .data[[ple_fu_col]] == 2, 
+      1, 0
+    ))
+}  
+
+ledata <- 
+    ledata %>%
     # add column for whether subject knew someone who attempted suicide ie
     # ple_suicide_y==1 but did not occur within past year ie 
     # ple_suicide_past_yr_y==0. Assumed that event was negative, so 
@@ -197,15 +214,20 @@ ledata <-
     mutate(past_suicide = if_else(ple_suicide_y==1 &
                                   ple_suicide_past_yr_y==0,
                                   1, 0)) %>%
-    # add column for sum of negative life events not within past year
-    mutate(past_bad_le = past_died + past_suicide) %>%
-    # select only columns relevant to analysis
-    # select(src_subject_id,eventname,ple_y_ss_total_bad) %>%
-    # rename column with total number of events experienced and described as bad
+    # for each row, sum all negative events experienced but not in past year
+    rowwise() %>%
+    mutate(past_bad_le = sum(c_across(starts_with("past_")), na.rm = TRUE)) %>%
+    ungroup() %>%
+    # rename column with total number of negative events ever experienced
     rename(total_bad_le = ple_y_ss_total_bad) %>%
+    # select only columns relevant to analysis
+    select(src_subject_id,eventname,total_bad_le,past_bad_le) %>%
     # add column for log-transformed version of total number of bad events
-    mutate(log_total_bad_le = log(total_bad_le+1))
-
+    mutate(log_total_bad_le = log(total_bad_le+1)) %>%
+    # add column for log-transformed version of number of bad events not in 
+    # past year
+    mutate(log_past_bad_le = log(past_bad_le+1))
+    
 #### Provide summary statistics for LES data by data collection year ####
 ledata %>% group_by(eventname) %>% summary()
 
