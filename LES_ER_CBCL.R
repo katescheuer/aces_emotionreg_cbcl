@@ -5,6 +5,7 @@ setwd("C:/Users/Kate Scheuer/OneDrive - UW/Desktop/Lab/aces_emotionreg_cbcl")
 library(tidyverse)
 library(lme4)
 library(lmerTest)
+library(nortest)
 library(psych)
 library(lavaan)
 library(ggpattern)
@@ -28,6 +29,7 @@ genderdata <-
     # raw gender data
     gish_y_gi %>%
     # keep only data from year 3 and 4 follow-up visits
+    # Before this step, n should be 49083. After this step, n should be 15064.
     filter(eventname=="3_year_follow_up_y_arm_1"|
            eventname=="4_year_follow_up_y_arm_1") %>%
     # convert numeric sex values to human-readable character strings
@@ -81,7 +83,8 @@ genderdata <-
     select(src_subject_id,eventname,sex,gender,trans,sex_female,
            genderid,gender_cisgirl,gender_gd,gender_cisboy) %>%
     # remove subjects who refused to answer and/or did not understand gender
-    # or trans questions
+    # or trans questions. Before this step, n should be 15064. After this step,
+    # n should be 14495.
     filter(genderid!="refuse",
            genderid!="dont_understand")
 
@@ -115,7 +118,8 @@ cbcldata <-
 dersdata <- 
     # raw DERS-P data
     mh_p_ders %>%
-    # remove subjects who refused to answer one or more items
+    # remove subjects who refused to answer one or more items. Before this step,
+    # n should be 14708. After this step, n should be 14225.
     filter(!if_any(everything(), ~ . == 777)) %>%
     # add column to reverse score "my child pays attention to how he/she feels"
     mutate(rev_ders_attn_awareness_p = 5 + 1 - ders_attn_awareness_p) %>%
@@ -170,6 +174,7 @@ ledata <-
     # as 0 (ie subject with all NA to individual items will still be given 0
     # for the sum score). note: exclude items about homelessness and knowing
     # someone who attempted suicide because those were only asked in year 4.
+    # Before this step, n should be 49151. After this step, n should be 14850.
     filter(!if_any(all_of(
                         c("ple_died_y","ple_injured_y","ple_crime_y",
                           "ple_friend_y","ple_friend_injur_y",
@@ -220,10 +225,11 @@ alldata <-
   )) %>%
   # make genderid, sex, and site factors rather than characters
   mutate(across(c(genderid, sex, site), as.factor)) %>%
-  # remove subjects without LES or DERS or CBCL data
+  # remove subjects without LES or DERS or CBCL data in either year 3 or year 4
+  # follow-up. Before this step, n should be 14495. After this step, n should 
+  # be 13513
   filter(!is.na(ders_total), !is.na(total_bad_le),
-         !is.na(cbcl_total), !is.na(cbcl_int),
-         !is.na(cbcl_ext))
+         !is.na(cbcl_total), !is.na(cbcl_int), !is.na(cbcl_ext))
 
 ### Get general overview of all data ####
 #### See type of each column ####
@@ -239,9 +245,11 @@ alldata %>%
   mutate(percentage = n / sum(n) * 100)
 
 #### Create separate data frame for just data from year 4 follow-up visit
+# n should be 4372
 yr4data <- alldata %>% filter(eventname=="4_year_follow_up_y_arm_1")
 
 #### Create separate data frame for just data from year 3 follow-up visit
+# n should be 9326
 yr3data <- alldata %>% filter(eventname=="3_year_follow_up_y_arm_1")
 
 #### Get general summary of values for each column for data from year 4 visit
@@ -275,9 +283,11 @@ variable_histograms <-
        "cbcl_total", "log_cbcl_total", 
        "cbcl_int", "log_cbcl_int", 
        "cbcl_ext", "log_cbcl_ext"), 
-     ~ ggplot(aes_string(x = .x), data = alldata) + 
-               geom_histogram() +
-               ggtitle(.x)
+      # note that !!sym(.x) turns the variables in the list above into arguments
+      # that can be passed to ggplot
+     ~ ggplot(alldata, aes(x = !!sym(.x))) + 
+         geom_histogram() +
+         ggtitle(.x)
              )
 # Print all histograms from stored list
 print(variable_histograms)
@@ -304,7 +314,6 @@ corrmat$p.adj
 ### Plot variables against each other ####
 #### Without gender
 ##### Scatterplots of DERS vs CBCL total problems, internalizing, externalizing ####
-# 240 total points removed due to NA for DERS (n=238) or CBCL (n=63) values
 outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext")
 ders_plot_list <- list()
 for (outcome in outcome_list) {
@@ -313,7 +322,7 @@ for (outcome in outcome_list) {
                   geom_point(size=1) +
                   geom_smooth(method="lm",
                               se=FALSE,
-                              size=1.25,color="black") +
+                              linewidth=1.25,color="black") +
                   scale_x_continuous(expand = c(0,0),
                                      breaks=seq(25,150,25),
                                      limits = c(25,155)) +
@@ -359,7 +368,6 @@ for (outcome in outcome_list) {
 
 #### With gender
 ##### Scatterplots of DERS vs CBCL total problems, internalizing, externalizing ####
-# 240 total points removed due to NA for DERS (n=238) or CBCL (n=63) values
 outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext")
 ders_gender_plot_list <- list()
 for (outcome in outcome_list) {
@@ -426,7 +434,7 @@ for (outcome in outcome_list) {
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether age differs 
 # significantly based on gender group
-# Test is significant (p = 4.61e-06)
+# Test is significant (p = 9.018e-06)
 kruskal.test(age ~ genderid, data = alldata)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -439,7 +447,7 @@ pairwise.wilcox.test(alldata$total_bad_le, alldata$genderid,
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether age differs
 # significantly based on gender group
-# Test is significant (p = 0.002622)
+# Test is significant (p = 0.007951)
 kruskal.test(age ~ genderid, data = yr3data)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -452,7 +460,7 @@ pairwise.wilcox.test(yr3data$total_bad_le, yr3data$genderid,
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether age differs
 # significantly based on gender group
-# Test is not significant (p = 0.06381)
+# Test is not significant (p = 0.07834)
 kruskal.test(age ~ genderid, data = yr4data)
 
 #### Get summary statistics for age ####
@@ -486,7 +494,7 @@ alldata %>%
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether total_bad_le
 # differs significantly based on gender group
-# Test is significant (p < 2.2e-16)
+# Test is significant (p = 2.03e-14)
 kruskal.test(total_bad_le ~ genderid, data = alldata)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -499,7 +507,7 @@ pairwise.wilcox.test(alldata$total_bad_le, alldata$genderid,
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether total_bad_le
 # differs significantly based on gender group
-# Test is significant (p = 3.333e-05)
+# Test is significant (p = 0.0001489)
 kruskal.test(total_bad_le ~ genderid, data = yr3data)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -512,7 +520,7 @@ pairwise.wilcox.test(yr3data$total_bad_le, yr3data$genderid,
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether total_bad_le
 # differs significantly based on gender group
-# Test is significant (p = 3.653e-15)
+# Test is significant (p = 3.339e-13)
 kruskal.test(total_bad_le ~ genderid, data = yr4data)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -651,7 +659,7 @@ ggplot(ders_df_proportions,
   scale_y_continuous(expand = c(0,0),
                      breaks=seq(min(ders_df_proportions$yr4_proportion),
                                       0.3,
-                                      by=0.05),limits = c(0,0.3)) +
+                                      by=0.05),limits = c(0,0.31)) +
   theme_classic()
 
 # Save bar graph
@@ -918,7 +926,7 @@ pairwise.wilcox.test(yr3data$cbcl_ext, yr3data$genderid,
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether cbcl_ext
 # differs significantly based on gender group
-# Test is significant (p < 2.2e-16)
+# Test is significant (p = 2.758e-10)
 kruskal.test(cbcl_ext ~ genderid, data = yr4data)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -958,7 +966,7 @@ ggplot(cbcl_ext_df_proportions,
                      breaks=seq(
                        min(cbcl_ext_df_proportions$yr4_proportion),
                        0.4,
-                       by=0.05),limits = c(0,0.4)) + 
+                       by=0.05),limits = c(0,0.41)) + 
   theme_classic()
 
 # Save bar graph
@@ -991,8 +999,8 @@ alldata %>%
 
 ### Establish relationships between all pairs of variables individually ####
 #### DERS ~ LES + age + (1|site) ####
-# DERS scores differ significantly based on LES (p = 7.11e-12) but not based on
-# age (p = 0.0616).
+# DERS scores differ significantly based on LES (p = 1.68e-12) but not based on
+# age (p = 0.0526).
 ders_les_reg <- lmer(Z_ders_total ~ Z_total_bad_le + Z_age + 
                      (1|site),
                      data=yr4data)
@@ -1000,7 +1008,7 @@ summary(ders_les_reg)
 
 #### CBCL total problems ~ LES + age + (1|site) ####
 # CBCL total problems scores differ significantly based on LES (p < 2e-16) and
-# based on age (p = 0.0016)
+# based on age (p = 0.00366)
 cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_total_bad_le + Z_age + 
                            (1|site),
                            data=yr4data)
@@ -1008,7 +1016,7 @@ summary(cbcl_total_les_reg)
 
 #### CBCL internalizing ~ LES + age + (1|site) ####
 # CBCL internalizing scores differ significantly based on LES (p < 2e-16) but
-# not based on age (p = 0.241)
+# not based on age (p = 0.264)
 cbcl_int_les_reg <- lmer(Z_cbcl_int ~ Z_total_bad_le + Z_age + 
                              (1|site),
                            data=yr4data)
@@ -1016,7 +1024,7 @@ summary(cbcl_int_les_reg)
 
 #### CBCL externalizing ~ LES + age + (1|site) ####
 # CBCL externalizing scores differ significantly based on LES (p < 2e-16) and
-# based on age (p = 0.000322)
+# based on age (p = 0.0014)
 cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_total_bad_le + Z_age + 
                            (1|site),
                          data=yr4data)
@@ -1024,7 +1032,7 @@ summary(cbcl_ext_les_reg)
 
 #### CBCL total problems ~ DERS + age + (1|site) ####
 # CBCL total problems scores differ significantly based on DERS (p < 2e-16) but
-# not based on age (p = 0.122)
+# not based on age (p = 0.0967)
 cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_ders_total + Z_age + 
                              (1|site),
                            data=yr4data)
@@ -1032,7 +1040,7 @@ summary(cbcl_total_les_reg)
 
 #### CBCL internalizing ~ DERS + age + (1|site) ####
 # CBCL internalizing scores differ significantly based on DERS (p < 2e-16) but
-# not based on age (p = 0.698)
+# not based on age (p = 0.855)
 cbcl_int_les_reg <- lmer(Z_cbcl_int ~ Z_ders_total + Z_age + 
                            (1|site),
                          data=yr4data)
@@ -1040,7 +1048,7 @@ summary(cbcl_int_les_reg)
 
 #### CBCL externalizing ~ DERS + age + (1|site) ####
 # CBCL externalizing scores differ significantly based on DERS (p < 2e-16) and
-# based on age (p = 0.0421)
+# based on age (p = 0.0365)
 cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_ders_total + Z_age + 
                            (1|site),
                          data=yr4data)
