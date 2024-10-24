@@ -5,8 +5,6 @@ setwd("C:/Users/Kate Scheuer/OneDrive - UW/Desktop/Lab/aces_emotionreg_cbcl")
 library(tidyverse)
 library(lme4)
 library(lmerTest)
-library(partR2)
-library(nortest)
 library(psych)
 library(lavaan)
 library(ggpattern)
@@ -164,11 +162,45 @@ dersdata %>% group_by(eventname) %>% summary()
 
 ### Prepare LES data for analysis ####
 #### Identify and prepare relevant columns ####
+# List all item stems for LES except question relating to knowing someone who
+# attempted suicide because item pattern is slightly different for that set
+# of questions
+les_item_stems <- c("died","injured","crime","friend","friend_injur",
+                    "financial","sud","ill","injur","argue","job","away",
+                    "arrest","friend_died","mh","sib","victim","separ",
+                    "law","school","move","jail","step","new_job","new_sib",
+                    "foster_care","hit","homeless","hospitalized",
+                    "lockdown","shot","deported")
 ledata <- 
     # raw LES data
     mh_y_le %>% 
+    # fix column name with typo where original column was 
+    # le_friend_injur_past_yr_y but to be consistent with other column names
+    # should be ple_friend_injur_past_yr_y
+    rename(ple_friend_injur_past_yr_y = le_friend_injur_past_yr_y) %>%
+    # remove rows where individual items are all NA
+    # note that these will be coded as 0 rather than NA in the column
+    # corresponding to total number of bad events ie ple_died_past_yr_y
+    filter(!is.na(ple_died_y)) %>%
+    # add column for whether life event was negative and occurred but not 
+    # within year prior to time point, ie if event ever occurred (ple_XXX_y==1) 
+    # but not within past year (ple_XXX_past_yr_y==0) and was considered "mostly
+    # bad" (ple_XXX_fu_y==2)
+    mutate(past_died = if_else(ple_died_y==1 & 
+                               ple_died_past_yr_y==0 &
+                               ple_died_fu_y==2, 
+                               1, 0)) %>%
+    # add column for whether subject knew someone who attempted suicide ie
+    # ple_suicide_y==1 but did not occur within past year ie 
+    # ple_suicide_past_yr_y==0. Assumed that event was negative, so 
+    # ple_suicide_fu_y does not exist.
+    mutate(past_suicide = if_else(ple_suicide_y==1 &
+                                  ple_suicide_past_yr_y==0,
+                                  1, 0)) %>%
+    # add column for sum of negative life events not within past year
+    mutate(past_bad_le = past_died + past_suicide) %>%
     # select only columns relevant to analysis
-    select(src_subject_id,eventname,ple_y_ss_total_bad) %>%
+    # select(src_subject_id,eventname,ple_y_ss_total_bad) %>%
     # rename column with total number of events experienced and described as bad
     rename(total_bad_le = ple_y_ss_total_bad) %>%
     # add column for log-transformed version of total number of bad events
