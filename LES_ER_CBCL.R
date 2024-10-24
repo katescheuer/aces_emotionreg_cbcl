@@ -162,72 +162,33 @@ dersdata %>% group_by(eventname) %>% summary()
 
 ### Prepare LES data for analysis ####
 #### Identify and prepare relevant columns ####
-# List all item stems for LES except question relating to knowing someone who
-# attempted suicide because item pattern is slightly different for that set
-# of questions
-les_item_stems <- c("died","injured","crime","friend","friend_injur",
-                    "financial","sud","ill","injur","argue","job","away",
-                    "arrest","friend_died","mh","sib","victim","separ",
-                    "law","school","move","jail","step","new_job","new_sib"
-                    # "foster_care","hit","homeless","hospitalized",
-                    # "lockdown","shot","deported"
-                    )
-
-# Fix column names with typos so consistent with overall pattern for each stem
-ledata <-
-    # raw LES data
-    mh_y_le %>%
-    # rename columns with typos (from raw ABCD names)
-    rename(ple_friend_injur_past_yr_y = le_friend_injur_past_yr_y) %>%
-    rename(ple_injur_past_yr_y = ple_injur_y_past_yr_y) 
-
-# For each item stem, remove rows with NA for the whether the event was/was not
-# experienced (ie ple_XXX_y where XXX is the stem). Also, for each stem, create
-# a column for whether the event was experienced but not within the past year.
-for (stem in les_item_stems) {
-  # Generate column names for given stem
-  ple_y_col <- paste0("ple_", stem, "_y")
-  ple_past_yr_col <- paste0("ple_", stem, "_past_yr_y")
-  ple_fu_col <- paste0("ple_", stem, "_fu_y")
-  
-  ledata <- 
-    ledata %>%
-    # remove rows with NA for whether the event was/was not experienced
-    filter(!is.na(.data[[ple_y_col]])) %>%
-    # add row for whether event was ever experienced (ie ple_XXX_y==1) and was
-    # negative (ie ple_XXX_fu_y==2) but was not experienced in past year
-    # (ie ple_XXX_past_yr_col==0)
-    mutate(!!paste0("past_", stem) := if_else(
-      .data[[ple_y_col]] == 1 & 
-        .data[[ple_past_yr_col]] == 0 & 
-        .data[[ple_fu_col]] == 2, 
-      1, 0
-    ))
-}  
-
 ledata <- 
-    ledata %>%
-    # add column for whether subject knew someone who attempted suicide ie
-    # ple_suicide_y==1 but did not occur within past year ie 
-    # ple_suicide_past_yr_y==0. Assumed that event was negative, so 
-    # ple_suicide_fu_y does not exist.
-    mutate(past_suicide = if_else(ple_suicide_y==1 &
-                                  ple_suicide_past_yr_y==0,
-                                  1, 0)) %>%
-    # for each row, sum all negative events experienced but not in past year
-    rowwise() %>%
-    mutate(past_bad_le = sum(c_across(starts_with("past_")), na.rm = TRUE)) %>%
-    ungroup() %>%
-    # rename column with total number of negative events ever experienced
-    rename(total_bad_le = ple_y_ss_total_bad) %>%
+    # raw LES data
+    mh_y_le %>% 
+    # remove rows with NA in any of the main items asking about whether event
+    # was or was not experienced because sum of all bad events counts NA values
+    # as 0 (ie subject with all NA to individual items will still be given 0
+    # for the sum score). note: exclude items about homelessness and knowing
+    # someone who attempted suicide because those were only asked in year 4.
+    filter(!if_any(all_of(
+                        c("ple_died_y","ple_injured_y","ple_crime_y",
+                          "ple_friend_y","ple_friend_injur_y",
+                          "ple_financial_y","ple_sud_y","ple_ill_y",
+                          "ple_injur_y","ple_argue_y","ple_job_y",
+                          "ple_away_y","ple_arrest_y","ple_friend_died_y",
+                          "ple_mh_y","ple_sib_y","ple_victim_y","ple_separ_y",
+                          "ple_law_y","ple_school_y","ple_move_y","ple_jail_y",
+                          "ple_step_y","ple_new_job_y","ple_new_sib_y",
+                          "ple_foster_care_y","ple_hit_y","ple_hospitalized_y",
+                          "ple_lockdown_y","ple_shot_y","ple_deported_y"
+                          )), is.na)) %>%
     # select only columns relevant to analysis
-    select(src_subject_id,eventname,total_bad_le,past_bad_le) %>%
+    select(src_subject_id,eventname,ple_y_ss_total_bad) %>%
+    # rename column with total number of events experienced and described as bad
+    rename(total_bad_le = ple_y_ss_total_bad) %>%
     # add column for log-transformed version of total number of bad events
-    mutate(log_total_bad_le = log(total_bad_le+1)) %>%
-    # add column for log-transformed version of number of bad events not in 
-    # past year
-    mutate(log_past_bad_le = log(past_bad_le+1))
-    
+    mutate(log_total_bad_le = log(total_bad_le+1))
+
 #### Provide summary statistics for LES data by data collection year ####
 ledata %>% group_by(eventname) %>% summary()
 
