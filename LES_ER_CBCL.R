@@ -23,6 +23,13 @@ abcd_y_lt <- read.csv("./data/abcd_y_lt.csv", header = T)
 #### LES for exposure to negative life events
 mh_y_le <- read.csv("./data/mh_y_le.csv", header = T)
 
+### Determine initial number of year 4 participants from each data frame ####
+gish_y_gi %>% filter(eventname=="4_year_follow_up_y_arm_1") %>% count()
+mh_p_ders %>% filter(eventname=="4_year_follow_up_y_arm_1") %>% count()
+mh_p_cbcl %>% filter(eventname=="4_year_follow_up_y_arm_1") %>% count()
+abcd_y_lt %>% filter(eventname=="4_year_follow_up_y_arm_1") %>% count()
+mh_y_le %>% filter(eventname=="4_year_follow_up_y_arm_1") %>% count()
+
 ### Prepare gender data for analysis ####
 #### Identify gender groups ####
 genderdata <- 
@@ -484,7 +491,7 @@ pairwise.wilcox.test(yr3data$total_bad_le, yr3data$genderid,
 kruskal.test(age ~ genderid, data = yr4data)
 
 #### Get summary statistics for age ####
-##### Summary statistics for full data set ####
+##### Summary statistics for full data set by gender ####
 alldata %>%
   group_by(genderid) %>%
   summarise(
@@ -496,7 +503,7 @@ alldata %>%
     n = n()
   )
 
-##### Summary statistics for by year ####
+##### Summary statistics by gender and by year ####
 alldata %>%
   group_by(eventname,genderid) %>%
   summarise(
@@ -508,6 +515,28 @@ alldata %>%
     n = n()
   )
 
+##### Summary statistics for year 4 overall ####
+yr4data %>%
+  summarise(
+    mean_age = mean(age, na.rm = TRUE),
+    sd_age = sd(age, na.rm = TRUE),
+    min_age = min(age, na.rm = TRUE),
+    max_age = max(age, na.rm = TRUE),
+    median_age = median(age, na.rm = TRUE),
+    n = n()
+  )
+
+##### Summary statistics for year 4 by gender ####
+yr4data %>%
+  group_by(genderid) %>%
+  summarise(
+    mean_age = mean(age, na.rm = TRUE),
+    sd_age = sd(age, na.rm = TRUE),
+    min_age = min(age, na.rm = TRUE),
+    max_age = max(age, na.rm = TRUE),
+    median_age = median(age, na.rm = TRUE),
+    n = n()
+  )
 
 ### Determine whether LES differs based only on gender ####
 #### Full data set ####
@@ -581,9 +610,8 @@ ggplot(les_df_proportions,
 # ggsave("LES_by_gender.tiff",width=7,height=3,unit="in")
 
 #### Get summary statistics for LES ####
-##### Summary statistics for full data set ####
-alldata %>%
-  group_by(genderid) %>%
+##### Summary statistics for year 4 ####
+yr4data %>%
   summarise(
     mean_total_bad_le = mean(total_bad_le, na.rm = TRUE),
     sd_total_bad_le = sd(total_bad_le, na.rm = TRUE),
@@ -593,7 +621,7 @@ alldata %>%
     n = n()
   )
 
-##### Summary statistics for by year ####
+##### Summary statistics by year ####
 alldata %>%
   group_by(eventname,genderid) %>%
   summarise(
@@ -686,9 +714,9 @@ ggplot(ders_df_proportions,
 # ggsave("DERS_by_gender.tiff",width=7,height=3,unit="in")
 
 #### Get summary statistics for DERS ####
-##### Summary statistics for full data set ####
-alldata %>%
-  group_by(genderid) %>%
+##### Summary statistics for year 4 ####
+yr4data %>%
+  # group_by(genderid) %>%
   summarise(
     mean_ders_total = mean(ders_total, na.rm = TRUE),
     sd_ders_total = sd(ders_total, na.rm = TRUE),
@@ -788,9 +816,9 @@ ggplot(cbcl_total_df_proportions,
 # ggsave("CBCL_total_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
 
 #### Get summary statistics for CBCL total problems ####
-##### Summary statistics for full data set ####
-alldata %>%
-  group_by(genderid) %>%
+##### Summary statistics for year 4 ####
+yr4data %>%
+  # group_by(genderid) %>%
   summarise(
     mean_cbcl_total = mean(cbcl_total, na.rm = TRUE),
     sd_cbcl_total = sd(cbcl_total, na.rm = TRUE),
@@ -891,9 +919,9 @@ ggplot(cbcl_int_df_proportions,
 # ggsave("cbcl_int_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
 
 #### Get summary statistics for CBCL total problems ####
-##### Summary statistics for full data set ####
-alldata %>%
-  group_by(genderid) %>%
+##### Summary statistics for year 4 ####
+yr4data %>%
+  # group_by(genderid) %>%
   summarise(
     mean_cbcl_int = mean(cbcl_int, na.rm = TRUE),
     sd_cbcl_int = sd(cbcl_int, na.rm = TRUE),
@@ -993,9 +1021,9 @@ ggplot(cbcl_ext_df_proportions,
 # ggsave("cbcl_ext_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
 
 #### Get summary statistics for CBCL total problems ####
-##### Summary statistics for full data set ####
-alldata %>%
-  group_by(genderid) %>%
+##### Summary statistics for year 4 ####
+yr4data %>%
+  # group_by(genderid) %>%
   summarise(
     mean_cbcl_ext = mean(cbcl_ext, na.rm = TRUE),
     sd_cbcl_ext = sd(cbcl_ext, na.rm = TRUE),
@@ -1016,6 +1044,39 @@ alldata %>%
     median_cbcl_ext = median(cbcl_ext, na.rm = TRUE),
     n = n()
   )
+
+### Determine whether any variable differs based on sex ####
+
+sex_yr4data <- 
+  yr4data %>%
+  filter(!(sex=="dont_know")) %>%
+  filter(!(sex=="refuse")) 
+
+sex_yr4data %>%
+  group_by(sex) %>%
+  summarise(
+    mean_age = mean(age, na.rm = TRUE),
+    sd_age = sd(age, na.rm = TRUE),
+    mean_les = mean(total_bad_le, na.rm = TRUE),
+    sd_les = sd(total_bad_le, na.rm = TRUE),
+    mean_ders = mean(ders_total, na.rm = TRUE),
+    sd_ders = sd(ders_total, na.rm = TRUE),
+    mean_cbcl_total = mean(cbcl_total, na.rm = TRUE),
+    sd_cbcl_total = sd(cbcl_total, na.rm = TRUE),
+    mean_cbcl_int = mean(cbcl_int, na.rm = TRUE),
+    sd_cbcl_int = sd(cbcl_int, na.rm = TRUE),
+    mean_cbcl_ext = mean(cbcl_ext, na.rm = TRUE),
+    sd_cbcl_ext = sd(cbcl_ext, na.rm = TRUE),
+    n = n()
+  )
+
+wilcox.test(age ~ sex, data = sex_yr4data)
+wilcox.test(total_bad_le ~ sex, data = sex_yr4data)
+wilcox.test(ders_total ~ sex, data = sex_yr4data)
+wilcox.test(cbcl_total ~ sex, data = sex_yr4data)
+wilcox.test(cbcl_int ~ sex, data = sex_yr4data)
+wilcox.test(cbcl_ext ~ sex, data = sex_yr4data)
+
 
 ### Establish relationships between all pairs of variables individually ####
 #### DERS ~ LES + age + (1|site) ####
@@ -1277,6 +1338,7 @@ summary(sextotalfit,
         ci=TRUE, 
         rsquare=TRUE)
 parameterEstimates(sextotalfit, boot.ci.type = "bca.simple")
+
 
 ##### CBCL internalizing ####
 ###### Without gender or sex ####
