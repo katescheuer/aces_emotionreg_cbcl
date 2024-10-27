@@ -238,25 +238,45 @@ str(alldata)
 #### See all unique values for each column ####
 map(alldata,unique)
 
-#### Get raw number and percentage for each gender group and data collection year
+#### Get raw number and percentage for each gender group and data collection year ####
 alldata %>% 
   group_by(eventname) %>% 
   count(genderid) %>% 
   mutate(percentage = n / sum(n) * 100)
 
-#### Create separate data frame for just data from year 4 follow-up visit
+#### Create separate data frame for just data from year 4 follow-up visit ####
 # n should be 4372
 yr4data <- alldata %>% filter(eventname=="4_year_follow_up_y_arm_1")
 
-#### Create separate data frame for just data from year 3 follow-up visit
+#### Create separate data frame for just data from year 3 follow-up visit ####
 # n should be 9326
 yr3data <- alldata %>% filter(eventname=="3_year_follow_up_y_arm_1")
 
-#### Get general summary of values for each column for data from year 4 visit
+#### Get general summary of values for each column for data from year 4 visit ####
 yr4data %>% summary()
 
-#### Get general summary of values for each column for data from year 3 visit
+#### Get general summary of values for each column for data from year 3 visit ####
 yr3data %>% summary()
+
+#### Determine how many subjects switched gender groups between years 3 and 4 ####
+gender_change <-
+    # raw year 4 data
+    yr4data %>%
+    # select only genderid and subject id columns
+    select(src_subject_id,genderid) %>%
+    # rename genderid column to show corresponds to genderid in year 4
+    rename(genderid_yr4 = genderid) %>%
+    # add genderid from year 3 for subjects present in year 4 data
+    left_join(select(yr3data,
+                     c(src_subject_id,genderid)),
+              by=c("src_subject_id")) %>%
+    # rename genderid column to show correspond to genderid in year 3
+    rename(genderid_yr3 = genderid) %>%
+    filter(genderid_yr4 != genderid_yr3) %>%
+    group_by(genderid_yr3,genderid_yr4) %>% 
+    count()
+gender_change
+
 
 ### Assess normality of distributions of each variable from all data ####
 # p-value < 0.05 suggests data is not normally distributed
