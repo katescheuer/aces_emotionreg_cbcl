@@ -1,8 +1,5 @@
 ### Set working directory ####
-#setwd("C:/Users/Kate Scheuer/OneDrive - UW/Desktop/Lab/aces_emotionreg_cbcl")
-
-setwd("~/OneDrive - UW/ABCD/core/Project Specific Folders/Kate Schuer RBuddy Project")
-
+setwd("C:/Users/Kate Scheuer/OneDrive - UW/Desktop/Lab/aces_emotionreg_cbcl/data")
 
 ### Load libraries ####
 library(tidyverse)
@@ -17,26 +14,23 @@ library(misty)
 ### Read in raw data ####
 #### Gender data ####
 #'*I usually just set the file path all the way to the main folder*
+#'Change made
 #'*Also, read_csv is a bit better than read.csv bc it's tied to tidyverse*
+#'Change made
 
-gish_y_gi <- read.csv("gish_y_gi.csv", header = T)
-#gish_y_gi <- read.csv("./data/gish_y_gi.csv", header = T)
+gish_y_gi <- read_csv("gish_y_gi.csv")
 
 #### DERS-P for emotion regulation ####
-mh_p_ders <- read.csv("mh_p_ders.csv", header = T)
-#mh_p_ders <- read.csv("./data/mh_p_ders.csv", header = T)
+mh_p_ders <- read_csv("mh_p_ders.csv")
 
 #### CBCL for psychopathology symptoms ####
-mh_p_cbcl <- read.csv("mh_p_cbcl.csv", header = T)
-#mh_p_cbcl <- read.csv("./data/mh_p_cbcl.csv", header = T)
+mh_p_cbcl <- read_csv("mh_p_cbcl.csv")
 
 #### Longitudinal tracking data ####
-abcd_y_lt <- read.csv("abcd_y_lt.csv", header = T)
-#abcd_y_lt <- read.csv("./data/abcd_y_lt.csv", header = T)
+abcd_y_lt <- read_csv("abcd_y_lt.csv")
 
 #### LES for exposure to negative life events
-mh_y_le <- read.csv("mh_y_le.csv", header = T)
-#mh_y_le <- read.csv("./data/mh_y_le.csv", header = T)
+mh_y_le <- read_csv("mh_y_le.csv")
 
 ### Determine initial number of year 4 participants from each data frame ####
 
@@ -1198,6 +1192,8 @@ summary(cbcl_ext_les_reg)
 #################### FOR ANALYSIS USING ALL YEAR 4 DATA #######################
 ###############################################################################
 
+### Create clean data for mediation analysis to make syntax more clear
+
 med_data <- 
   yr4data %>%
   select(src_subject_id,
@@ -1226,12 +1222,17 @@ med_data <-
          extCBCL = Z_cbcl_ext
   )
 
+### For mediation analyses using sex instead of gender, need to remove subjects
+### who refused to answer or answered "don't know" for sex. Don't want to remove
+### these earlier in the code so that we retain all subjects with information on
+### gender regardless of whether they have sex data
+
 sex_med_data <- med_data %>% filter(sex!="refuse",sex!="dont_know")
 
 ###############################################################################
 # FOR ANALYSIS USING YEAR 3 LES & DERS WITH YEAR 4 OUTCOMES, GENDER, & COVARIATES ###############################################################################
 
-
+### Create clean data for mediation analysis to make syntax more clear
 
 med_data <- 
   yr4data %>%
@@ -1266,11 +1267,18 @@ med_data <-
     extCBCL = Z_cbcl_ext
   )
 
+### For mediation analyses using sex instead of gender, need to remove subjects
+### who refused to answer or answered "don't know" for sex. Don't want to remove
+### these earlier in the code so that we retain all subjects with information on
+### gender regardless of whether they have sex data
+
 sex_med_data <- med_data %>% filter(sex!="refuse",sex!="dont_know")
 
 ###############################################################################
 ############# FOR ANALYSIS USING LOG TRANSFORMED YEAR 4 DATA ##################
 ###############################################################################
+
+### Create clean data for mediation analysis to make syntax more clear
 
 med_data <- 
   yr4data %>%
@@ -1300,7 +1308,13 @@ med_data <-
     extCBCL = Z_log_cbcl_ext
   )
 
+### For mediation analyses using sex instead of gender, need to remove subjects
+### who refused to answer or answered "don't know" for sex. Don't want to remove
+### these earlier in the code so that we retain all subjects with information on
+### gender regardless of whether they have sex data
+
 sex_med_data <- med_data %>% filter(sex!="refuse",sex!="dont_know")
+
 ###############################################################################
 
 #'*So cool to run mediation. Wish I knew more about SEM mediation. #Goals*
