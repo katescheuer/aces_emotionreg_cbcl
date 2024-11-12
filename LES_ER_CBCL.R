@@ -35,205 +35,253 @@ mh_y_le <- read_csv("mh_y_le.csv")
 ### Determine initial number of year 4 participants from each data frame ####
 
 #'*Coding best practice is to start on new line after each operator (readability)*
+#'Change made 
 
-gish_y_gi %>% filter(eventname=="4_year_follow_up_y_arm_1") %>% count()
-mh_p_ders %>% filter(eventname=="4_year_follow_up_y_arm_1") %>% count()
-mh_p_cbcl %>% filter(eventname=="4_year_follow_up_y_arm_1") %>% count()
-abcd_y_lt %>% filter(eventname=="4_year_follow_up_y_arm_1") %>% count()
-mh_y_le %>% filter(eventname=="4_year_follow_up_y_arm_1") %>% count()
-
+gish_y_gi %>% 
+  filter(eventname=="4_year_follow_up_y_arm_1") %>%
+  count() 
+mh_p_ders %>% 
+  filter(eventname=="4_year_follow_up_y_arm_1") %>% 
+  count()
+mh_p_cbcl %>% 
+  filter(eventname=="4_year_follow_up_y_arm_1") %>% 
+  count()
+abcd_y_lt %>% 
+  filter(eventname=="4_year_follow_up_y_arm_1") %>% 
+  count()
+mh_y_le %>% 
+  filter(eventname=="4_year_follow_up_y_arm_1") %>% 
+  count()
 
 ### Prepare gender data for analysis ####
 #### Identify gender groups ####
 #'*I would keep old and new df object on same line,then enter after main operator*
 #'*Other than that, wonderful long chunk of tidyverse here!*
-genderdata <- 
-    # raw gender data
-    gish_y_gi %>%
-    # keep only data from year 3 and 4 follow-up visits
-    # Before this step, n should be 49083. After this step, n should be 15064.
-    filter(eventname=="3_year_follow_up_y_arm_1"|
-           eventname=="4_year_follow_up_y_arm_1") %>%
-    # convert numeric sex values to human-readable character strings
-    mutate(sex = case_when(
-                    kbi_sex_assigned_at_birth==1 ~ "male",
-                    kbi_sex_assigned_at_birth==2 ~ "female",
-                    kbi_sex_assigned_at_birth==777 ~ "dont_know",
-                    kbi_sex_assigned_at_birth==999 ~ "refuse"
+#'Change made
+genderdata <- gish_y_gi %>%
+  # keep only data from year 3 and 4 follow-up visits
+  # Before this step, n should be 49083. After this step, n should be 15064.
+  filter(eventname=="3_year_follow_up_y_arm_1"|
+         eventname=="4_year_follow_up_y_arm_1") %>%
+  # convert numeric sex values to human-readable character strings
+  mutate(sex = case_when(
+                  kbi_sex_assigned_at_birth==1 ~ "male",
+                  kbi_sex_assigned_at_birth==2 ~ "female",
+                  kbi_sex_assigned_at_birth==777 ~ "dont_know",
+                  kbi_sex_assigned_at_birth==999 ~ "refuse"
+                  )) %>%
+  # make binary column for whether or not participant is female
+  mutate(sex_female = if_else(sex=="female",1,0)) %>%
+  # convert numeric gender values to human-readable character strings
+  mutate(gender = case_when(
+                    kbi_gender==1 ~ "boy",
+                    kbi_gender==2 ~ "girl",
+                    kbi_gender==3 ~ "nb",
+                    kbi_gender==4 ~ "dont_understand",
+                    kbi_gender==777 ~ "refuse"
                     )) %>%
-    # make binary column for whether or not participant is female
-    mutate(sex_female = if_else(sex=="female",1,0)) %>%
-    # convert numeric gender values to human-readable character strings
-    mutate(gender = case_when(
-                      kbi_gender==1 ~ "boy",
-                      kbi_gender==2 ~ "girl",
-                      kbi_gender==3 ~ "nb",
+  # convert numeric values for trans identity to human-readable character strings
+  mutate(trans = case_when(
+                    kbi_y_trans_id==1 ~ "yes",
+                    kbi_y_trans_id==2 ~ "maybe",
+                    kbi_y_trans_id==3 ~ "no",
+                    kbi_y_trans_id==4 ~ "dont_understand",
+                    kbi_y_trans_id==777 ~ "refuse"
+                    )) %>%
+  # combine gender and trans identity information to make three gender groups
+  mutate(genderid = case_when(
+                      kbi_gender==777 ~ "refuse",
+                      kbi_y_trans_id==777 ~ "refuse",
                       kbi_gender==4 ~ "dont_understand",
-                      kbi_gender==777 ~ "refuse"
-                      )) %>%
-    # convert numeric values for trans identity to human-readable character strings
-    mutate(trans = case_when(
-                      kbi_y_trans_id==1 ~ "yes",
-                      kbi_y_trans_id==2 ~ "maybe",
-                      kbi_y_trans_id==3 ~ "no",
                       kbi_y_trans_id==4 ~ "dont_understand",
-                      kbi_y_trans_id==777 ~ "refuse"
+                      kbi_gender==1 & kbi_y_trans_id==1 ~ "gd", #"trans_boy",
+                      kbi_gender==1 & kbi_y_trans_id==2 ~ "gd", #"trans_boy",
+                      kbi_gender==1 & kbi_y_trans_id==3 ~ "cis_boy",
+                      kbi_gender==2 & kbi_y_trans_id==1 ~ "gd", #"trans_girl",
+                      kbi_gender==2 & kbi_y_trans_id==2 ~ "gd", #"trans_girl",
+                      kbi_gender==2 & kbi_y_trans_id==3 ~ "cis_girl",
+                      kbi_gender==3 & kbi_y_trans_id==1 ~ "gd", #"nb",
+                      kbi_gender==3 & kbi_y_trans_id==2 ~ "gd", #"nb",
+                      kbi_gender==3 & kbi_y_trans_id==3 ~ "gd" #"nb"
                       )) %>%
-    # combine gender and trans identity information to make three gender groups
-    mutate(genderid = case_when(
-                        kbi_gender==777 ~ "refuse",
-                        kbi_y_trans_id==777 ~ "refuse",
-                        kbi_gender==4 ~ "dont_understand",
-                        kbi_y_trans_id==4 ~ "dont_understand",
-                        kbi_gender==1 & kbi_y_trans_id==1 ~ "gd", #"trans_boy",
-                        kbi_gender==1 & kbi_y_trans_id==2 ~ "gd", #"trans_boy",
-                        kbi_gender==1 & kbi_y_trans_id==3 ~ "cis_boy",
-                        kbi_gender==2 & kbi_y_trans_id==1 ~ "gd", #"trans_girl",
-                        kbi_gender==2 & kbi_y_trans_id==2 ~ "gd", #"trans_girl",
-                        kbi_gender==2 & kbi_y_trans_id==3 ~ "cis_girl",
-                        kbi_gender==3 & kbi_y_trans_id==1 ~ "gd", #"nb",
-                        kbi_gender==3 & kbi_y_trans_id==2 ~ "gd", #"nb",
-                        kbi_gender==3 & kbi_y_trans_id==3 ~ "gd" #"nb"
-                        )) %>%
-    # make binary column for whether or not participant is cis girl
-    mutate(gender_cisgirl = if_else(genderid=="cis_girl",1,0)) %>%
-    # make binary column for whether or not participant is gender diverse
-    mutate(gender_gd = if_else(genderid=="gd",1,0)) %>%
-    # make binary column for whether or not participant is cis boy
-    mutate(gender_cisboy = if_else(genderid=="cis_boy",1,0)) %>%
-    # keep only columns relevant to analysis
-    select(src_subject_id,eventname,sex,gender,trans,sex_female,
-           genderid,gender_cisgirl,gender_gd,gender_cisboy) %>%
-    # remove subjects who refused to answer and/or did not understand gender
-    # or trans questions. Before this step, n should be 15064. After this step,
-    # n should be 14495.
-    filter(genderid!="refuse",
-           genderid!="dont_understand")
+  # make binary column for whether or not participant is cis girl
+  mutate(gender_cisgirl = if_else(genderid=="cis_girl",1,0)) %>%
+  # make binary column for whether or not participant is gender diverse
+  mutate(gender_gd = if_else(genderid=="gd",1,0)) %>%
+  # make binary column for whether or not participant is cis boy
+  mutate(gender_cisboy = if_else(genderid=="cis_boy",1,0)) %>%
+  # keep only columns relevant to analysis
+  select(src_subject_id,eventname,sex,gender,trans,sex_female,
+         genderid,gender_cisgirl,gender_gd,gender_cisboy) %>%
+  # remove subjects who refused to answer and/or did not understand gender
+  # or trans questions. Before this step, n should be 15064. After this step,
+  # n should be 14495.
+  filter(genderid!="refuse",
+         genderid!="dont_understand")
 
 #### Count number of subjects per gender group per data collection year ####
-genderdata %>% group_by(eventname) %>% count(genderid)
+genderdata %>% 
+  group_by(eventname) %>% 
+  count(genderid)
 
 ### Prepare CBCL data for analysis ####
-cbcldata <- 
-    # raw CBCL data
-    mh_p_cbcl %>%
-    # select only columns relevant to analysis
-    select(src_subject_id,eventname,
-           cbcl_scr_syn_totprob_t,
-           cbcl_scr_syn_internal_t,
-           cbcl_scr_syn_external_t
-           ) %>%
-    # rename subscale columns to be more human-readable and shorter
-    rename(cbcl_total = cbcl_scr_syn_totprob_t,
-           cbcl_ext = cbcl_scr_syn_external_t,
-           cbcl_int = cbcl_scr_syn_internal_t
-           ) %>%
-    # add column with log-transformed CBCL total problems values
-    mutate(log_cbcl_total = log(cbcl_total)) %>%
-    # add column with log-transformed CBCL internalizing values
-    mutate(log_cbcl_int = log(cbcl_int)) %>%
-    # add column with log-transformed CBCL externalizing values
-    mutate(log_cbcl_ext = log(cbcl_ext)) 
+cbcldata <- mh_p_cbcl %>%
+  # select only columns relevant to analysis
+  select(src_subject_id,eventname,
+         cbcl_scr_syn_totprob_t,
+         cbcl_scr_syn_internal_t,
+         cbcl_scr_syn_external_t
+         ) %>%
+  # rename subscale columns to be more human-readable and shorter
+  rename(cbcl_total = cbcl_scr_syn_totprob_t,
+         cbcl_ext = cbcl_scr_syn_external_t,
+         cbcl_int = cbcl_scr_syn_internal_t
+         ) %>%
+  # add column with log-transformed CBCL total problems values
+  mutate(log_cbcl_total = log(cbcl_total)) %>%
+  # add column with log-transformed CBCL internalizing values
+  mutate(log_cbcl_int = log(cbcl_int)) %>%
+  # add column with log-transformed CBCL externalizing values
+  mutate(log_cbcl_ext = log(cbcl_ext)) 
 
 ### Prepare DERS-P data for analysis ####
 #### Create cumulative score ####
-dersdata <- 
-    # raw DERS-P data
-    mh_p_ders %>%
-    # remove subjects who refused to answer one or more items. Before this step,
-    # n should be 14708. After this step, n should be 14225.
-    filter(!if_any(everything(), ~ . == 777)) %>%
-    # add column to reverse score "my child pays attention to how he/she feels"
-    #'*to reduce potential error/for checking, could code more explicitly*
-    #'*mutate(rev_ders_attn_awareness_p = case_when(ders_attn_awareness_p == 1 ~ 5*
-    #'*                                             ders_attn_awareness_p == 2 ~ 4*
-    #'*                                             ders_attn_awareness_p == 3 ~ 3*
-    #'*                                             ders_attn_awareness_p == 4 ~ 2*
-    #'*                                             ders_attn_awareness_p == 5 ~ 1*
-    
-    mutate(rev_ders_attn_awareness_p = 5 + 1 - ders_attn_awareness_p) %>%
-    # add column to reverse score "my child is attentive to his/her feelings"
-    mutate(rev_ders_feelings_attentive_p = 5 + 1 - ders_feelings_attentive_p) %>%
-    # add column to reverse score "my child cares about what he/she is feeling"
-    mutate(rev_ders_feelings_care_p = 5 + 1 - ders_feelings_care_p) %>%
-    # add column to reverse score "when my child is upset, he/she acknowledges
-    # his/her emotions"
-    mutate(rev_ders_upset_ack_p = 5 + 1 - ders_upset_ack_p) %>%
-    # add column to reverse score "my child is clear about his/her feelings"
-    mutate(rev_ders_clear_feelings_p = 5 + 1 - ders_clear_feelings_p) %>%
-    # add column to reverse score "my child knows exactly how he/she is feeling"
-    mutate(rev_ders_feelings_know_p = 5 + 1 - ders_feelings_know_p) %>%
-    # add column to reverse score "when my child is upset, he/she feels like
-    # he/she can remin in control of his/her behaviors"
-    mutate(rev_ders_upset_behavior_control_p = 5 + 1 - ders_upset_behavior_control_p) %>%
-    # add column to reverse score "when my child is upset, he/she knows that
-    # he/she can find a way to eventually feel better"
-    mutate(rev_ders_upset_better_p = 5 + 1 - ders_upset_better_p) %>%
-    # add column to sum across all items (using using reverse-scored versions of
-    # eight items above) and make one cumulative score
-    #'*Assuming the DERS is scored as sum score? My mentor Kate says to be careful*
-    #'*with sum score because if any missingness somehow, sum score would miss that*
-    #'*average/mean score would protect/be resilient to this*
-    mutate(ders_total = rowSums(
-                          across(!all_of(
-                                    c("src_subject_id",
-                                      "eventname",
-                                      "ders_p_select_language___1",
-                                      "ders_attn_awareness_p",
-                                      "ders_feelings_attentive_p",
-                                      "ders_feelings_care_p",
-                                      "ders_upset_ack_p",
-                                      "ders_clear_feelings_p",
-                                      "ders_feelings_know_p",
-                                      "ders_upset_behavior_control_p",
-                                      "ders_upset_better_p"
-                                      ))))) %>%
-    # add column for log-transformed cumulative score
-    mutate(log_ders_total = log(ders_total)) %>%
-    # select only columns relevant to analysis
-    select(src_subject_id,eventname,ders_total,log_ders_total)
+dersdata <- mh_p_ders %>%
+  # remove subjects who refused to answer one or more items. Before this step,
+  # n should be 14708. After this step, n should be 14225.
+  filter(!if_any(everything(), ~ . == 777)) %>%
+  #'*to reduce potential error/for checking, could code more explicitly*
+  #'Change made
+  # add column to reverse score "my child pays attention to how he/she feels"
+  mutate(rev_ders_attn_awareness_p = 
+           case_when(ders_attn_awareness_p == 1 ~ 5,
+                     ders_attn_awareness_p == 2 ~ 4,
+                     ders_attn_awareness_p == 3 ~ 3,
+                     ders_attn_awareness_p == 4 ~ 2,
+                     ders_attn_awareness_p == 5 ~ 1)) %>%
+  # add column to reverse score "my child is attentive to his/her feelings"
+  mutate(rev_ders_feelings_attentive_p = 
+           case_when(ders_feelings_attentive_p == 1 ~ 5,
+                     ders_feelings_attentive_p == 2 ~ 4,
+                     ders_feelings_attentive_p == 3 ~ 3,
+                     ders_feelings_attentive_p == 4 ~ 2,
+                     ders_feelings_attentive_p == 5 ~ 1)) %>%
+  # add column to reverse score "my child cares about what he/she is feeling"
+  mutate(rev_ders_feelings_care_p = 
+           case_when(ders_feelings_care_p == 1 ~ 5,
+                      ders_feelings_care_p == 2 ~ 4,
+                      ders_feelings_care_p == 3 ~ 3,
+                      ders_feelings_care_p == 4 ~ 2,
+                      ders_feelings_care_p == 5 ~ 1)) %>%
+  # add column to reverse score "when my child is upset, he/she acknowledges
+  # his/her emotions"
+  mutate(rev_ders_upset_ack_p = 
+           case_when(ders_upset_ack_p == 1 ~ 5,
+                      ders_upset_ack_p == 2 ~ 4,
+                      ders_upset_ack_p == 3 ~ 3,
+                      ders_upset_ack_p == 4 ~ 2,
+                      ders_upset_ack_p == 5 ~ 1)) %>%
+  # add column to reverse score "my child is clear about his/her feelings"
+  mutate(rev_ders_clear_feelings_p = 
+           case_when(ders_clear_feelings_p == 1 ~ 5,
+                     ders_clear_feelings_p == 2 ~ 4,
+                     ders_clear_feelings_p == 3 ~ 3,
+                     ders_clear_feelings_p == 4 ~ 2,
+                     ders_clear_feelings_p == 5 ~ 1)) %>%
+  # add column to reverse score "my child knows exactly how he/she is feeling"
+  mutate(rev_ders_feelings_know_p = 
+           case_when(ders_feelings_know_p == 1 ~ 5,
+                      ders_feelings_know_p == 2 ~ 4,
+                      ders_feelings_know_p == 3 ~ 3,
+                      ders_feelings_know_p == 4 ~ 2,
+                      ders_feelings_know_p == 5 ~ 1)) %>%
+  # add column to reverse score "when my child is upset, he/she feels like
+  # he/she can remin in control of his/her behaviors"
+    mutate(rev_ders_upset_behavior_control_p = 
+             case_when(ders_upset_behavior_control_p == 1 ~ 5,
+                       ders_upset_behavior_control_p == 2 ~ 4,
+                       ders_upset_behavior_control_p == 3 ~ 3,
+                       ders_upset_behavior_control_p == 4 ~ 2,
+                       ders_upset_behavior_control_p == 5 ~ 1)) %>%
+  # add column to reverse score "when my child is upset, he/she knows that
+  # he/she can find a way to eventually feel better"
+    mutate(rev_ders_upset_better_p = 
+             case_when(ders_upset_better_p == 1 ~ 5,
+                       ders_upset_better_p == 2 ~ 4,
+                       ders_upset_better_p == 3 ~ 3,
+                       ders_upset_better_p == 4 ~ 2,
+                       ders_upset_better_p == 5 ~ 1)) %>%
+  # add column to sum across all items (using using reverse-scored versions of
+  # eight items above) and make one cumulative score
+  #'*Assuming the DERS is scored as sum score? My mentor Kate says to be careful*
+  #'*with sum score because if any missingness somehow, sum score would miss that*
+  #'*average/mean score would protect/be resilient to this*
+  #'added step below to see all unique values and make sure no NA
+  mutate(ders_total = rowSums(
+                        across(!all_of(
+                                  c("src_subject_id",
+                                    "eventname",
+                                    "ders_p_select_language___1",
+                                    "ders_attn_awareness_p",
+                                    "ders_feelings_attentive_p",
+                                    "ders_feelings_care_p",
+                                    "ders_upset_ack_p",
+                                    "ders_clear_feelings_p",
+                                    "ders_feelings_know_p",
+                                    "ders_upset_behavior_control_p",
+                                    "ders_upset_better_p"
+                                    ))))) %>%
+  # add column for log-transformed cumulative score
+  mutate(log_ders_total = log(ders_total)) %>%
+  # select only columns relevant to analysis
+  select(src_subject_id,eventname,ders_total,log_ders_total)
+
+#### See all unique values for each column in DERS-P data ####
+# see all unique values (can visually check for NA or errors)
+map(dersdata,unique)
+# explicitly check for any NA values
+which(is.na(dersdata))
 
 #### Provide summary statistics for DERS-P data by data collection year ####
-dersdata %>% group_by(eventname) %>% summary()
-
+dersdata %>% 
+  group_by(eventname) %>% 
+  summary()
 
 ### Prepare LES data for analysis ####
 #### Identify and prepare relevant columns ####
-ledata <- 
-    # raw LES data
-    mh_y_le %>% 
-    # remove rows with NA in any of the main items asking about whether event
-    # was or was not experienced because sum of all bad events counts NA values
-    # as 0 (ie subject with all NA to individual items will still be given 0
-    # for the sum score). note: exclude items about homelessness and knowing
-    # someone who attempted suicide because those were only asked in year 4.
-    # Before this step, n should be 49151. After this step, n should be 14850.
-    filter(!if_any(all_of(
-                        c("ple_died_y","ple_injured_y","ple_crime_y",
-                          "ple_friend_y","ple_friend_injur_y",
-                          "ple_financial_y","ple_sud_y","ple_ill_y",
-                          "ple_injur_y","ple_argue_y","ple_job_y",
-                          "ple_away_y","ple_arrest_y","ple_friend_died_y",
-                          "ple_mh_y","ple_sib_y","ple_victim_y","ple_separ_y",
-                          "ple_law_y","ple_school_y","ple_move_y","ple_jail_y",
-                          "ple_step_y","ple_new_job_y","ple_new_sib_y",
-                          "ple_foster_care_y","ple_hit_y","ple_hospitalized_y",
-                          "ple_lockdown_y","ple_shot_y","ple_deported_y"
-                          )), is.na)) %>%
-    # select only columns relevant to analysis
-    select(src_subject_id,eventname,ple_y_ss_total_bad) %>%
-    # rename column with total number of events experienced and described as bad
-    rename(total_bad_le = ple_y_ss_total_bad) %>%
-    # add column for log-transformed version of total number of bad events
-    mutate(log_total_bad_le = log(total_bad_le+1))
+ledata <- mh_y_le %>% 
+  # remove rows with NA in any of the main items asking about whether event
+  # was or was not experienced because sum of all bad events counts NA values
+  # as 0 (ie subject with all NA to individual items will still be given 0
+  # for the sum score). note: exclude items about homelessness and knowing
+  # someone who attempted suicide because those were only asked in year 4.
+  # Before this step, n should be 49151. After this step, n should be 14850.
+  filter(!if_any(all_of(
+                      c("ple_died_y","ple_injured_y","ple_crime_y",
+                        "ple_friend_y","ple_friend_injur_y",
+                        "ple_financial_y","ple_sud_y","ple_ill_y",
+                        "ple_injur_y","ple_argue_y","ple_job_y",
+                        "ple_away_y","ple_arrest_y","ple_friend_died_y",
+                        "ple_mh_y","ple_sib_y","ple_victim_y","ple_separ_y",
+                        "ple_law_y","ple_school_y","ple_move_y","ple_jail_y",
+                        "ple_step_y","ple_new_job_y","ple_new_sib_y",
+                        "ple_foster_care_y","ple_hit_y","ple_hospitalized_y",
+                        "ple_lockdown_y","ple_shot_y","ple_deported_y"
+                        )), is.na)) %>%
+  # select only columns relevant to analysis
+  select(src_subject_id,eventname,ple_y_ss_total_bad) %>%
+  # rename column with total number of events experienced and described as bad
+  rename(total_bad_le = ple_y_ss_total_bad) %>%
+  # add column for log-transformed version of total number of bad events
+  mutate(log_total_bad_le = log(total_bad_le+1))
 
 #### Provide summary statistics for LES data by data collection year ####
-ledata %>% group_by(eventname) %>% summary()
+ledata %>% 
+  group_by(eventname) %>% 
+  summary()
 
 ### Combine all data for analysis into one data frame ####
-alldata <- 
-  # prepared gender data
-  genderdata %>%
+alldata <- genderdata %>%
   # add longitudinal tracking data based on subject ID and data collection year
   left_join(select(abcd_y_lt,
                       c(src_subject_id,eventname,
@@ -280,20 +328,24 @@ alldata %>%
 #### Create separate data frame for just data from year 4 follow-up visit ####
 # n should be 4372
 #'*I'm getting 4188*
+#'I'm also getting 4188 now. I think it's because I removed rows with NA in any 
+#'column in the LES data frame and didn't update these numbers
 yr4data <- alldata %>% filter(eventname=="4_year_follow_up_y_arm_1")
 
 #### Create separate data frame for just data from year 3 follow-up visit ####
 # n should be 9326
 #'*I'm getting 9325*
+#'Me too. See previous note about forgetting to update after making changes to
+#'what's included in LES
 yr3data <- alldata %>% filter(eventname=="3_year_follow_up_y_arm_1")
 
 #### Get general summary of values for each column for data from year 4 visit ####
 #'*I also like 'describe' function for this...includes more sum stats, range, etc*
-yr4data %>% summary()
-
+#'Describe is exactly the function I wanted but didn't know existed
+yr4data %>% describe()
 
 #### Get general summary of values for each column for data from year 3 visit ####
-yr3data %>% summary()
+yr3data %>% describe()
 
 #### Determine how many subjects switched gender groups between years 3 and 4 ####
 #'*Really interesting question driving this, and such needed research*
@@ -339,6 +391,9 @@ walk(c("total_bad_le", "log_total_bad_le",
 #'*I really like hist.data.frame function from Hmisc package. Provides hist*
 #'*for each variable, Total N, and total missingness. One line of code*
 #'*But ggplot is always prettier lol*
+#'I'm not familiar with hist.data.frame. I like that I can specify only a subset
+#'of variables to put into histograms (though that could also be possible with
+#'hist.data.frame)
 variable_histograms <- 
   map(c("total_bad_le", "log_total_bad_le", 
        "ders_total", "log_ders_total", 
@@ -529,6 +584,7 @@ kruskal.test(age ~ genderid, data = yr4data)
 #### Get summary statistics for age ####
 ##### Summary statistics for full data set by gender ####
 #'*describe function really nice for this!*
+#'Not sure how to get describe function to work with grouping
 
 alldata %>%
   group_by(genderid) %>%
@@ -542,7 +598,6 @@ alldata %>%
   )
 
 ##### Summary statistics by gender and by year ####
-
 
 alldata %>%
   group_by(eventname,genderid) %>%
@@ -1122,6 +1177,9 @@ wilcox.test(cbcl_ext ~ sex, data = sex_yr4data)
 #'*I can't remember why this is, but I do not believe you are suppose to Z-score*
 #'*the outcome variable*.
 #'*At least I remember Liz saying that, but not sure if that's a hard and fast*
+#'Her notes do have many examples where predictors but not outcomes are Z-scored
+#'so I think this may be right. Changed below for both linear regression and
+#'also farther down for mediation analyses
 
 #'*Curious if it is convention before running a mediation analysis to look at*
 #'*Mini MLM regression models of direct effect, and then indirect effect essentially,*
@@ -1129,10 +1187,12 @@ wilcox.test(cbcl_ext ~ sex, data = sex_yr4data)
 #'*and LES in every MLM model together? Perhaps it's mathematically the same to*
 #'*do it like you've done. Would love to talk about this more just for fun...*
 #'* not that you need to change this. I am newish to mediation!*
+#'That was my goal with identifying all pairwise relationships between variable
+#'below (though it's definitely possible there's a cleaner/better way to do it)
 #### DERS ~ LES + age + (1|site) ####
 # DERS scores differ significantly based on LES (p = 1.68e-12) but not based on
 # age (p = 0.0526).
-ders_les_reg <- lmer(Z_ders_total ~ Z_total_bad_le + Z_age + 
+ders_les_reg <- lmer(ders_total ~ Z_total_bad_le + Z_age + 
                      (1|site),
                      data=yr4data)
 summary(ders_les_reg)
@@ -1140,7 +1200,7 @@ summary(ders_les_reg)
 #### CBCL total problems ~ LES + age + (1|site) ####
 # CBCL total problems scores differ significantly based on LES (p < 2e-16) and
 # based on age (p = 0.00366)
-cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_total_bad_le + Z_age + 
+cbcl_total_les_reg <- lmer(cbcl_total ~ Z_total_bad_le + Z_age + 
                            (1|site),
                            data=yr4data)
 summary(cbcl_total_les_reg)
@@ -1148,7 +1208,7 @@ summary(cbcl_total_les_reg)
 #### CBCL internalizing ~ LES + age + (1|site) ####
 # CBCL internalizing scores differ significantly based on LES (p < 2e-16) but
 # not based on age (p = 0.264)
-cbcl_int_les_reg <- lmer(Z_cbcl_int ~ Z_total_bad_le + Z_age + 
+cbcl_int_les_reg <- lmer(cbcl_int ~ Z_total_bad_le + Z_age + 
                              (1|site),
                            data=yr4data)
 summary(cbcl_int_les_reg)
@@ -1156,7 +1216,7 @@ summary(cbcl_int_les_reg)
 #### CBCL externalizing ~ LES + age + (1|site) ####
 # CBCL externalizing scores differ significantly based on LES (p < 2e-16) and
 # based on age (p = 0.0014)
-cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_total_bad_le + Z_age + 
+cbcl_ext_les_reg <- lmer(cbcl_ext ~ Z_total_bad_le + Z_age + 
                            (1|site),
                          data=yr4data)
 summary(cbcl_ext_les_reg)
@@ -1164,7 +1224,7 @@ summary(cbcl_ext_les_reg)
 #### CBCL total problems ~ DERS + age + (1|site) ####
 # CBCL total problems scores differ significantly based on DERS (p < 2e-16) but
 # not based on age (p = 0.0967)
-cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_ders_total + Z_age + 
+cbcl_total_les_reg <- lmer(cbcl_total ~ Z_ders_total + Z_age + 
                              (1|site),
                            data=yr4data)
 summary(cbcl_total_les_reg)
@@ -1172,7 +1232,7 @@ summary(cbcl_total_les_reg)
 #### CBCL internalizing ~ DERS + age + (1|site) ####
 # CBCL internalizing scores differ significantly based on DERS (p < 2e-16) but
 # not based on age (p = 0.855)
-cbcl_int_les_reg <- lmer(Z_cbcl_int ~ Z_ders_total + Z_age + 
+cbcl_int_les_reg <- lmer(cbcl_int ~ Z_ders_total + Z_age + 
                            (1|site),
                          data=yr4data)
 summary(cbcl_int_les_reg)
@@ -1180,7 +1240,7 @@ summary(cbcl_int_les_reg)
 #### CBCL externalizing ~ DERS + age + (1|site) ####
 # CBCL externalizing scores differ significantly based on DERS (p < 2e-16) and
 # based on age (p = 0.0365)
-cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_ders_total + Z_age + 
+cbcl_ext_les_reg <- lmer(cbcl_ext ~ Z_ders_total + Z_age + 
                            (1|site),
                          data=yr4data)
 summary(cbcl_ext_les_reg)
@@ -1206,9 +1266,9 @@ med_data <-
          Z_age,
          Z_total_bad_le,
          Z_ders_total,
-         Z_cbcl_total,
-         Z_cbcl_int,
-         Z_cbcl_ext) %>%
+         cbcl_total,
+         cbcl_int,
+         cbcl_ext) %>%
   rename(
          age = Z_age,
          cisboy = gender_cisboy,
@@ -1217,9 +1277,9 @@ med_data <-
          female = sex_female,
          LES = Z_total_bad_le,
          DERS = Z_ders_total,
-         totalCBCL = Z_cbcl_total,
-         intCBCL = Z_cbcl_int,
-         extCBCL = Z_cbcl_ext
+         totalCBCL = cbcl_total,
+         intCBCL = cbcl_int,
+         extCBCL = cbcl_ext
   )
 
 ### For mediation analyses using sex instead of gender, need to remove subjects
@@ -1227,7 +1287,8 @@ med_data <-
 ### these earlier in the code so that we retain all subjects with information on
 ### gender regardless of whether they have sex data
 
-sex_med_data <- med_data %>% filter(sex!="refuse",sex!="dont_know")
+sex_med_data <- med_data %>% 
+  filter(sex!="refuse",sex!="dont_know")
 
 ###############################################################################
 # FOR ANALYSIS USING YEAR 3 LES & DERS WITH YEAR 4 OUTCOMES, GENDER, & COVARIATES ###############################################################################
@@ -1247,9 +1308,9 @@ med_data <-
          Z_age,
          # Z_total_bad_le,
          # Z_ders_total,
-         Z_cbcl_total,
-         Z_cbcl_int,
-         Z_cbcl_ext) %>%
+         cbcl_total,
+         cbcl_int,
+         cbcl_ext) %>%
   # LES and DERS from year 3
   left_join(select(yr3data,c(src_subject_id,
                              Z_total_bad_le,Z_ders_total)),
@@ -1262,9 +1323,9 @@ med_data <-
     female = sex_female,
     LES = Z_total_bad_le,
     DERS = Z_ders_total,
-    totalCBCL = Z_cbcl_total,
-    intCBCL = Z_cbcl_int,
-    extCBCL = Z_cbcl_ext
+    totalCBCL = cbcl_total,
+    intCBCL = cbcl_int,
+    extCBCL = cbcl_ext
   )
 
 ### For mediation analyses using sex instead of gender, need to remove subjects
@@ -1272,7 +1333,8 @@ med_data <-
 ### these earlier in the code so that we retain all subjects with information on
 ### gender regardless of whether they have sex data
 
-sex_med_data <- med_data %>% filter(sex!="refuse",sex!="dont_know")
+sex_med_data <- med_data %>% 
+  filter(sex!="refuse",sex!="dont_know")
 
 ###############################################################################
 ############# FOR ANALYSIS USING LOG TRANSFORMED YEAR 4 DATA ##################
@@ -1292,9 +1354,9 @@ med_data <-
          Z_age,
          Z_log_total_bad_le,
          Z_log_ders_total,
-         Z_log_cbcl_total,
-         Z_log_cbcl_int,
-         Z_log_cbcl_ext) %>%
+         log_cbcl_total,
+         log_cbcl_int,
+         log_cbcl_ext) %>%
   rename(
     age = Z_age,
     cisboy = gender_cisboy,
@@ -1303,9 +1365,9 @@ med_data <-
     female = sex_female,
     LES = Z_log_total_bad_le,
     DERS = Z_log_ders_total,
-    totalCBCL = Z_log_cbcl_total,
-    intCBCL = Z_log_cbcl_int,
-    extCBCL = Z_log_cbcl_ext
+    totalCBCL = log_cbcl_total,
+    intCBCL = log_cbcl_int,
+    extCBCL = log_cbcl_ext
   )
 
 ### For mediation analyses using sex instead of gender, need to remove subjects
@@ -1313,7 +1375,8 @@ med_data <-
 ### these earlier in the code so that we retain all subjects with information on
 ### gender regardless of whether they have sex data
 
-sex_med_data <- med_data %>% filter(sex!="refuse",sex!="dont_know")
+sex_med_data <- med_data %>% 
+  filter(sex!="refuse",sex!="dont_know")
 
 ###############################################################################
 
