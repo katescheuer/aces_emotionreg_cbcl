@@ -60,8 +60,8 @@ genderdata <- gish_y_gi %>%
                   kbi_sex_assigned_at_birth==777 ~ "dont_know",
                   kbi_sex_assigned_at_birth==999 ~ "refuse"
                   )) %>%
-  # make binary column for whether or not participant is female
-  mutate(sex_female = if_else(sex=="female",1,0)) %>%
+  # effect code sex
+  mutate(sex_female = if_else(sex=="female",1,-1)) %>%
   # convert numeric gender values to human-readable character strings
   mutate(gender = case_when(
                     kbi_gender==1 ~ "boy",
@@ -1192,7 +1192,7 @@ wilcox.test(cbcl_ext ~ sex, data = sex_yr4data)
 #### DERS ~ LES + age + (1|site) ####
 # DERS scores differ significantly based on LES (p = 1.68e-12) but not based on
 # age (p = 0.0526).
-ders_les_reg <- lmer(ders_total ~ Z_total_bad_le + Z_age + 
+ders_les_reg <- lmer(Z_ders_total ~ Z_total_bad_le + Z_age + 
                      (1|site),
                      data=yr4data)
 summary(ders_les_reg)
@@ -1200,7 +1200,7 @@ summary(ders_les_reg)
 #### CBCL total problems ~ LES + age + (1|site) ####
 # CBCL total problems scores differ significantly based on LES (p < 2e-16) and
 # based on age (p = 0.00366)
-cbcl_total_les_reg <- lmer(cbcl_total ~ Z_total_bad_le + Z_age + 
+cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_total_bad_le + Z_age + 
                            (1|site),
                            data=yr4data)
 summary(cbcl_total_les_reg)
@@ -1208,7 +1208,7 @@ summary(cbcl_total_les_reg)
 #### CBCL internalizing ~ LES + age + (1|site) ####
 # CBCL internalizing scores differ significantly based on LES (p < 2e-16) but
 # not based on age (p = 0.264)
-cbcl_int_les_reg <- lmer(cbcl_int ~ Z_total_bad_le + Z_age + 
+cbcl_int_les_reg <- lmer(Z_cbcl_int ~ Z_total_bad_le + Z_age + 
                              (1|site),
                            data=yr4data)
 summary(cbcl_int_les_reg)
@@ -1216,7 +1216,7 @@ summary(cbcl_int_les_reg)
 #### CBCL externalizing ~ LES + age + (1|site) ####
 # CBCL externalizing scores differ significantly based on LES (p < 2e-16) and
 # based on age (p = 0.0014)
-cbcl_ext_les_reg <- lmer(cbcl_ext ~ Z_total_bad_le + Z_age + 
+cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_total_bad_le + Z_age + 
                            (1|site),
                          data=yr4data)
 summary(cbcl_ext_les_reg)
@@ -1224,7 +1224,7 @@ summary(cbcl_ext_les_reg)
 #### CBCL total problems ~ DERS + age + (1|site) ####
 # CBCL total problems scores differ significantly based on DERS (p < 2e-16) but
 # not based on age (p = 0.0967)
-cbcl_total_les_reg <- lmer(cbcl_total ~ Z_ders_total + Z_age + 
+cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_ders_total + Z_age + 
                              (1|site),
                            data=yr4data)
 summary(cbcl_total_les_reg)
@@ -1232,7 +1232,7 @@ summary(cbcl_total_les_reg)
 #### CBCL internalizing ~ DERS + age + (1|site) ####
 # CBCL internalizing scores differ significantly based on DERS (p < 2e-16) but
 # not based on age (p = 0.855)
-cbcl_int_les_reg <- lmer(cbcl_int ~ Z_ders_total + Z_age + 
+cbcl_int_les_reg <- lmer(Z_cbcl_int ~ Z_ders_total + Z_age + 
                            (1|site),
                          data=yr4data)
 summary(cbcl_int_les_reg)
@@ -1240,7 +1240,7 @@ summary(cbcl_int_les_reg)
 #### CBCL externalizing ~ DERS + age + (1|site) ####
 # CBCL externalizing scores differ significantly based on DERS (p < 2e-16) and
 # based on age (p = 0.0365)
-cbcl_ext_les_reg <- lmer(cbcl_ext ~ Z_ders_total + Z_age + 
+cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_ders_total + Z_age + 
                            (1|site),
                          data=yr4data)
 summary(cbcl_ext_les_reg)
@@ -1270,9 +1270,9 @@ med_data <-
          Z_age,
          Z_total_bad_le,
          Z_ders_total,
-         cbcl_total,
-         cbcl_int,
-         cbcl_ext) %>%
+         Z_cbcl_total,
+         Z_cbcl_int,
+         Z_cbcl_ext) %>%
   rename(
          age = Z_age,
          # cisboy = gender_cisboy,
@@ -1281,9 +1281,9 @@ med_data <-
          female = sex_female,
          LES = Z_total_bad_le,
          DERS = Z_ders_total,
-         totalCBCL = cbcl_total,
-         intCBCL = cbcl_int,
-         extCBCL = cbcl_ext
+         totalCBCL = Z_cbcl_total,
+         intCBCL = Z_cbcl_int,
+         extCBCL = Z_cbcl_ext
   )
 
 ### For mediation analyses using sex instead of gender, need to remove subjects
@@ -1303,33 +1303,37 @@ med_data <-
   yr4data %>%
   # CBCL outcomes, gender, and covariates from year 4
   select(src_subject_id,
-         gender_cisboy,
-         gender_cisgirl,
-         gender_gd,
+         # gender_cisboy,
+         # gender_cisgirl,
+         # gender_gd,
+         eff_cisgirl_ref_cisboy,
+         eff_gd_ref_cisboy,
+         eff_cisboy_ref_cisgirl,
+         eff_gd_ref_cisgirl,
          sex,
          sex_female,
          site,
          Z_age,
          # Z_total_bad_le,
          # Z_ders_total,
-         cbcl_total,
-         cbcl_int,
-         cbcl_ext) %>%
+         Z_cbcl_total,
+         Z_cbcl_int,
+         Z_cbcl_ext) %>%
   # LES and DERS from year 3
   left_join(select(yr3data,c(src_subject_id,
                              Z_total_bad_le,Z_ders_total)),
             by=c("src_subject_id")) %>%
   rename(
     age = Z_age,
-    cisboy = gender_cisboy,
-    cisgirl = gender_cisgirl,
-    gd = gender_gd,
+    # cisboy = gender_cisboy,
+    # cisgirl = gender_cisgirl,
+    # gd = gender_gd,
     female = sex_female,
     LES = Z_total_bad_le,
     DERS = Z_ders_total,
-    totalCBCL = cbcl_total,
-    intCBCL = cbcl_int,
-    extCBCL = cbcl_ext
+    totalCBCL = Z_cbcl_total,
+    intCBCL = Z_cbcl_int,
+    extCBCL = Z_cbcl_ext
   )
 
 ### For mediation analyses using sex instead of gender, need to remove subjects
@@ -1349,29 +1353,33 @@ sex_med_data <- med_data %>%
 med_data <- 
   yr4data %>%
   select(src_subject_id,
-         gender_cisboy,
-         gender_cisgirl,
-         gender_gd,
+         # gender_cisboy,
+         # gender_cisgirl,
+         # gender_gd,
+         eff_cisgirl_ref_cisboy,
+         eff_gd_ref_cisboy,
+         eff_cisboy_ref_cisgirl,
+         eff_gd_ref_cisgirl,
          sex,
          sex_female,
          site,
          Z_age,
          Z_log_total_bad_le,
          Z_log_ders_total,
-         log_cbcl_total,
-         log_cbcl_int,
-         log_cbcl_ext) %>%
+         Z_log_cbcl_total,
+         Z_log_cbcl_int,
+         Z_log_cbcl_ext) %>%
   rename(
     age = Z_age,
-    cisboy = gender_cisboy,
-    cisgirl = gender_cisgirl,
-    gd = gender_gd,
+    # cisboy = gender_cisboy,
+    # cisgirl = gender_cisgirl,
+    # gd = gender_gd,
     female = sex_female,
     LES = Z_log_total_bad_le,
     DERS = Z_log_ders_total,
-    totalCBCL = log_cbcl_total,
-    intCBCL = log_cbcl_int,
-    extCBCL = log_cbcl_ext
+    totalCBCL = Z_log_cbcl_total,
+    intCBCL = Z_log_cbcl_int,
+    extCBCL = Z_log_cbcl_ext
   )
 
 ### For mediation analyses using sex instead of gender, need to remove subjects
