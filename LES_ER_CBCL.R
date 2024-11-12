@@ -94,15 +94,65 @@ genderdata <- gish_y_gi %>%
                       kbi_gender==3 & kbi_y_trans_id==2 ~ "gd", #"nb",
                       kbi_gender==3 & kbi_y_trans_id==3 ~ "gd" #"nb"
                       )) %>%
-  # make binary column for whether or not participant is cis girl
-  mutate(gender_cisgirl = if_else(genderid=="cis_girl",1,0)) %>%
-  # make binary column for whether or not participant is gender diverse
-  mutate(gender_gd = if_else(genderid=="gd",1,0)) %>%
-  # make binary column for whether or not participant is cis boy
-  mutate(gender_cisboy = if_else(genderid=="cis_boy",1,0)) %>%
+  
+  # dummy coding table below to help conceptually convert from one column with
+  # three categories into two new, dummy-coded columns with cis BOY as reference
+  ### gender group ### gender_cisgirl ### gender_gd ###
+  ###    cis boy   ###      0         ###     0     ###
+  ###    cis girl  ###      1         ###     0     ###
+  ###     gd       ###      0         ###     1     ###
+  
+  # dummy coding table below to help conceptually convert from one column with
+  # three categories into two new, dummy-coded columns with cis GIRL as reference
+  ### gender group ### gender_cisboy ### gender_gd ###
+  ###    cis boy   ###      1         ###     0     ###
+  ###    cis girl  ###      0         ###     0     ###
+  ###     gd       ###      0         ###     1     ###
+
+  # code to execute dummy coding 
+  # mutate(gender_cisgirl = if_else(genderid=="cis_girl",1,0)) %>%
+  # mutate(gender_gd = if_else(genderid=="gd",1,0)) %>%
+  # mutate(gender_cisboy = if_else(genderid=="cis_boy",1,0)) %>%
+  
+  # effect coding table below to help conceptually convert from one column with
+  # three categories into two new, effect-coded columns with cis BOY as reference
+  ### gender group ### eff_cisgirl_ref_cisboy ### eff_gd_ref_cisboy ###
+  ###    cis boy   ###             -1         ###            -1     ###
+  ###    cis girl  ###              1         ###             0     ###
+  ###     gd       ###              0         ###             1     ###
+
+  # effect coding table below to help conceptually convert from one column with
+  # three categories into two new, effect-coded columns with cis GIRL as reference
+  ### gender group ### eff_cisboy_ref_cisgirl ### eff_gd_ref_cisgirl ###
+  ###    cis boy   ###              1         ###              0     ###
+  ###    cis girl  ###             -1         ###             -1     ###
+  ###     gd       ###              0         ###              1     ###
+  
+  # code to execute effect coding
+  mutate(eff_cisgirl_ref_cisboy = 
+           case_when(genderid=="cis_boy" ~ -1,
+                     genderid=="cis_girl" ~ 1,
+                     genderid=="gd" ~ 0)) %>%
+  mutate(eff_gd_ref_cisboy = 
+           case_when(genderid=="cis_boy" ~ -1,
+                     genderid=="cis_girl" ~ 0,
+                     genderid=="gd" ~ 1)) %>%
+  mutate(eff_cisboy_ref_cisgirl = 
+           case_when(genderid=="cis_boy" ~ 1,
+                     genderid=="cis_girl" ~ -1,
+                     genderid=="gd" ~ 0)) %>%
+  mutate(eff_gd_ref_cisgirl = 
+           case_when(genderid=="cis_boy" ~ 0,
+                     genderid=="cis_girl" ~ -1,
+                     genderid=="gd" ~ 1)) %>%
+
   # keep only columns relevant to analysis
   select(src_subject_id,eventname,sex,gender,trans,sex_female,
-         genderid,gender_cisgirl,gender_gd,gender_cisboy) %>%
+         genderid,
+         # gender_cisgirl,gender_gd,gender_cisboy
+         eff_cisgirl_ref_cisboy,eff_gd_ref_cisboy,
+         eff_cisboy_ref_cisgirl,eff_gd_ref_cisgirl
+         ) %>%
   # remove subjects who refused to answer and/or did not understand gender
   # or trans questions. Before this step, n should be 15064. After this step,
   # n should be 14495.
@@ -1207,9 +1257,13 @@ summary(cbcl_ext_les_reg)
 med_data <- 
   yr4data %>%
   select(src_subject_id,
-         gender_cisboy,
-         gender_cisgirl,
-         gender_gd,
+         eff_cisgirl_ref_cisboy,
+         eff_gd_ref_cisboy,
+         eff_cisboy_ref_cisgirl,
+         eff_gd_ref_cisgirl,
+         # gender_cisboy,
+         # gender_cisgirl,
+         # gender_gd,
          sex,
          sex_female,
          site,
@@ -1221,9 +1275,9 @@ med_data <-
          cbcl_ext) %>%
   rename(
          age = Z_age,
-         cisboy = gender_cisboy,
-         cisgirl = gender_cisgirl,
-         gd = gender_gd,
+         # cisboy = gender_cisboy,
+         # cisgirl = gender_cisgirl,
+         # gd = gender_gd,
          female = sex_female,
          LES = Z_total_bad_le,
          DERS = Z_ders_total,
@@ -1356,9 +1410,9 @@ parameterEstimates(nogendertotalfit, boot.ci.type = "bca.simple")
 ###### With gender, using cis boys as the comparison group ####
 gendertotalmodel_compcisboy <- 
    ' # direct effect 
-       totalCBCL~ c*LES + cisgirl + gd + age + LES:cisgirl + LES:gd
+       totalCBCL~ c*LES + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
      # mediator 
-       DERS ~ a*LES  + cisgirl + gd + age + LES:cisgirl + LES:gd
+       DERS ~ a*LES  + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
      # indirect effect 
        totalCBCL~ b*DERS
      # indirect effect w mediator (a*b)
@@ -1380,9 +1434,9 @@ parameterEstimates(gendertotalfit_compcisboy, boot.ci.type = "bca.simple")
 ###### With gender, using cis girls as the comparison group ####
 gendertotalmodel_compcisgirl <- 
     ' # direct effect 
-        totalCBCL~ c*LES + cisboy + gd + age + LES:cisboy + LES:gd
+        totalCBCL~ c*LES + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
       # mediator 
-        DERS ~ a*LES  + cisboy + gd + age + LES:cisboy + LES:gd
+        DERS ~ a*LES  + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
       # indirect effect 
         totalCBCL~ b*DERS
       # indirect effect w mediator (a*b)
@@ -1450,9 +1504,9 @@ parameterEstimates(nogenderintfit, boot.ci.type = "bca.simple")
 ###### With gender, using cis boys as the comparison group ####
 genderintmodel_compcisboy <- 
   ' # direct effect 
-       intCBCL~ c*LES + cisgirl + gd + age + LES:cisgirl + LES:gd
+       intCBCL~ c*LES + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
      # mediator 
-       DERS ~ a*LES  + cisgirl + gd + age + LES:cisgirl + LES:gd
+       DERS ~ a*LES  + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
      # indirect effect 
        intCBCL~ b*DERS
      # indirect effect w mediator (a*b)
@@ -1474,9 +1528,9 @@ parameterEstimates(genderintfit_compcisboy, boot.ci.type = "bca.simple")
 ###### With gender, using cis girls as the comparison group ####
 genderintmodel_compcisgirl <- 
   ' # direct effect 
-        intCBCL~ c*LES + cisboy + gd + age + LES:cisboy + LES:gd
+        intCBCL~ c*LES + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
       # mediator 
-        DERS ~ a*LES  + cisboy + gd + age + LES:cisboy + LES:gd
+        DERS ~ a*LES  + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
       # indirect effect 
         intCBCL~ b*DERS
       # indirect effect w mediator (a*b)
@@ -1543,9 +1597,9 @@ parameterEstimates(nogenderextfit, boot.ci.type = "bca.simple")
 ###### With gender, using cis boys as the comparison group ####
 genderextmodel_compcisboy <- 
   ' # direct effect 
-       extCBCL~ c*LES + cisgirl + gd + age + LES:cisgirl + LES:gd
+       extCBCL~ c*LES + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
      # mediator 
-       DERS ~ a*LES  + cisgirl + gd + age + LES:cisgirl + LES:gd
+       DERS ~ a*LES  + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
      # indirect effect 
        extCBCL~ b*DERS
      # indirect effect w mediator (a*b)
@@ -1567,9 +1621,9 @@ parameterEstimates(genderextfit_compcisboy, boot.ci.type = "bca.simple")
 ###### With gender, using cis girls as the comparison group ####
 genderextmodel_compcisgirl <- 
   ' # direct effect 
-        extCBCL~ c*LES + cisboy + gd + age + LES:cisboy + LES:gd
+        extCBCL~ c*LES + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
       # mediator 
-        DERS ~ a*LES  + cisboy + gd + age + LES:cisboy + LES:gd
+        DERS ~ a*LES  + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
       # indirect effect 
         extCBCL~ b*DERS
       # indirect effect w mediator (a*b)
