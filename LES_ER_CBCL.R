@@ -13,10 +13,6 @@ library(misty)
 
 ### Read in raw data ####
 #### Gender data ####
-#'*I usually just set the file path all the way to the main folder*
-#'Change made
-#'*Also, read_csv is a bit better than read.csv bc it's tied to tidyverse*
-#'Change made
 
 gish_y_gi <- read_csv("gish_y_gi.csv")
 
@@ -33,9 +29,6 @@ abcd_y_lt <- read_csv("abcd_y_lt.csv")
 mh_y_le <- read_csv("mh_y_le.csv")
 
 ### Determine initial number of year 4 participants from each data frame ####
-
-#'*Coding best practice is to start on new line after each operator (readability)*
-#'Change made 
 
 gish_y_gi %>% 
   filter(eventname=="4_year_follow_up_y_arm_1") %>%
@@ -55,9 +48,6 @@ mh_y_le %>%
 
 ### Prepare gender data for analysis ####
 #### Identify gender groups ####
-#'*I would keep old and new df object on same line,then enter after main operator*
-#'*Other than that, wonderful long chunk of tidyverse here!*
-#'Change made
 genderdata <- gish_y_gi %>%
   # keep only data from year 3 and 4 follow-up visits
   # Before this step, n should be 49083. After this step, n should be 15064.
@@ -150,8 +140,6 @@ dersdata <- mh_p_ders %>%
   # remove subjects who refused to answer one or more items. Before this step,
   # n should be 14708. After this step, n should be 14225.
   filter(!if_any(everything(), ~ . == 777)) %>%
-  #'*to reduce potential error/for checking, could code more explicitly*
-  #'Change made
   # add column to reverse score "my child pays attention to how he/she feels"
   mutate(rev_ders_attn_awareness_p = 
            case_when(ders_attn_awareness_p == 1 ~ 5,
@@ -213,10 +201,6 @@ dersdata <- mh_p_ders %>%
                        ders_upset_better_p == 5 ~ 1)) %>%
   # add column to sum across all items (using using reverse-scored versions of
   # eight items above) and make one cumulative score
-  #'*Assuming the DERS is scored as sum score? My mentor Kate says to be careful*
-  #'*with sum score because if any missingness somehow, sum score would miss that*
-  #'*average/mean score would protect/be resilient to this*
-  #'added step below to see all unique values and make sure no NA
   mutate(ders_total = rowSums(
                         across(!all_of(
                                   c("src_subject_id",
@@ -326,29 +310,20 @@ alldata %>%
   mutate(percentage = n / sum(n) * 100)
 
 #### Create separate data frame for just data from year 4 follow-up visit ####
-# n should be 4372
-#'*I'm getting 4188*
-#'I'm also getting 4188 now. I think it's because I removed rows with NA in any 
-#'column in the LES data frame and didn't update these numbers
+# n should be 4188
 yr4data <- alldata %>% filter(eventname=="4_year_follow_up_y_arm_1")
 
 #### Create separate data frame for just data from year 3 follow-up visit ####
-# n should be 9326
-#'*I'm getting 9325*
-#'Me too. See previous note about forgetting to update after making changes to
-#'what's included in LES
+# n should be 9325
 yr3data <- alldata %>% filter(eventname=="3_year_follow_up_y_arm_1")
 
 #### Get general summary of values for each column for data from year 4 visit ####
-#'*I also like 'describe' function for this...includes more sum stats, range, etc*
-#'Describe is exactly the function I wanted but didn't know existed
 yr4data %>% describe()
 
 #### Get general summary of values for each column for data from year 3 visit ####
 yr3data %>% describe()
 
 #### Determine how many subjects switched gender groups between years 3 and 4 ####
-#'*Really interesting question driving this, and such needed research*
 gender_change <-
     # raw year 4 data
     yr4data %>%
@@ -387,13 +362,6 @@ walk(c("total_bad_le", "log_total_bad_le",
 
 ### Create basic histogram for each variable ####
 # Store histograms in list in case want to view later
-#'*Never tried this and purr package isn't downloading for me right now :(*
-#'*I really like hist.data.frame function from Hmisc package. Provides hist*
-#'*for each variable, Total N, and total missingness. One line of code*
-#'*But ggplot is always prettier lol*
-#'I'm not familiar with hist.data.frame. I like that I can specify only a subset
-#'of variables to put into histograms (though that could also be possible with
-#'hist.data.frame)
 variable_histograms <- 
   map(c("total_bad_le", "log_total_bad_le", 
        "ders_total", "log_ders_total", 
@@ -424,7 +392,6 @@ corrmat <-
 # note that values are already rounded to the decimal place which is showing
 print(corrmat,digits=3)
 # See fdr-adjusted p-value for each correlation test
-#'*Love that you are doing FDR!!!*
 # note that list gives p values above diagonal, going across rows (ie not down
 # columns) 
 corrmat$p.adj
@@ -583,8 +550,6 @@ kruskal.test(age ~ genderid, data = yr4data)
 
 #### Get summary statistics for age ####
 ##### Summary statistics for full data set by gender ####
-#'*describe function really nice for this!*
-#'Not sure how to get describe function to work with grouping
 
 alldata %>%
   group_by(genderid) %>%
@@ -1174,21 +1139,6 @@ wilcox.test(cbcl_ext ~ sex, data = sex_yr4data)
 
 
 ### Establish relationships between all pairs of variables individually ####
-#'*I can't remember why this is, but I do not believe you are suppose to Z-score*
-#'*the outcome variable*.
-#'*At least I remember Liz saying that, but not sure if that's a hard and fast*
-#'Her notes do have many examples where predictors but not outcomes are Z-scored
-#'so I think this may be right. Changed below for both linear regression and
-#'also farther down for mediation analyses
-
-#'*Curious if it is convention before running a mediation analysis to look at*
-#'*Mini MLM regression models of direct effect, and then indirect effect essentially,*
-#'*Rather than put all the variables together in the MLM models? As in, have Ders*
-#'*and LES in every MLM model together? Perhaps it's mathematically the same to*
-#'*do it like you've done. Would love to talk about this more just for fun...*
-#'* not that you need to change this. I am newish to mediation!*
-#'That was my goal with identifying all pairwise relationships between variable
-#'below (though it's definitely possible there's a cleaner/better way to do it)
 #### DERS ~ LES + age + (1|site) ####
 # DERS scores differ significantly based on LES (p = 1.68e-12) but not based on
 # age (p = 0.0526).
@@ -1379,8 +1329,6 @@ sex_med_data <- med_data %>%
   filter(sex!="refuse",sex!="dont_know")
 
 ###############################################################################
-
-#'*So cool to run mediation. Wish I knew more about SEM mediation. #Goals*
 
 #### Run mediation analysis ####
 ##### CBCL total problems ####
