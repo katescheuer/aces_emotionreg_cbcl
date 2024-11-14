@@ -19,8 +19,11 @@ gish_y_gi <- read_csv("gish_y_gi.csv")
 #### DERS-P for emotion regulation ####
 mh_p_ders <- read_csv("mh_p_ders.csv")
 
-#### CBCL for psychopathology symptoms ####
+#### CBCL for parent-report psychopathology symptoms ####
 mh_p_cbcl <- read_csv("mh_p_cbcl.csv")
+
+#### BPM for youth-report psychopathology symptoms ####
+mh_y_bpm <- read_csv("mh_y_bpm.csv")
 
 #### Longitudinal tracking data ####
 abcd_y_lt <- read_csv("abcd_y_lt.csv")
@@ -37,6 +40,9 @@ mh_p_ders %>%
   filter(eventname=="4_year_follow_up_y_arm_1") %>% 
   count()
 mh_p_cbcl %>% 
+  filter(eventname=="4_year_follow_up_y_arm_1") %>% 
+  count()
+mh_y_bpm %>% 
   filter(eventname=="4_year_follow_up_y_arm_1") %>% 
   count()
 abcd_y_lt %>% 
@@ -184,6 +190,26 @@ cbcldata <- mh_p_cbcl %>%
   # add column with log-transformed CBCL externalizing values
   mutate(log_cbcl_ext = log(cbcl_ext)) 
 
+### Prepare BPM data for analysis ####
+bpmdata <- mh_y_bpm %>%
+  # select only columns relevant to analysis
+  select(src_subject_id,eventname,
+         bpm_y_scr_totalprob_t,
+         bpm_y_scr_internal_t,
+         bpm_y_scr_external_t
+  ) %>%
+  # rename subscale columns to be more human-readable and shorter
+  rename(bpm_total = bpm_y_scr_totalprob_t,
+         bpm_ext = bpm_y_scr_external_t,
+         bpm_int = bpm_y_scr_internal_t
+  ) %>%
+  # add column with log-transformed BPM total problems values
+  mutate(log_bpm_total = log(bpm_total)) %>%
+  # add column with log-transformed BPM internalizing values
+  mutate(log_bpm_int = log(bpm_int)) %>%
+  # add column with log-transformed BPM externalizing values
+  mutate(log_bpm_ext = log(bpm_ext)) 
+
 ### Prepare DERS-P data for analysis ####
 #### Create cumulative score ####
 dersdata <- mh_p_ders %>%
@@ -329,12 +355,16 @@ alldata <- genderdata %>%
   left_join(ledata,by=c("src_subject_id","eventname")) %>%
   # add CBCL data based on subject ID and data collection year
   left_join(cbcldata,by=c("src_subject_id","eventname")) %>%
+  # add BPM data based on subject ID and data collection year
+  left_join(bpmdata,by=c("src_subject_id","eventname")) %>%
   # Z score continuous variables
   mutate(across(
     c(age, ders_total, total_bad_le, 
       cbcl_total, cbcl_int, cbcl_ext,
-      log_ders_total, log_total_bad_le, log_cbcl_total, 
-      log_cbcl_int, log_cbcl_ext),
+      bpm_total, bpm_int, bpm_ext,
+      log_ders_total, log_total_bad_le, 
+      log_cbcl_total, log_cbcl_int, log_cbcl_ext,
+      log_bpm_total, log_bpm_int, log_bpm_ext),
     ~ as.numeric(scale(.)),
     .names = "Z_{.col}"
   )) %>%
@@ -342,8 +372,8 @@ alldata <- genderdata %>%
   mutate(across(c(genderid, sex, site), as.factor)) %>%
   # remove subjects without LES or DERS or CBCL data in either year 3 or year 4
   # follow-up. Before this step, n should be 14495. After this step, n should 
-  # be 13513
-  filter(!is.na(ders_total), !is.na(total_bad_le),
+  # be 12104
+  filter(!is.na(ders_total), !is.na(total_bad_le), !is.na(bpm_total),
          !is.na(cbcl_total), !is.na(cbcl_int), !is.na(cbcl_ext))
 
 ### Get general overview of all data ####
@@ -360,11 +390,11 @@ alldata %>%
   mutate(percentage = n / sum(n) * 100)
 
 #### Create separate data frame for just data from year 4 follow-up visit ####
-# n should be 4188
+# n should be 3661
 yr4data <- alldata %>% filter(eventname=="4_year_follow_up_y_arm_1")
 
 #### Create separate data frame for just data from year 3 follow-up visit ####
-# n should be 9325
+# n should be 8443
 yr3data <- alldata %>% filter(eventname=="3_year_follow_up_y_arm_1")
 
 #### Get general summary of values for each column for data from year 4 visit ####
@@ -404,7 +434,10 @@ walk(c("total_bad_le", "log_total_bad_le",
        "ders_total", "log_ders_total", 
        "cbcl_total", "log_cbcl_total", 
        "cbcl_int", "log_cbcl_int", 
-       "cbcl_ext", "log_cbcl_ext"), 
+       "cbcl_ext", "log_cbcl_ext",
+       "bpm_total", "log_bpm_total", 
+       "bpm_int", "log_bpm_int", 
+       "bpm_ext", "log_bpm_ext"), 
      ~ {
        cat("Variable:", .x, "\n")
        print(ad.test(alldata[[.x]]))
@@ -417,7 +450,10 @@ variable_histograms <-
        "ders_total", "log_ders_total", 
        "cbcl_total", "log_cbcl_total", 
        "cbcl_int", "log_cbcl_int", 
-       "cbcl_ext", "log_cbcl_ext"), 
+       "cbcl_ext", "log_cbcl_ext",
+       "bpm_total", "log_bpm_total", 
+       "bpm_int", "log_bpm_int", 
+       "bpm_ext", "log_bpm_ext"), 
       # note that !!sym(.x) turns the variables in the list above into arguments
       # that can be passed to ggplot
      ~ ggplot(alldata, aes(x = !!sym(.x))) + 
@@ -435,7 +471,8 @@ corrmat <-
   yr4data %>% 
   # select relevant columns
   select(c(total_bad_le,ders_total,
-           cbcl_total,cbcl_int,cbcl_ext)) %>% 
+           cbcl_total,cbcl_int,cbcl_ext,
+           bpm_total,bpm_int,bpm_ext)) %>% 
   # run correlation tests for all pairs of variables, adjust using
   corr.test(adjust="fdr")
 # print correlation matrix, correlation coefficients, and p-values
@@ -449,7 +486,8 @@ corrmat$p.adj
 ### Plot variables against each other ####
 #### Without gender
 ##### Scatterplots of DERS vs CBCL total problems, internalizing, externalizing ####
-outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext")
+outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext",
+                  "bpm_total","bpm_int","bpm_ext")
 ders_plot_list <- list()
 for (outcome in outcome_list) {
   # Create plot
@@ -473,21 +511,25 @@ for (outcome in outcome_list) {
 
 ##### Barplots of LES vs CBCL total problems, internalizing, and externalizing ####
 ###### Create table with summary stats for barplot ####
-les_vs_cbcl_summary_stats <- yr4data %>% 
+les_vs_cbcl_bpm_summary_stats <- yr4data %>% 
   group_by(total_bad_le) %>% 
   summarise(cbcl_total=mean(cbcl_total,na.rm=TRUE),
             cbcl_int=mean(cbcl_int,na.rm=TRUE),
             cbcl_ext=mean(cbcl_ext,na.rm=TRUE),
+            bpm_total=mean(bpm_total,na.rm=TRUE),
+            bpm_int=mean(bpm_int,na.rm=TRUE),
+            bpm_ext=mean(bpm_ext,na.rm=TRUE),
             n=n(),
             .groups="drop") %>%
   complete(total_bad_le)
 ###### Create barplots ####
-outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext")
+outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext",
+                  "bpm_total","bpm_int","bpm_ext")
 les_plot_list <- list()
 for (outcome in outcome_list) {
   # Create plot
   les_plot <- ggplot(aes(x=total_bad_le,y=.data[[outcome]]),
-                     data=les_vs_cbcl_summary_stats) +
+                     data=les_vs_cbcl_bpm_summary_stats) +
                 geom_bar(stat="identity",
                          position="dodge",
                          color="black",width=0.75) +
@@ -503,7 +545,8 @@ for (outcome in outcome_list) {
 
 #### With gender
 ##### Scatterplots of DERS vs CBCL total problems, internalizing, externalizing ####
-outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext")
+outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext",
+                  "bpm_total","bpm_int","bpm_ext")
 ders_gender_plot_list <- list()
 for (outcome in outcome_list) {
   # Create plot
@@ -530,12 +573,15 @@ for (outcome in outcome_list) {
 
 ##### Barplots of LES vs CBCL total problems, internalizing, and externalizing ####
 ###### Create table with summary stats for barplot ####
-les_vs_cbcl_w_gender_summary_stats <- 
+les_vs_cbcl_bpm_w_gender_summary_stats <- 
   yr4data %>% 
   group_by(total_bad_le,genderid) %>% 
   summarise(cbcl_total=mean(cbcl_total,na.rm=TRUE),
             cbcl_int=mean(cbcl_int,na.rm=TRUE),
             cbcl_ext=mean(cbcl_ext,na.rm=TRUE),
+            bpm_total=mean(bpm_total,na.rm=TRUE),
+            bpm_int=mean(bpm_int,na.rm=TRUE),
+            bpm_ext=mean(bpm_ext,na.rm=TRUE),
             n=n(),
             .groups="drop") %>%
   # ensure all combinations of gender and number of bad events are
@@ -543,14 +589,15 @@ les_vs_cbcl_w_gender_summary_stats <-
   complete(total_bad_le, genderid, fill = list(n = 0, prop = 0)) %>% 
   mutate(total_bad_le = replace_na(total_bad_le,0))
 ###### Create barplots ####
-outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext")
+outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext",
+                  "bpm_total","bpm_int","bpm_ext")
 les_gender_plot_list <- list()
 for (outcome in outcome_list) {
   # Create plot
   les_plot <- ggplot(aes(x=total_bad_le,y=.data[[outcome]],
                          color=genderid,
                          fill=genderid),
-                     data=les_vs_cbcl_w_gender_summary_stats) +
+                     data=les_vs_cbcl_bpm_w_gender_summary_stats) +
     geom_bar(stat="identity",
              position="dodge",
              width=0.75) +
@@ -569,7 +616,7 @@ for (outcome in outcome_list) {
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether age differs 
 # significantly based on gender group
-# Test is significant (p = 9.018e-06)
+# Test is significant (p = 1.606e-05)
 kruskal.test(age ~ genderid, data = alldata)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -582,7 +629,7 @@ pairwise.wilcox.test(alldata$total_bad_le, alldata$genderid,
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether age differs
 # significantly based on gender group
-# Test is significant (p = 0.007951)
+# Test is significant (p = 0.01412)
 kruskal.test(age ~ genderid, data = yr3data)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -595,7 +642,7 @@ pairwise.wilcox.test(yr3data$total_bad_le, yr3data$genderid,
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether age differs
 # significantly based on gender group
-# Test is not significant (p = 0.07834)
+# Test is not significant (p = 0.1779)
 kruskal.test(age ~ genderid, data = yr4data)
 
 #### Get summary statistics for age ####
@@ -653,7 +700,7 @@ yr4data %>%
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether total_bad_le
 # differs significantly based on gender group
-# Test is significant (p = 2.03e-14)
+# Test is significant (p = 4.672e-11)
 kruskal.test(total_bad_le ~ genderid, data = alldata)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -666,7 +713,7 @@ pairwise.wilcox.test(alldata$total_bad_le, alldata$genderid,
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether total_bad_le
 # differs significantly based on gender group
-# Test is significant (p = 0.0001489)
+# Test is significant (p = 0.002221)
 kruskal.test(total_bad_le ~ genderid, data = yr3data)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -679,7 +726,7 @@ pairwise.wilcox.test(yr3data$total_bad_le, yr3data$genderid,
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether total_bad_le
 # differs significantly based on gender group
-# Test is significant (p = 3.339e-13)
+# Test is significant (p = 4.803e-11)
 kruskal.test(total_bad_le ~ genderid, data = yr4data)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -774,7 +821,7 @@ pairwise.wilcox.test(yr3data$ders_total, yr3data$genderid,
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether ders_total
 # differs significantly based on gender group
-# Test is significant (p < 2.2e-16)
+# Test is significant (p = 2.022e-13)
 kruskal.test(ders_total ~ genderid, data = yr4data)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -1028,7 +1075,7 @@ ggplot(cbcl_int_df_proportions,
 # Save bar graph
 # ggsave("cbcl_int_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
 
-#### Get summary statistics for CBCL total problems ####
+#### Get summary statistics for CBCL internalizing problems ####
 ##### Summary statistics for year 4 ####
 yr4data %>%
   # group_by(genderid) %>%
@@ -1084,7 +1131,7 @@ pairwise.wilcox.test(yr3data$cbcl_ext, yr3data$genderid,
 ##### Kruskal-Wallis test ####
 # (non-parametric version of one-way ANOVA) to test whether cbcl_ext
 # differs significantly based on gender group
-# Test is significant (p = 2.758e-10)
+# Test is significant (p = 9.4e-09)
 kruskal.test(cbcl_ext ~ genderid, data = yr4data)
 
 ##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
@@ -1093,9 +1140,9 @@ kruskal.test(cbcl_ext ~ genderid, data = yr4data)
 pairwise.wilcox.test(yr4data$cbcl_ext, yr4data$genderid,
                      p.adjust.method = "fdr")
 
-##### Create bar graph of CBCL internalizing by gender group ####
-# Use CBCL internalizing on x-axis and proportion of subjects with a given
-# CBCL internalizing score for each specific gender group (rather than raw 
+##### Create bar graph of CBCL externalizing by gender group ####
+# Use CBCL externalizing on x-axis and proportion of subjects with a given
+# CBCL externalizing score for each specific gender group (rather than raw 
 # number of subjects per gender group) so that differences in GD group are 
 # more clear despite having a much smaller sample size
 # Create data frame with proportions rather than raw numbers
@@ -1130,7 +1177,7 @@ ggplot(cbcl_ext_df_proportions,
 # Save bar graph
 # ggsave("cbcl_ext_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
 
-#### Get summary statistics for CBCL total problems ####
+#### Get summary statistics for CBCL externalizing problems ####
 ##### Summary statistics for year 4 ####
 yr4data %>%
   # group_by(genderid) %>%
@@ -1152,6 +1199,312 @@ alldata %>%
     min_cbcl_ext = min(cbcl_ext, na.rm = TRUE),
     max_cbcl_ext = max(cbcl_ext, na.rm = TRUE),
     median_cbcl_ext = median(cbcl_ext, na.rm = TRUE),
+    n = n()
+  )
+
+### Determine whether BPM total problems differs based only on gender ####
+#### Full data set ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether bpm_total
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(bpm_total ~ genderid, data = alldata)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on bpm_total
+pairwise.wilcox.test(alldata$bpm_total, alldata$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 3 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether bpm_total
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(bpm_total ~ genderid, data = yr3data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on bpm_total
+pairwise.wilcox.test(yr3data$bpm_total, yr3data$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 4 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether bpm_total
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(bpm_total ~ genderid, data = yr4data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on bpm_total
+pairwise.wilcox.test(yr4data$bpm_total, yr4data$genderid,
+                     p.adjust.method = "fdr")
+
+##### Create bar graph of bpm total problems by gender group ####
+# Use bpm total problems on x-axis and proportion of subjects with a given
+# bpm total problems score for each specific gender group (rather than raw 
+# number of subjects per gender group) so that differences in GD group are 
+# more clear despite having a much smaller sample size
+# Create data frame with proportions rather than raw numbers
+bpm_total_df_proportions <- yr4data %>%
+  # Create bins
+  mutate(bpm_total_bin = cut(bpm_total, 
+                              breaks = seq(0, 100, by = 10), 
+                              right = FALSE)) %>% # Create bins
+  group_by(genderid, bpm_total_bin) %>%
+  count() %>%
+  group_by(genderid) %>%
+  mutate(yr4_proportion = n / sum(n)) %>%
+  ungroup() %>%
+  # ensure all combinations of gender and number of bad events are
+  # present so can be included on plot
+  complete(bpm_total_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
+  mutate(yr4_proportion = replace_na(yr4_proportion,0))
+# Make actual bar graph
+ggplot(bpm_total_df_proportions, 
+       aes(x = bpm_total_bin,y=yr4_proportion,fill=genderid)) +
+  geom_bar(stat="identity",position="dodge",color="black") +
+  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49",
+                            "50-59","60-69","70-79","80-89","90-99")) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(
+                       min(bpm_total_df_proportions$yr4_proportion),
+                       0.9,
+                       by=0.05),limits = c(0,0.9)) +
+  theme_classic()
+
+# Save bar graph
+# ggsave("bpm_total_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
+
+#### Get summary statistics for bpm total problems ####
+##### Summary statistics for year 4 ####
+yr4data %>%
+  # group_by(genderid) %>%
+  summarise(
+    mean_bpm_total = mean(bpm_total, na.rm = TRUE),
+    sd_bpm_total = sd(bpm_total, na.rm = TRUE),
+    min_bpm_total = min(bpm_total, na.rm = TRUE),
+    max_bpm_total = max(bpm_total, na.rm = TRUE),
+    median_bpm_total = median(bpm_total, na.rm = TRUE),
+    n = n()
+  )
+
+##### Summary statistics for by year ####
+alldata %>%
+  group_by(eventname,genderid) %>%
+  summarise(
+    mean_bpm_total = mean(bpm_total, na.rm = TRUE),
+    sd_bpm_total = sd(bpm_total, na.rm = TRUE),
+    min_bpm_total = min(bpm_total, na.rm = TRUE),
+    max_bpm_total = max(bpm_total, na.rm = TRUE),
+    median_bpm_total = median(bpm_total, na.rm = TRUE),
+    n = n()
+  )
+
+### Determine whether BPM internalizing differs based only on gender ####
+#### Full data set ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether bpm_int
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(bpm_int ~ genderid, data = alldata)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on bpm_int
+pairwise.wilcox.test(alldata$bpm_int, alldata$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 3 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether bpm_int
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(bpm_int ~ genderid, data = yr3data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# GD youth are significantly different from cis girls and cis boys, but the
+# difference between cis girls and cis boys is not significant.
+pairwise.wilcox.test(yr3data$bpm_int, yr3data$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 4 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether bpm_int
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(bpm_int ~ genderid, data = yr4data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on bpm_total
+pairwise.wilcox.test(yr4data$bpm_int, yr4data$genderid,
+                     p.adjust.method = "fdr")
+
+##### Create bar graph of BPM internalizing by gender group ####
+# Use bpm internalizing on x-axis and proportion of subjects with a given
+# bpm internalizing score for each specific gender group (rather than raw 
+# number of subjects per gender group) so that differences in GD group are 
+# more clear despite having a much smaller sample size
+# Create data frame with proportions rather than raw numbers
+bpm_int_df_proportions <- 
+  yr4data %>%
+  # Create bins
+  mutate(bpm_int_bin = cut(bpm_int, 
+                            breaks = seq(0, 100, by = 10), 
+                            right = FALSE)) %>% # Create bins
+  group_by(genderid, bpm_int_bin) %>%
+  count() %>%
+  group_by(genderid) %>%
+  mutate(yr4_proportion = n / sum(n)) %>%
+  ungroup() %>%
+  # ensure all combinations of gender and number of bad events are
+  # present so can be included on plot
+  complete(bpm_int_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
+  mutate(yr4_proportion = replace_na(yr4_proportion,0))
+# Make actual bar graph
+ggplot(bpm_int_df_proportions, 
+       aes(x = bpm_int_bin,y=yr4_proportion,fill=genderid)) +
+  geom_bar(stat="identity",position="dodge",color="black") +
+  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49",
+                            "50-59","60-69","70-79","80-89","90-99")) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(
+                       min(bpm_int_df_proportions$yr4_proportion),
+                       0.9,
+                       by=0.05),limits = c(0,0.9)) + 
+  theme_classic()
+
+# Save bar graph
+# ggsave("bpm_int_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
+
+#### Get summary statistics for bpm internalizing problems ####
+##### Summary statistics for year 4 ####
+yr4data %>%
+  # group_by(genderid) %>%
+  summarise(
+    mean_bpm_int = mean(bpm_int, na.rm = TRUE),
+    sd_bpm_int = sd(bpm_int, na.rm = TRUE),
+    min_bpm_int = min(bpm_int, na.rm = TRUE),
+    max_bpm_int = max(bpm_int, na.rm = TRUE),
+    median_bpm_int = median(bpm_int, na.rm = TRUE),
+    n = n()
+  )
+
+##### Summary statistics for by year ####
+alldata %>%
+  group_by(eventname,genderid) %>%
+  summarise(
+    mean_bpm_int = mean(bpm_int, na.rm = TRUE),
+    sd_bpm_int = sd(bpm_int, na.rm = TRUE),
+    min_bpm_int = min(bpm_int, na.rm = TRUE),
+    max_bpm_int = max(bpm_int, na.rm = TRUE),
+    median_bpm_int = median(bpm_int, na.rm = TRUE),
+    n = n()
+  )
+
+### Determine whether BPM externalizing differs based only on gender ####
+#### Full data set ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether bpm_ext
+# differs significantly based on gender group
+# Test is significant (p < 2.2e-16)
+kruskal.test(bpm_ext ~ genderid, data = alldata)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on bpm_ext
+pairwise.wilcox.test(alldata$bpm_ext, alldata$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 3 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether bpm_ext
+# differs significantly based on gender group
+# Test is significant (p = 5.787e-06)
+kruskal.test(bpm_ext ~ genderid, data = yr3data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on bpm_ext
+pairwise.wilcox.test(yr3data$bpm_ext, yr3data$genderid,
+                     p.adjust.method = "fdr")
+
+#### Year 4 data only ####
+##### Kruskal-Wallis test ####
+# (non-parametric version of one-way ANOVA) to test whether bpm_ext
+# differs significantly based on gender group
+# Test is significant (p = 2.073e-13)
+kruskal.test(bpm_ext ~ genderid, data = yr4data)
+
+##### Post-hoc pairwise Wilcoxon rank sum test using false discovery rate ####
+# to identify which pairs of gender groups are significantly different
+# all pairs of gender groups differ significantly based on bpm_ext
+pairwise.wilcox.test(yr4data$bpm_ext, yr4data$genderid,
+                     p.adjust.method = "fdr")
+
+##### Create bar graph of BPM externalizing by gender group ####
+# Use bpm externalizing on x-axis and proportion of subjects with a given
+# bpm externalizing score for each specific gender group (rather than raw 
+# number of subjects per gender group) so that differences in GD group are 
+# more clear despite having a much smaller sample size
+# Create data frame with proportions rather than raw numbers
+bpm_ext_df_proportions <- 
+  yr4data %>%
+  # Create bins
+  mutate(bpm_ext_bin = cut(bpm_ext, 
+                            breaks = seq(0, 100, by = 10), 
+                            right = FALSE)) %>% # Create bins
+  group_by(genderid, bpm_ext_bin) %>%
+  count() %>%
+  group_by(genderid) %>%
+  mutate(yr4_proportion = n / sum(n)) %>%
+  ungroup() %>%
+  # ensure all combinations of gender and number of bad events are
+  # present so can be included on plot
+  complete(bpm_ext_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
+  mutate(yr4_proportion = replace_na(yr4_proportion,0))
+# Make actual bar graph
+ggplot(bpm_ext_df_proportions, 
+       aes(x = bpm_ext_bin,y=yr4_proportion,fill=genderid)) +
+  geom_bar(stat="identity",position="dodge",color="black") +
+  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49",
+                            "50-59","60-69","70-79","80-89","90-99")) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(
+                       min(bpm_ext_df_proportions$yr4_proportion),
+                       1,
+                       by=0.05),limits = c(0,1)) +
+  theme_classic()
+
+# Save bar graph
+# ggsave("bpm_ext_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
+
+#### Get summary statistics for bpm externalizing problems ####
+##### Summary statistics for year 4 ####
+yr4data %>%
+  # group_by(genderid) %>%
+  summarise(
+    mean_bpm_ext = mean(bpm_ext, na.rm = TRUE),
+    sd_bpm_ext = sd(bpm_ext, na.rm = TRUE),
+    min_bpm_ext = min(bpm_ext, na.rm = TRUE),
+    max_bpm_ext = max(bpm_ext, na.rm = TRUE),
+    median_bpm_ext = median(bpm_ext, na.rm = TRUE),
+    n = n()
+  )
+
+##### Summary statistics for by year ####
+alldata %>%
+  group_by(eventname,genderid) %>%
+  summarise(
+    mean_bpm_ext = mean(bpm_ext, na.rm = TRUE),
+    sd_bpm_ext = sd(bpm_ext, na.rm = TRUE),
+    min_bpm_ext = min(bpm_ext, na.rm = TRUE),
+    max_bpm_ext = max(bpm_ext, na.rm = TRUE),
+    median_bpm_ext = median(bpm_ext, na.rm = TRUE),
     n = n()
   )
 
@@ -1189,6 +1542,33 @@ wilcox.test(cbcl_ext ~ sex, data = sex_yr4data)
 
 
 ### Establish relationships between all pairs of variables individually ####
+
+# lm_var_list <- colnames(yr4data)[31:35]
+lm_var_list <- colnames(yr4data)[31:46]
+summary_lm <- list()
+list_name<-list()
+var_counter <- 1
+for (var in lm_var_list) {
+  #print(var)
+  #print(nrow(yr4data[,var]))
+  #print(length(yr4data$Z_age))
+  for (var2 in lm_var_list) {
+  #print(var2)
+  #print(nrow(yr4data[,var]))
+    if (var != var2) {
+      
+      lm_out <- lmer(paste(var, "~", var2, "+ Z_age + (1|site)"), data=yr4data)
+      summary_lm[var_counter] <- lm_out
+      list_name[var_counter]<-paste0(var," ~ ",var2)
+      var_counter <- var_counter + 1
+    }
+  }
+}
+
+print(summary(summary_lm[[1]]))
+
+
+
 #### DERS ~ LES + age + (1|site) ####
 # DERS scores differ significantly based on LES (p = 1.68e-12) but not based on
 # age (p = 0.0526).
@@ -1221,6 +1601,30 @@ cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_total_bad_le + Z_age +
                          data=yr4data)
 summary(cbcl_ext_les_reg)
 
+#### BPM total problems ~ LES + age + (1|site) ####
+# BPM total problems scores differ significantly based on LES (p < 2e-16) but
+# not age (p = 0.716)
+bpm_total_les_reg <- lmer(Z_bpm_total ~ Z_total_bad_le + Z_age + 
+                             (1|site),
+                           data=yr4data)
+summary(bpm_total_les_reg)
+
+#### BPM internalizing ~ LES + age + (1|site) ####
+# BPM internalizing scores differ significantly based on LES (p < 2e-16) but
+# not age (p = 0.143)
+bpm_int_les_reg <- lmer(Z_bpm_int ~ Z_total_bad_le + Z_age + 
+                           (1|site),
+                         data=yr4data)
+summary(bpm_int_les_reg)
+
+#### BPM externalizing ~ LES + age + (1|site) ####
+# BPM externalizing scores differ significantly based on LES (p < 2e-16) but not
+# age (p = 0.657)
+bpm_ext_les_reg <- lmer(Z_bpm_ext ~ Z_total_bad_le + Z_age + 
+                           (1|site),
+                         data=yr4data)
+summary(bpm_ext_les_reg)
+
 #### CBCL total problems ~ DERS + age + (1|site) ####
 # CBCL total problems scores differ significantly based on DERS (p < 2e-16) but
 # not based on age (p = 0.0967)
@@ -1244,6 +1648,30 @@ cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_ders_total + Z_age +
                            (1|site),
                          data=yr4data)
 summary(cbcl_ext_les_reg)
+
+#### BPM total problems ~ DERS + age + (1|site) ####
+# BPM total problems scores differ significantly based on DERS (p < 2e-16) but
+# not age (p = 0.183)
+bpm_total_les_reg <- lmer(Z_bpm_total ~ Z_ders_total + Z_age + 
+                             (1|site),
+                           data=yr4data)
+summary(bpm_total_les_reg)
+
+#### BPM internalizing ~ DERS + age + (1|site) ####
+# BPM internalizing scores differ significantly based on DERS (p < 2e-16) and
+# age (p = 0.021)
+bpm_int_les_reg <- lmer(Z_bpm_int ~ Z_ders_total + Z_age + 
+                           (1|site),
+                         data=yr4data)
+summary(bpm_int_les_reg)
+
+#### BPM externalizing ~ DERS + age + (1|site) ####
+# BPM externalizing scores differ significantly based on DERS (p < 2e-16) but
+# not age (p = 0.219)
+bpm_ext_les_reg <- lmer(Z_bpm_ext ~ Z_ders_total + Z_age + 
+                           (1|site),
+                         data=yr4data)
+summary(bpm_ext_les_reg)
 
 ### Mediation models with lavaan  ####
 #### Select only data for mediation analysis ####
@@ -1272,7 +1700,10 @@ med_data <-
          Z_ders_total,
          Z_cbcl_total,
          Z_cbcl_int,
-         Z_cbcl_ext) %>%
+         Z_cbcl_ext,
+         Z_bpm_total,
+         Z_bpm_int,
+         Z_bpm_ext) %>%
   rename(
          age = Z_age,
          # cisboy = gender_cisboy,
@@ -1283,7 +1714,10 @@ med_data <-
          DERS = Z_ders_total,
          totalCBCL = Z_cbcl_total,
          intCBCL = Z_cbcl_int,
-         extCBCL = Z_cbcl_ext
+         extCBCL = Z_cbcl_ext,
+         totalBPM = Z_bpm_total,
+         intBPM = Z_bpm_int,
+         extBPM = Z_bpm_ext
   )
 
 ### For mediation analyses using sex instead of gender, need to remove subjects
@@ -1318,7 +1752,10 @@ med_data <-
          # Z_ders_total,
          Z_cbcl_total,
          Z_cbcl_int,
-         Z_cbcl_ext) %>%
+         Z_cbcl_ext,
+         Z_bpm_total,
+         Z_bpm_int,
+         Z_bpm_ext) %>%
   # LES and DERS from year 3
   left_join(select(yr3data,c(src_subject_id,
                              Z_total_bad_le,Z_ders_total)),
@@ -1333,7 +1770,10 @@ med_data <-
     DERS = Z_ders_total,
     totalCBCL = Z_cbcl_total,
     intCBCL = Z_cbcl_int,
-    extCBCL = Z_cbcl_ext
+    extCBCL = Z_cbcl_ext,
+    totalBPM = Z_bpm_total,
+    intBPM = Z_bpm_int,
+    extBPM = Z_bpm_ext
   )
 
 ### For mediation analyses using sex instead of gender, need to remove subjects
@@ -1368,7 +1808,10 @@ med_data <-
          Z_log_ders_total,
          Z_log_cbcl_total,
          Z_log_cbcl_int,
-         Z_log_cbcl_ext) %>%
+         Z_log_cbcl_ext,
+         Z_log_bpm_total,
+         Z_log_bpm_int,
+         Z_log_bpm_ext) %>%
   rename(
     age = Z_age,
     # cisboy = gender_cisboy,
@@ -1379,7 +1822,10 @@ med_data <-
     DERS = Z_log_ders_total,
     totalCBCL = Z_log_cbcl_total,
     intCBCL = Z_log_cbcl_int,
-    extCBCL = Z_log_cbcl_ext
+    extCBCL = Z_log_cbcl_ext,
+    totalBPM = Z_log_bpm_total,
+    intBPM = Z_log_bpm_int,
+    extBPM = Z_log_bpm_ext
   )
 
 ### For mediation analyses using sex instead of gender, need to remove subjects
