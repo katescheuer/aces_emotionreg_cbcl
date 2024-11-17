@@ -1827,6 +1827,36 @@ summary(bpm_ext_les_gender_reg)
 
 
 
+##### to try controlling for T3 levels of LES and ER
+meddata <- yr4data %>%
+            rename(
+                   Z_yr4_total_bad_le = Z_total_bad_le,
+                   Z_yr4_ders_total = Z_ders_total,
+                   Z_yr4_cbcl_int = Z_cbcl_int,
+                   Z_yr4_cbcl_ext = Z_cbcl_ext,
+                   Z_yr4_bpm_int = Z_bpm_int,
+                   Z_yr4_bpm_ext = Z_bpm_ext,
+                   Z_log_yr4_total_bad_le = Z_log_total_bad_le,
+                   Z_log_yr4_ders_total = Z_log_ders_total,
+                   Z_log_yr4_cbcl_int = Z_log_cbcl_int,
+                   Z_log_yr4_cbcl_ext = Z_log_cbcl_ext,
+                   Z_log_yr4_bpm_int = Z_log_bpm_int,
+                   Z_log_yr4_bpm_ext = Z_log_bpm_ext,
+                   Z_yr4_age = Z_age) %>%
+            left_join(select(yr3data, 
+                             c(src_subject_id,Z_age,
+                               Z_total_bad_le,Z_ders_total,
+                               Z_cbcl_int,Z_cbcl_ext,
+                               Z_bpm_int,Z_bpm_ext)),
+                      by="src_subject_id") %>%
+            rename(Z_yr3_total_bad_le = Z_total_bad_le,
+                   Z_yr3_ders_total = Z_ders_total,
+                   Z_yr3_cbcl_int = Z_cbcl_int,
+                   Z_yr3_cbcl_ext = Z_cbcl_ext,
+                   Z_yr3_bpm_int = Z_bpm_int,
+                   Z_yr3_bpm_ext = Z_bpm_ext,
+                   Z_yr3_age = Z_age)
+            
 
 
 
@@ -1842,12 +1872,478 @@ summary(bpm_ext_les_gender_reg)
 
 
 library(bruceR)
+
+##### MODELS WITHOUT GENDER ####
+cbclint_nogender_model4 <- PROCESS(
+  meddata,
+  # y = "Z_yr3_cbcl_int",
+  y = "Z_yr4_cbcl_int",
+  # y = "Z_log_yr4_cbcl_int",
+  x = "Z_yr4_total_bad_le",
+  # x = "Z_yr3_total_bad_le",
+  # x = "Z_log_yr4_total_bad_le",
+  # meds = c("Z_yr3_ders_total"),
+  meds = c("Z_yr4_ders_total"),
+  # meds = c("Z_log_yr4_ders_total"),
+  # mods = c("genderid"),
+  # mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c(
+           # "Z_yr3_age"
+           "Z_yr4_age"
+           # "Z_yr3_ders_total"
+           # "Z_yr3_cbcl_int"
+           # "Z_yr3_total_bad_le"
+  ),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  # mod.path = c(
+  #   "x-y",
+  #   # "x-m", 
+  #   "m-y" 
+  #   # "all"
+  # ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
+
+cbclext_nogender_model4 <- PROCESS(
+  meddata,
+  # y = "Z_yr3_cbcl_ext",
+  y = "Z_yr4_cbcl_ext",
+  # y = "Z_log_yr4_cbcl_ext",
+  x = "Z_yr4_total_bad_le",
+  # x = "Z_yr3_total_bad_le",
+  # x = "Z_log_yr4_total_bad_le",
+  # meds = c("Z_yr3_ders_total"),
+  meds = c("Z_yr4_ders_total"),
+  # meds = c("Z_log_yr4_ders_total"),
+  # mods = c("genderid"),
+  # mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c(
+           # "Z_yr3_age"
+           "Z_yr4_age"
+           # "Z_yr3_ders_total"
+           # "Z_yr3_cbcl_ext"
+           # "Z_yr3_total_bad_le"
+  ),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  # mod.path = c(
+  #   "x-y",
+  #   # "x-m", 
+  #   "m-y" 
+  #   # "all"
+  # ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
+
+bpmint_nogender_model4 <- PROCESS(
+  meddata,
+  # y = "Z_yr3_bpm_int",
+  y = "Z_yr4_bpm_int",
+  # y = "Z_log_yr4_bpm_int",
+  x = "Z_yr4_total_bad_le",
+  # x = "Z_yr3_total_bad_le",
+  # x = "Z_log_yr4_total_bad_le",
+  # meds = c("Z_yr3_ders_total"),
+  meds = c("Z_yr4_ders_total"),
+  # meds = c("Z_log_yr4_ders_total"),
+  # mods = c("genderid"),
+  # mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c(
+    # "Z_yr3_age"
+    "Z_yr4_age"
+    # "Z_yr3_ders_total"
+    # "Z_yr3_bpm_int"
+    # "Z_yr3_total_bad_le"
+  ),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  # mod.path = c(
+  #   "x-y",
+  #   # "x-m", 
+  #   "m-y" 
+  #   # "all"
+  # ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
+
+bpmext_nogender_model4 <- PROCESS(
+  meddata,
+  # y = "Z_yr3_bpm_ext",
+  y = "Z_yr4_bpm_ext",
+  # y = "Z_log_yr4_bpm_ext",
+  x = "Z_yr4_total_bad_le",
+  # x = "Z_yr3_total_bad_le",
+  # x = "Z_log_yr4_total_bad_le",
+  # meds = c("Z_yr3_ders_total"),
+  meds = c("Z_yr4_ders_total"),
+  # meds = c("Z_log_yr4_ders_total"),
+  # mods = c("genderid"),
+  # mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c(
+    # "Z_yr3_age"
+    "Z_yr4_age"
+    # "Z_yr3_ders_total"
+    # "Z_yr3_bpm_ext"
+    # "Z_yr3_total_bad_le"
+  ),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  # mod.path = c(
+  #   "x-y",
+  #   # "x-m", 
+  #   "m-y" 
+  #   # "all"
+  # ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
+
+##### MODELS WITH GENDER ####
+cbclint_gender_model15 <- PROCESS(
+  meddata,
+  y = "Z_yr4_cbcl_int",
+  x = "Z_yr4_total_bad_le",
+  meds = c("Z_yr4_ders_total"),
+  # mods = c("genderid"),
+  mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c(
+    # "Z_yr3_age"
+    "Z_yr4_age"
+    # "Z_yr3_ders_total"
+    # "Z_yr3_cbcl_int"
+    # "Z_yr3_total_bad_le"
+  ),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  mod.path = c(
+    "x-y",
+    # "x-m",
+    "m-y"
+    # "all"
+  ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
+
+cbclext_gender_model15 <- PROCESS(
+  meddata,
+  y = "Z_yr4_cbcl_ext",
+  x = "Z_yr4_total_bad_le",
+  meds = c("Z_yr4_ders_total"),
+  # mods = c("genderid"),
+  mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c(
+    # "Z_yr3_age"
+    "Z_yr4_age"
+    # "Z_yr3_ders_total"
+    # "Z_yr3_cbcl_ext"
+    # "Z_yr3_total_bad_le"
+  ),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  mod.path = c(
+    "x-y",
+    # "x-m",
+    "m-y"
+    # "all"
+  ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
+
+bpmint_gender_model15 <- PROCESS(
+  meddata,
+  y = "Z_yr4_bpm_int",
+  x = "Z_yr4_total_bad_le",
+  meds = c("Z_yr4_ders_total"),
+  # mods = c("genderid"),
+  mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c(
+    # "Z_yr3_age"
+    "Z_yr4_age"
+    # "Z_yr3_ders_total"
+    # "Z_yr3_bpm_int"
+    # "Z_yr3_total_bad_le"
+  ),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  mod.path = c(
+    "x-y",
+    # "x-m",
+    "m-y"
+    # "all"
+  ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
+
+bpmext_gender_model15 <- PROCESS(
+  meddata,
+  y = "Z_yr4_bpm_ext",
+  x = "Z_yr4_total_bad_le",
+  meds = c("Z_yr4_ders_total"),
+  # mods = c("genderid"),
+  # mods = c("genderid_refcisboy"),
+  mods = c("genderid_refcisgirl"),
+  covs = c(
+    # "Z_yr3_age"
+    "Z_yr4_age"
+    # "Z_yr3_ders_total"
+    # "Z_yr3_bpm_ext"
+    # "Z_yr3_total_bad_le"
+  ),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  mod.path = c(
+    "x-y",
+    # "x-m",
+    "m-y"
+    # "all"
+  ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cbclintmodel15 <- PROCESS(
+  meddata,
+  y = "Z_yr4_cbcl_int",
+  x = "Z_yr4_total_bad_le",
+  meds = c("Z_yr4_ders_total"),
+  # mods = c("genderid"),
+  mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c("Z_yr4_age"
+           # "Z_yr3_ders_total","Z_yr3_cbcl_int"
+           # "Z_yr3_total_bad_le"
+           ),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  mod.path = c(
+    "x-y",
+    # "x-m", 
+    "m-y" 
+    # "all"
+  ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  # nsim = 10000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
+
+bpmintmodel15 <- PROCESS(
+  meddata,
+  y = "Z_yr4_bpm_int",
+  x = "Z_yr4_total_bad_le",
+  meds = c("Z_yr4_ders_total"),
+  # mods = c("genderid"),
+  mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c("Z_yr4_age","Z_yr3_ders_total","Z_yr3_bpm_int"),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  mod.path = c(
+    "x-y",
+    # "x-m", 
+    "m-y" 
+    # "all"
+  ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  # nsim = 10000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
+
+
+
+
 cbclintmodel15 <- PROCESS(
           yr4data,
           y = "Z_cbcl_int",
           x = "Z_total_bad_le",
           meds = c("Z_ders_total"),
-          mods = c("genderid"),
+          # mods = c("genderid"),
+          mods = c("genderid_refcisboy"),
+          # mods = c("genderid_refcisgirl"),
           covs = c("Z_age"),
           # clusters = c(),
           # hlm.re.m = "",
@@ -1868,21 +2364,65 @@ cbclintmodel15 <- PROCESS(
           # mod1.val = NULL,
           # mod2.val = NULL,
           # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
-          nsim = 10000,
+          # nsim = 10000,
           seed = 1234,
           center = TRUE,
           std = FALSE,
           digits = 3,
           # file = NULL
         )
-cbclintmodel15
+
 
 bpmintmodel15 <- PROCESS(
+          yr4data,
+          y = "Z_bpm_int",
+          x = "Z_total_bad_le",
+          meds = c("Z_ders_total"),
+          # mods = c("genderid"),
+          mods = c("genderid_refcisboy"),
+          # mods = c("genderid_refcisgirl"),
+          covs = c("Z_age"),
+          # clusters = c(),
+          # hlm.re.m = "",
+          hlm.re.y = "site",
+          # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+          # med.type = c("parallel", "serial"),
+          # mod.type = c("2-way", "3-way"),
+          mod.path = c(
+            "x-y",
+            # "x-m", 
+            "m-y" 
+            # "all"
+          ),
+          cov.path = c(
+            # "y", 
+            # "m", 
+            "both"),
+          # mod1.val = NULL,
+          # mod2.val = NULL,
+          # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+          # nsim = 10000,
+          seed = 1234,
+          center = TRUE,
+          std = FALSE,
+          digits = 3,
+          # file = NULL
+        )
+        
+        
+
+
+
+
+
+cbclintmodel59 <- PROCESS(
   yr4data,
-  y = "Z_bpm_int",
+  y = "Z_cbcl_int",
   x = "Z_total_bad_le",
   meds = c("Z_ders_total"),
-  mods = c("genderid"),
+  # mods = c("genderid"),
+  mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
   covs = c("Z_age"),
   # clusters = c(),
   # hlm.re.m = "",
@@ -1891,10 +2431,10 @@ bpmintmodel15 <- PROCESS(
   # med.type = c("parallel", "serial"),
   # mod.type = c("2-way", "3-way"),
   mod.path = c(
-    "x-y",
+    # "x-y",
     # "x-m", 
-    "m-y" 
-    # "all"
+    # "m-y" 
+    "all"
   ),
   cov.path = c(
     # "y", 
@@ -1903,23 +2443,49 @@ bpmintmodel15 <- PROCESS(
   # mod1.val = NULL,
   # mod2.val = NULL,
   # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
-  nsim = 10000,
+  # nsim = 10000,
   seed = 1234,
   center = TRUE,
   std = FALSE,
   digits = 3,
   # file = NULL
 )
-bpmintmodel15
 
-
-
-
-
-
-
-
-
+bpmintmodel59 <- PROCESS(
+  yr4data,
+  y = "Z_bpm_int",
+  x = "Z_total_bad_le",
+  meds = c("Z_ders_total"),
+  # mods = c("genderid"),
+  mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c("Z_age"),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  mod.path = c(
+    # "x-y",
+    # "x-m", 
+    # "m-y" 
+    "all"
+  ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  # nsim = 10000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
 
 
 
