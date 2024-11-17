@@ -163,7 +163,13 @@ genderdata <- gish_y_gi %>%
   # or trans questions. Before this step, n should be 15064. After this step,
   # n should be 14495.
   filter(genderid!="refuse",
-         genderid!="dont_understand")
+         genderid!="dont_understand") %>%
+
+  # make genderid a factor (automatically uses cisboy as reference
+  mutate(genderid_refcisboy = as.factor(genderid)) %>%
+  # make another column that uses cis_girl as reference instead
+  mutate(genderid_refcisgirl = relevel(genderid_refcisboy,"cis_girl"))
+
 
 #### Count number of subjects per gender group per data collection year ####
 genderdata %>% 
@@ -1539,75 +1545,169 @@ wilcox.test(ders_total ~ sex, data = sex_yr4data)
 wilcox.test(cbcl_total ~ sex, data = sex_yr4data)
 wilcox.test(cbcl_int ~ sex, data = sex_yr4data)
 wilcox.test(cbcl_ext ~ sex, data = sex_yr4data)
+wilcox.test(bpm_total ~ sex, data = sex_yr4data)
+wilcox.test(bpm_int ~ sex, data = sex_yr4data)
+wilcox.test(bpm_ext ~ sex, data = sex_yr4data)
 
 
 ### Establish relationships between all pairs of variables individually ####
 
 # lm_var_list <- colnames(yr4data)[31:35]
-lm_var_list <- colnames(yr4data)[31:46]
-summary_lm <- list()
-list_name<-list()
-var_counter <- 1
-for (var in lm_var_list) {
-  #print(var)
-  #print(nrow(yr4data[,var]))
-  #print(length(yr4data$Z_age))
-  for (var2 in lm_var_list) {
-  #print(var2)
-  #print(nrow(yr4data[,var]))
-    if (var != var2) {
-      
-      lm_out <- lmer(paste(var, "~", var2, "+ Z_age + (1|site)"), data=yr4data)
-      summary_lm[var_counter] <- lm_out
-      list_name[var_counter]<-paste0(var," ~ ",var2)
-      var_counter <- var_counter + 1
-    }
-  }
-}
+# lm_var_list <- colnames(yr4data)[31:46]
+# summary_lm <- list()
+# list_name<-list()
+# var_counter <- 1
+# for (var in lm_var_list) {
+#   #print(var)
+#   #print(nrow(yr4data[,var]))
+#   #print(length(yr4data$Z_age))
+#   for (var2 in lm_var_list) {
+#   #print(var2)
+#   #print(nrow(yr4data[,var]))
+#     if (var != var2) {
+#       
+#       lm_out <- lmer(paste(var, "~", var2, "+ Z_age + (1|site)"), data=yr4data)
+#       summary_lm[var_counter] <- lm_out
+#       list_name[var_counter]<-paste0(var," ~ ",var2)
+#       var_counter <- var_counter + 1
+#     }
+#   }
+# }
+# 
+# print(summary(summary_lm[[1]]))
 
-print(summary(summary_lm[[1]]))
+#### DERS ~ Gender + age + (1|site) ####
+# DERS scores differ significantly based on Gender (p = 1.71e-11) but not based on
+# age (p = 0.164).
+ders_gender_reg <- lmer(Z_ders_total ~ genderid + Z_age + 
+                       (1|site),
+                     data=yr4data)
+summary(ders_gender_reg)
 
+#### LES ~ Gender + age + (1|site) ####
+# LES scores differ significantly based on Gender (p = 1.71e-11) but not based on
+# age (p = 0.164).
+les_gender_reg <- lmer(Z_total_bad_le ~ genderid + Z_age + 
+                          (1|site),
+                        data=yr4data)
+summary(les_gender_reg)
 
+#### CBCL int ~ Gender + age + (1|site) ####
+# CBCL int scores differ significantly based on Gender (p = 1.71e-11) but not based on
+# age (p = 0.164).
+cbcl_int_gender_reg <- lmer(Z_cbcl_int ~ genderid + Z_age + 
+                         (1|site),
+                       data=yr4data)
+summary(cbcl_int_gender_reg)
+
+#### CBCL ext ~ Gender + age + (1|site) ####
+# CBCL ext scores differ significantly based on Gender (p = 1.71e-11) but not based on
+# age (p = 0.164).
+cbcl_ext_gender_reg <- lmer(Z_cbcl_ext ~ genderid + Z_age + 
+                              (1|site),
+                            data=yr4data)
+summary(cbcl_ext_gender_reg)
+
+#### BPM int ~ Gender + age + (1|site) ####
+# BPM int scores differ significantly based on Gender (p = 1.71e-11) but not based on
+# age (p = 0.164).
+bpm_int_gender_reg <- lmer(Z_bpm_int ~ genderid + Z_age + 
+                              (1|site),
+                            data=yr4data)
+summary(bpm_int_gender_reg)
+
+#### BPM ext ~ Gender + age + (1|site) ####
+# BPM ext scores differ significantly based on Gender (p = 1.71e-11) but not based on
+# age (p = 0.164).
+bpm_ext_gender_reg <- lmer(Z_bpm_ext ~ genderid + Z_age + 
+                              (1|site),
+                            data=yr4data)
+summary(bpm_ext_gender_reg)
 
 #### DERS ~ LES + age + (1|site) ####
-# DERS scores differ significantly based on LES (p = 1.68e-12) but not based on
-# age (p = 0.0526).
+# DERS scores differ significantly based on LES (p = 1.71e-11) but not based on
+# age (p = 0.164).
 ders_les_reg <- lmer(Z_ders_total ~ Z_total_bad_le + Z_age + 
                      (1|site),
                      data=yr4data)
 summary(ders_les_reg)
 
+#### DERS ~ LES*gender + age + (1|site) ####
+ders_les_gender_reg <- lmer(Z_ders_total ~ Z_total_bad_le*genderid + Z_age + 
+                                 (1|site),
+                               data=yr4data)
+summary(ders_les_gender_reg)
+# test <- emmeans(ders_les_gender_reg, ~ genderid)
+# contrast(test,method="pairwise",adjust="fdr")
+
+# DERS scores differ significantly based on LES and gender but interactions are
+# not significant
+# ders_les_refcisboy_reg <- lmer(Z_ders_total ~ Z_total_bad_le*genderid_refcisboy + Z_age + 
+#                        (1|site),
+#                      data=yr4data)
+# summary(ders_les_refcisboy_reg)
+# # DERS scores differ significantly based on LES and gender but interactions are
+# # not significant
+# ders_les_refcisgirl_reg <- lmer(Z_ders_total ~ Z_total_bad_le*genderid_refcisgirl + Z_age + 
+#                                  (1|site),
+#                                data=yr4data)
+# summary(ders_les_refcisgirl_reg)
+
 #### CBCL total problems ~ LES + age + (1|site) ####
 # CBCL total problems scores differ significantly based on LES (p < 2e-16) and
-# based on age (p = 0.00366)
-cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_total_bad_le + Z_age + 
-                           (1|site),
-                           data=yr4data)
-summary(cbcl_total_les_reg)
-
+# based on age (p = 0.00664)
+# cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_total_bad_le + Z_age + 
+#                            (1|site),
+#                            data=yr4data)
+# summary(cbcl_total_les_reg)
+ 
 #### CBCL internalizing ~ LES + age + (1|site) ####
 # CBCL internalizing scores differ significantly based on LES (p < 2e-16) but
-# not based on age (p = 0.264)
+# not based on age (p = 0.278)
 cbcl_int_les_reg <- lmer(Z_cbcl_int ~ Z_total_bad_le + Z_age + 
                              (1|site),
                            data=yr4data)
 summary(cbcl_int_les_reg)
 
+#### CBCL internalizing ~ LES*gender + age + (1|site) ####
+cbcl_int_les_gender_reg <- lmer(Z_cbcl_int ~ Z_total_bad_le*genderid + Z_age + 
+                              (1|site),
+                            data=yr4data)
+summary(cbcl_int_les_gender_reg)
+
+#### CBCL internalizing ~ LES*gender + age + (1|site) ####
+cbcl_int_les_genderrefcisboy_reg <- lmer(Z_cbcl_int ~ Z_total_bad_le*genderid_refcisboy + Z_age + 
+                                  (1|site),
+                                data=yr4data)
+summary(cbcl_int_les_genderrefcisboy_reg)
+
+#### CBCL internalizing ~ LES*gender + age + (1|site) ####
+cbcl_int_les_genderrefcisgirl_reg <- lmer(Z_cbcl_int ~ Z_total_bad_le*genderid_refcisgirl + Z_age + 
+                                  (1|site),
+                                data=yr4data)
+summary(cbcl_int_les_genderrefcisgirl_reg)
+
 #### CBCL externalizing ~ LES + age + (1|site) ####
-# CBCL externalizing scores differ significantly based on LES (p < 2e-16) and
-# based on age (p = 0.0014)
+# CBCL externalizing scores differ significantly based on LES (p = 3.48e-16) and
+# based on age (p = 0.00287)
 cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_total_bad_le + Z_age + 
                            (1|site),
                          data=yr4data)
 summary(cbcl_ext_les_reg)
 
+#### CBCL externalizing ~ LES*gender + age + (1|site) ####
+cbcl_ext_les_gender_reg <- lmer(Z_cbcl_ext ~ Z_total_bad_le*genderid + Z_age + 
+                                  (1|site),
+                                data=yr4data)
+summary(cbcl_ext_les_gender_reg)
+
 #### BPM total problems ~ LES + age + (1|site) ####
 # BPM total problems scores differ significantly based on LES (p < 2e-16) but
 # not age (p = 0.716)
-bpm_total_les_reg <- lmer(Z_bpm_total ~ Z_total_bad_le + Z_age + 
-                             (1|site),
-                           data=yr4data)
-summary(bpm_total_les_reg)
+# bpm_total_les_reg <- lmer(Z_bpm_total ~ Z_total_bad_le + Z_age + 
+#                              (1|site),
+#                            data=yr4data)
+# summary(bpm_total_les_reg)
 
 #### BPM internalizing ~ LES + age + (1|site) ####
 # BPM internalizing scores differ significantly based on LES (p < 2e-16) but
@@ -1617,6 +1717,12 @@ bpm_int_les_reg <- lmer(Z_bpm_int ~ Z_total_bad_le + Z_age +
                          data=yr4data)
 summary(bpm_int_les_reg)
 
+#### BPM internalizing ~ LES*gender + age + (1|site) ####
+bpm_int_les_gender_reg <- lmer(Z_bpm_int ~ Z_total_bad_le*genderid + Z_age + 
+                                  (1|site),
+                                data=yr4data)
+summary(bpm_int_les_gender_reg)
+
 #### BPM externalizing ~ LES + age + (1|site) ####
 # BPM externalizing scores differ significantly based on LES (p < 2e-16) but not
 # age (p = 0.657)
@@ -1625,37 +1731,55 @@ bpm_ext_les_reg <- lmer(Z_bpm_ext ~ Z_total_bad_le + Z_age +
                          data=yr4data)
 summary(bpm_ext_les_reg)
 
+#### BPM externalizing ~ LES*gender + age + (1|site) ####
+bpm_ext_les_gender_reg <- lmer(Z_bpm_ext ~ Z_total_bad_le*genderid + Z_age + 
+                                 (1|site),
+                               data=yr4data)
+summary(bpm_ext_les_gender_reg)
+
 #### CBCL total problems ~ DERS + age + (1|site) ####
 # CBCL total problems scores differ significantly based on DERS (p < 2e-16) but
-# not based on age (p = 0.0967)
-cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_ders_total + Z_age + 
-                             (1|site),
-                           data=yr4data)
-summary(cbcl_total_les_reg)
+# not based on age (p = 0.0644)
+# cbcl_total_les_reg <- lmer(Z_cbcl_total ~ Z_ders_total + Z_age + 
+#                              (1|site),
+#                            data=yr4data)
+# summary(cbcl_total_les_reg)
 
 #### CBCL internalizing ~ DERS + age + (1|site) ####
 # CBCL internalizing scores differ significantly based on DERS (p < 2e-16) but
-# not based on age (p = 0.855)
-cbcl_int_les_reg <- lmer(Z_cbcl_int ~ Z_ders_total + Z_age + 
+# not based on age (p = 0.892)
+cbcl_int_ders_reg <- lmer(Z_cbcl_int ~ Z_ders_total + Z_age + 
                            (1|site),
                          data=yr4data)
-summary(cbcl_int_les_reg)
+summary(cbcl_int_ders_reg)
+
+#### CBCL internalizing ~ DERS*gender + age + (1|site) ####
+cbcl_int_ders_gender_reg <- lmer(Z_cbcl_int ~ Z_ders_total*genderid + Z_age + 
+                                 (1|site),
+                               data=yr4data)
+summary(cbcl_int_ders_gender_reg)
 
 #### CBCL externalizing ~ DERS + age + (1|site) ####
 # CBCL externalizing scores differ significantly based on DERS (p < 2e-16) and
-# based on age (p = 0.0365)
-cbcl_ext_les_reg <- lmer(Z_cbcl_ext ~ Z_ders_total + Z_age + 
+# based on age (p = 0.0288)
+cbcl_ext_ders_reg <- lmer(Z_cbcl_ext ~ Z_ders_total + Z_age + 
                            (1|site),
                          data=yr4data)
-summary(cbcl_ext_les_reg)
+summary(cbcl_ext_ders_reg)
+
+#### CBCL externalizing ~ DERS*gender + age + (1|site) ####
+cbcl_ext_ders_gender_reg <- lmer(Z_cbcl_ext ~ Z_ders_total*genderid + Z_age + 
+                                  (1|site),
+                                data=yr4data)
+summary(cbcl_ext_ders_gender_reg)
 
 #### BPM total problems ~ DERS + age + (1|site) ####
 # BPM total problems scores differ significantly based on DERS (p < 2e-16) but
 # not age (p = 0.183)
-bpm_total_les_reg <- lmer(Z_bpm_total ~ Z_ders_total + Z_age + 
-                             (1|site),
-                           data=yr4data)
-summary(bpm_total_les_reg)
+# bpm_total_les_reg <- lmer(Z_bpm_total ~ Z_ders_total + Z_age + 
+#                              (1|site),
+#                            data=yr4data)
+# summary(bpm_total_les_reg)
 
 #### BPM internalizing ~ DERS + age + (1|site) ####
 # BPM internalizing scores differ significantly based on DERS (p < 2e-16) and
@@ -1665,6 +1789,24 @@ bpm_int_les_reg <- lmer(Z_bpm_int ~ Z_ders_total + Z_age +
                          data=yr4data)
 summary(bpm_int_les_reg)
 
+#### BPM internalizing ~ DERS*gender + age + (1|site) ####
+bpm_int_les_gender_reg <- lmer(Z_bpm_int ~ Z_ders_total*genderid + Z_age + 
+                                  (1|site),
+                                data=yr4data)
+summary(bpm_int_les_gender_reg)
+
+#### BPM internalizing ~ DERS*gender + age + (1|site) ####
+bpm_int_les_genderrefcisboy_reg <- lmer(Z_bpm_int ~ Z_ders_total*genderid_refcisboy + Z_age + 
+                                 (1|site),
+                               data=yr4data)
+summary(bpm_int_les_genderrefcisboy_reg)
+
+#### BPM internalizing ~ DERS*gender + age + (1|site) ####
+bpm_int_les_genderrefcisgirl_reg <- lmer(Z_bpm_int ~ Z_ders_total*genderid_refcisgirl + Z_age + 
+                                 (1|site),
+                               data=yr4data)
+summary(bpm_int_les_genderrefcisgirl_reg)
+
 #### BPM externalizing ~ DERS + age + (1|site) ####
 # BPM externalizing scores differ significantly based on DERS (p < 2e-16) but
 # not age (p = 0.219)
@@ -1672,6 +1814,121 @@ bpm_ext_les_reg <- lmer(Z_bpm_ext ~ Z_ders_total + Z_age +
                            (1|site),
                          data=yr4data)
 summary(bpm_ext_les_reg)
+
+#### BPM externalizing ~ DERS*gender + age + (1|site) ####
+bpm_ext_les_gender_reg <- lmer(Z_bpm_ext ~ Z_ders_total*genderid + Z_age + 
+                                 (1|site),
+                               data=yr4data)
+summary(bpm_ext_les_gender_reg)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+library(bruceR)
+cbclintmodel15 <- PROCESS(
+          yr4data,
+          y = "Z_cbcl_int",
+          x = "Z_total_bad_le",
+          meds = c("Z_ders_total"),
+          mods = c("genderid"),
+          covs = c("Z_age"),
+          # clusters = c(),
+          # hlm.re.m = "",
+          hlm.re.y = "site",
+          # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+          # med.type = c("parallel", "serial"),
+          # mod.type = c("2-way", "3-way"),
+          mod.path = c(
+                       "x-y",
+                       # "x-m", 
+                       "m-y" 
+                       # "all"
+                       ),
+          cov.path = c(
+                       # "y", 
+                       # "m", 
+                       "both"),
+          # mod1.val = NULL,
+          # mod2.val = NULL,
+          # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+          nsim = 10000,
+          seed = 1234,
+          center = TRUE,
+          std = FALSE,
+          digits = 3,
+          # file = NULL
+        )
+cbclintmodel15
+
+bpmintmodel15 <- PROCESS(
+  yr4data,
+  y = "Z_bpm_int",
+  x = "Z_total_bad_le",
+  meds = c("Z_ders_total"),
+  mods = c("genderid"),
+  covs = c("Z_age"),
+  # clusters = c(),
+  # hlm.re.m = "",
+  hlm.re.y = "site",
+  # hlm.type = c("1-1-1", "2-1-1", "2-2-1"),
+  # med.type = c("parallel", "serial"),
+  # mod.type = c("2-way", "3-way"),
+  mod.path = c(
+    "x-y",
+    # "x-m", 
+    "m-y" 
+    # "all"
+  ),
+  cov.path = c(
+    # "y", 
+    # "m", 
+    "both"),
+  # mod1.val = NULL,
+  # mod2.val = NULL,
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 10000,
+  seed = 1234,
+  center = TRUE,
+  std = FALSE,
+  digits = 3,
+  # file = NULL
+)
+bpmintmodel15
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### Mediation models with lavaan  ####
 #### Select only data for mediation analysis ####
@@ -2119,3 +2376,302 @@ summary(sexextfit,
         rsquare=TRUE)
 parameterEstimates(sexextfit, boot.ci.type = "bca.simple")
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##### BPM total problems ####
+###### Without gender or sex ####
+nogendertotalmodel <- 
+  ' # direct effect
+        totalBPM~ c*LES + age
+      # mediator
+        DERS ~ a*LES  + age
+      # indirect effect
+        totalBPM~ b*DERS
+      # indirect effect (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+nogendertotalfit <- sem(nogendertotalmodel, 
+                        data = med_data, 
+                        meanstructure = TRUE,
+                        se = "robust.cluster",
+                        cluster = "site")
+summary(nogendertotalfit, fit.measures=T, 
+        standardized=T, ci=TRUE, rsquare=TRUE)
+parameterEstimates(nogendertotalfit, boot.ci.type = "bca.simple")
+
+###### With gender, using cis boys as the comparison group ####
+gendertotalmodel_compcisboy <- 
+  ' # direct effect 
+       totalBPM~ c*LES + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
+     # mediator 
+       DERS ~ a*LES  + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
+     # indirect effect 
+       totalBPM~ b*DERS
+     # indirect effect w mediator (a*b)
+       ab := a*b
+     # total effect
+       total := c + (a*b) '
+gendertotalfit_compcisboy <- sem(gendertotalmodel_compcisboy, 
+                                 data = med_data, 
+                                 meanstructure = TRUE,
+                                 se = "robust.cluster",
+                                 cluster = "site")
+summary(gendertotalfit_compcisboy, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
+parameterEstimates(gendertotalfit_compcisboy, boot.ci.type = "bca.simple")
+
+###### With gender, using cis girls as the comparison group ####
+gendertotalmodel_compcisgirl <- 
+  ' # direct effect 
+        totalBPM~ c*LES + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
+      # mediator 
+        DERS ~ a*LES  + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
+      # indirect effect 
+        totalBPM~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+gendertotalfit_compcisgirl <- sem(gendertotalmodel_compcisgirl, 
+                                  data = med_data, 
+                                  meanstructure = TRUE,
+                                  se = "robust.cluster",
+                                  cluster = "site")
+summary(gendertotalfit_compcisgirl, 
+        fit.measures=T, standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
+parameterEstimates(gendertotalfit_compcisgirl, boot.ci.type = "bca.simple")
+
+###### With sex ####
+sextotalmodel <- 
+  ' # direct effect
+        totalBPM~ c*LES + female + age + LES:female
+      # mediator
+        DERS ~ a*LES  + female + age + LES:female
+      # indirect effect
+        totalBPM~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+sextotalfit <- sem(sextotalmodel, 
+                   data = sex_med_data, 
+                   meanstructure = TRUE,
+                   se = "robust.cluster",
+                   cluster = "site")
+summary(sextotalfit, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
+parameterEstimates(sextotalfit, boot.ci.type = "bca.simple")
+
+
+##### BPM internalizing ####
+###### Without gender or sex ####
+nogenderintmodel <- 
+  ' # direct effect
+        intBPM~ c*LES + age
+      # mediator
+        DERS ~ a*LES  + age
+      # indirect effect
+        intBPM~ b*DERS
+      # indirect effect (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+nogenderintfit <- sem(nogenderintmodel, 
+                      data = med_data, 
+                      meanstructure = TRUE,
+                      se = "robust.cluster",
+                      cluster = "site")
+summary(nogenderintfit, fit.measures=T, 
+        standardized=T, ci=TRUE, rsquare=TRUE)
+parameterEstimates(nogenderintfit, boot.ci.type = "bca.simple")
+
+###### With gender, using cis boys as the comparison group ####
+genderintmodel_compcisboy <- 
+  ' # direct effect 
+       intBPM~ c*LES + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
+     # mediator 
+       DERS ~ a*LES  + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
+     # indirect effect 
+       intBPM~ b*DERS
+     # indirect effect w mediator (a*b)
+       ab := a*b
+     # total effect
+       total := c + (a*b) '
+genderintfit_compcisboy <- sem(genderintmodel_compcisboy, 
+                               data = med_data, 
+                               meanstructure = TRUE,
+                               se = "robust.cluster",
+                               cluster = "site")
+summary(genderintfit_compcisboy, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
+parameterEstimates(genderintfit_compcisboy, boot.ci.type = "bca.simple")
+
+###### With gender, using cis girls as the comparison group ####
+genderintmodel_compcisgirl <- 
+  ' # direct effect 
+        intBPM~ c*LES + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
+      # mediator 
+        DERS ~ a*LES  + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
+      # indirect effect 
+        intBPM~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+genderintfit_compcisgirl <- sem(genderintmodel_compcisgirl, 
+                                data = med_data, 
+                                meanstructure = TRUE,
+                                se = "robust.cluster",
+                                cluster = "site")
+summary(genderintfit_compcisgirl, 
+        fit.measures=T, standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
+parameterEstimates(genderintfit_compcisgirl, boot.ci.type = "bca.simple")
+
+###### With sex ####
+sexintmodel <- 
+  ' # direct effect
+        intBPM~ c*LES + female + age + LES:female
+      # mediator
+        DERS ~ a*LES  + female + age + LES:female
+      # indirect effect
+        intBPM~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+sexintfit <- sem(sexintmodel, 
+                 data = sex_med_data, 
+                 meanstructure = TRUE,
+                 se = "robust.cluster",
+                 cluster = "site")
+summary(sexintfit, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
+parameterEstimates(sexintfit, boot.ci.type = "bca.simple")
+
+##### BPM externalizing ####
+###### Without gender or sex ####
+nogenderextmodel <- 
+  ' # direct effect
+        extBPM~ c*LES + age
+      # mediator
+        DERS ~ a*LES  + age
+      # indirect effect
+        extBPM~ b*DERS
+      # indirect effect (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+nogenderextfit <- sem(nogenderextmodel, 
+                      data = med_data, 
+                      meanstructure = TRUE,
+                      se = "robust.cluster",
+                      cluster = "site")
+summary(nogenderextfit, fit.measures=T, 
+        standardized=T, ci=TRUE, rsquare=TRUE)
+parameterEstimates(nogenderextfit, boot.ci.type = "bca.simple")
+
+###### With gender, using cis boys as the comparison group ####
+genderextmodel_compcisboy <- 
+  ' # direct effect 
+       extBPM~ c*LES + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
+     # mediator 
+       DERS ~ a*LES  + eff_cisgirl_ref_cisboy + eff_gd_ref_cisboy + age + LES:eff_cisgirl_ref_cisboy + LES:eff_gd_ref_cisboy
+     # indirect effect 
+       extBPM~ b*DERS
+     # indirect effect w mediator (a*b)
+       ab := a*b
+     # total effect
+       total := c + (a*b) '
+genderextfit_compcisboy <- sem(genderextmodel_compcisboy, 
+                               data = med_data, 
+                               meanstructure = TRUE,
+                               se = "robust.cluster",
+                               cluster = "site")
+summary(genderextfit_compcisboy, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
+parameterEstimates(genderextfit_compcisboy, boot.ci.type = "bca.simple")
+
+###### With gender, using cis girls as the comparison group ####
+genderextmodel_compcisgirl <- 
+  ' # direct effect 
+        extBPM~ c*LES + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
+      # mediator 
+        DERS ~ a*LES  + eff_cisboy_ref_cisgirl + eff_gd_ref_cisgirl + age + LES:eff_cisboy_ref_cisgirl + LES:eff_gd_ref_cisgirl
+      # indirect effect 
+        extBPM~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+genderextfit_compcisgirl <- sem(genderextmodel_compcisgirl, 
+                                data = med_data, 
+                                meanstructure = TRUE,
+                                se = "robust.cluster",
+                                cluster = "site")
+summary(genderextfit_compcisgirl, 
+        fit.measures=T, standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
+parameterEstimates(genderextfit_compcisgirl, boot.ci.type = "bca.simple")
+
+###### With sex ####
+sexextmodel <- 
+  ' # direct effect
+        extBPM~ c*LES + female + age + LES:female
+      # mediator
+        DERS ~ a*LES  + female + age + LES:female
+      # indirect effect
+        extBPM~ b*DERS
+      # indirect effect w mediator (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b) '
+sexextfit <- sem(sexextmodel, 
+                 data = sex_med_data, 
+                 meanstructure = TRUE,
+                 se = "robust.cluster",
+                 cluster = "site")
+summary(sexextfit, 
+        fit.measures=T, 
+        standardized=T, 
+        ci=TRUE, 
+        rsquare=TRUE)
+parameterEstimates(sexextfit, boot.ci.type = "bca.simple")
