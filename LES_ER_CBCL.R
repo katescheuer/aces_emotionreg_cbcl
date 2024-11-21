@@ -1,5 +1,5 @@
 ### Set working directory ####
-setwd("C:/Users/Kate Scheuer/OneDrive - UW/Desktop/Lab/aces_emotionreg_cbcl/data")
+setwd("C:/Users/Kate Scheuer/OneDrive - UW/Desktop/Lab/aces_emotionreg_cbcl")
 
 ### Load libraries ####
 library(tidyverse)
@@ -14,27 +14,29 @@ library(misty)
 library(bruceR)
 
 
+
 ## PREP DATA ####
 
 ### Read in raw data ####
 #### Gender data ####
 
-gish_y_gi <- read_csv("gish_y_gi.csv")
+gish_y_gi <- read_csv("data/gish_y_gi.csv")
 
 #### DERS-P for emotion regulation ####
-mh_p_ders <- read_csv("mh_p_ders.csv")
+mh_p_ders <- read_csv("data/mh_p_ders.csv")
 
 #### CBCL for parent-report psychopathology symptoms ####
-mh_p_cbcl <- read_csv("mh_p_cbcl.csv")
+mh_p_cbcl <- read_csv("data/mh_p_cbcl.csv")
 
 #### BPM for youth-report psychopathology symptoms ####
-mh_y_bpm <- read_csv("mh_y_bpm.csv")
+mh_y_bpm <- read_csv("data/mh_y_bpm.csv")
 
 #### Longitudinal tracking data ####
-abcd_y_lt <- read_csv("abcd_y_lt.csv")
+abcd_y_lt <- read_csv("data/abcd_y_lt.csv")
 
+#### LES (youth-reported) ####
 #### LES for exposure to negative life events
-mh_y_le <- read_csv("mh_y_le.csv")
+mh_y_le <- read_csv("data/mh_y_le.csv")
 
 ### Determine initial number of year 4 participants from each data frame ####
 
@@ -89,21 +91,29 @@ genderdata <- gish_y_gi %>%
                     kbi_y_trans_id==4 ~ "dont_understand",
                     kbi_y_trans_id==777 ~ "refuse"
                     )) %>%
-  # combine gender and trans identity information to make three gender groups
+  # combine gender and trans identity information to make five gender groups
+  mutate(gender_details = case_when(
+                            kbi_gender==777 ~ "refuse",
+                            kbi_y_trans_id==777 ~ "refuse",
+                            kbi_gender==4 ~ "dont_understand",
+                            kbi_y_trans_id==4 ~ "dont_understand",
+                            kbi_gender==1 & kbi_y_trans_id==1 ~ "trans_boy", #"gd",
+                            kbi_gender==1 & kbi_y_trans_id==2 ~ "trans_boy", #"gd",
+                            kbi_gender==1 & kbi_y_trans_id==3 ~ "cis_boy",
+                            kbi_gender==2 & kbi_y_trans_id==1 ~ "trans_girl", #"gd",
+                            kbi_gender==2 & kbi_y_trans_id==2 ~ "trans_girl", #"gd",
+                            kbi_gender==2 & kbi_y_trans_id==3 ~ "cis_girl",
+                            kbi_gender==3 & kbi_y_trans_id==1 ~ "nb", #"gd",
+                            kbi_gender==3 & kbi_y_trans_id==2 ~ "nb", #"gd",
+                            kbi_gender==3 & kbi_y_trans_id==3 ~ "nb" #"gd"
+  )) %>%
+  # combine all not cis groups due to sample size to make one gender diverse group (gd)
   mutate(genderid = case_when(
-                      kbi_gender==777 ~ "refuse",
-                      kbi_y_trans_id==777 ~ "refuse",
-                      kbi_gender==4 ~ "dont_understand",
-                      kbi_y_trans_id==4 ~ "dont_understand",
-                      kbi_gender==1 & kbi_y_trans_id==1 ~ "gd", #"trans_boy",
-                      kbi_gender==1 & kbi_y_trans_id==2 ~ "gd", #"trans_boy",
-                      kbi_gender==1 & kbi_y_trans_id==3 ~ "cis_boy",
-                      kbi_gender==2 & kbi_y_trans_id==1 ~ "gd", #"trans_girl",
-                      kbi_gender==2 & kbi_y_trans_id==2 ~ "gd", #"trans_girl",
-                      kbi_gender==2 & kbi_y_trans_id==3 ~ "cis_girl",
-                      kbi_gender==3 & kbi_y_trans_id==1 ~ "gd", #"nb",
-                      kbi_gender==3 & kbi_y_trans_id==2 ~ "gd", #"nb",
-                      kbi_gender==3 & kbi_y_trans_id==3 ~ "gd" #"nb"
+                      gender_details=="trans_boy" ~ "gd",
+                      gender_details=="trans_girl" ~ "gd",
+                      gender_details=="nb" ~ "gd",
+                      gender_details=="cis_boy" ~ "cis_boy",
+                      gender_details=="cis_girl" ~ "cis_girl"
                       )) %>%
   
   # dummy coding table below to help conceptually convert from one column with
@@ -158,7 +168,8 @@ genderdata <- gish_y_gi %>%
                      genderid=="gd" ~ 1)) %>%
 
   # keep only columns relevant to analysis
-  select(src_subject_id,eventname,sex,gender,trans,sex_female,
+  select(src_subject_id,eventname,sex,gender,trans,gender_details,
+         sex_female,
          genderid,
          # gender_cisgirl,gender_gd,gender_cisboy
          eff_cisgirl_ref_cisboy,eff_gd_ref_cisboy,
@@ -408,7 +419,8 @@ yr4data <- alldata %>% filter(eventname=="4_year_follow_up_y_arm_1")
 # n should be 3638
 yr4sexdata <- yr4data %>% 
     filter(sex!="refuse",
-           sex!="dont_know")
+           sex!="dont_know") %>%
+    mutate(sex = fct_relevel(sex, "male"))
 
 #### Create separate data frame for just data from year 3 follow-up visit ####
 # n should be 8443
@@ -446,6 +458,15 @@ gender_change <-
     count()
 gender_change
 
+#### Determine how many subjects in each more detailed gender group ####
+yr4data %>%
+  group_by(gender_details) %>%
+  count()
+
+#### Determine how many subjects in each combination of gender and sex group ####
+yr4data %>%
+  group_by(genderid, sex) %>%
+  count()
 
 
 
@@ -455,7 +476,8 @@ gender_change
 sumstats <- 
   yr4data %>%
   # yr4sexdata %>%
-  group_by(genderid) %>%
+  # group_by(genderid) %>%
+  group_by(gender_details) %>%
   # group_by(sex) %>%
   summarise(
     n = n(),
@@ -547,17 +569,17 @@ corrmat$p.adj
 
 
 
+
 ## PLOTS ####
 
 ### Plot variables against each other ####
 #### Without gender
-##### Scatterplots of DERS vs CBCL total problems, internalizing, externalizing ####
-outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext",
-                  "bpm_total","bpm_int","bpm_ext")
-ders_plot_list <- list()
+##### Scatterplots of DERS vs CBCL internalizing and externalizing ####
+outcome_list <- c("cbcl_int","cbcl_ext")
+cbcl_ders_plot_list <- list()
 for (outcome in outcome_list) {
   # Create plot
-  ders_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]]),data=yr4data) +
+  cbcl_ders_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]]),data=yr4data) +
                   geom_point(size=1) +
                   geom_smooth(method="lm",
                               se=FALSE,
@@ -569,7 +591,31 @@ for (outcome in outcome_list) {
                                      breaks=seq(0,100,20),
                                      limits = c(0,100)) +
                   theme_classic()
-  ders_plot_list[[outcome]] <- ders_plot
+  cbcl_ders_plot_list[[outcome]] <- cbcl_ders_plot
+  # Save plot
+  ggsave(paste0("ders_vs_",outcome,"_nogender.tiff"),
+         width=6,height=6,units = "in",
+         path="figures/")
+}
+
+##### Scatterplots of DERS vs BPM internalizing and externalizing ####
+outcome_list <- c("bpm_int","bpm_ext")
+bpm_ders_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  bpm_ders_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]]),data=yr4data) +
+    geom_point(size=1) +
+    geom_smooth(method="lm",
+                se=FALSE,
+                linewidth=1.25,color="black") +
+    scale_x_continuous(expand = c(0,0),
+                       breaks=seq(25,150,25),
+                       limits = c(25,155)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks=seq(40,80,10),
+                       limits = c(40,80)) +
+    theme_classic()
+  bpm_ders_plot_list[[outcome]] <- bpm_ders_plot
   # Save plot
   # ggsave(paste0("ders_vs_",outcome,"_nogender.tiff"),
   #        width=6,height=6,units = "in")
@@ -708,7 +754,8 @@ ggplot(les_df_proportions,
 # Save bar graph
 # ggsave("LES_by_gender.tiff",width=7,height=3,unit="in")
 
-####### Create bar graph of LES by gender group ####
+
+####### Create bar graph of DERS by gender group ####
 # Use DERS on x-axis and proportion of subjects with a given DERS score for
 # each specific gender group (rather than raw number of subjects per gender
 # group) so that differences in GD group are more clear despite having a
@@ -747,6 +794,221 @@ ggplot(ders_df_proportions,
 
 # Save bar graph
 # ggsave("DERS_by_gender.tiff",width=7,height=3,unit="in")
+
+
+##### Bargraph of LES vs DERS by gender ####
+ggplot(yr4data, 
+       aes(x=total_bad_le,y=ders_total, fill=genderid)) +
+  geom_bar(stat="summary",fun="mean",
+           position=position_dodge2(preserve = "single"),
+           color="gray",width=.7) +
+  scale_fill_grey(start=0.7,end=0.2) +
+  scale_x_continuous(expand = c(0,0),
+                     breaks = seq(0,15, by = 1)) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(0,125,by=25),
+                     limits=c(0,125)) +
+  theme_classic()
+# Save bar graph
+# ggsave("les_vs_ders_bygender.tiff",width=14,height=6,unit="in",path="figures")
+
+##### Bargraph of LES vs CBCL internalizing by gender ####
+ggplot(yr4data, 
+       aes(x=total_bad_le,y=cbcl_int, fill=genderid)) +
+  geom_bar(stat="summary",fun="mean",
+           position=position_dodge2(preserve = "single"),
+           color="gray",width=.7) +
+  # scale_fill_grey(start=0.7,end=0.2) +
+  scale_x_continuous(expand = c(0,0),
+                     breaks = seq(0,15, by = 1)) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(0,90,by=10),
+                     limits=c(0,90)) +
+  theme_classic()
+# Save bar graph
+# ggsave("les_vs_cbclint_bygender.tiff",width=14,height=6,unit="in",path="figures")
+
+##### Bargraph of LES vs CBCL externalizing by gender ####
+ggplot(yr4data, 
+       aes(x=total_bad_le,y=cbcl_ext, fill=genderid)) +
+  geom_bar(stat="summary",fun="mean",
+           position=position_dodge2(preserve = "single"),
+           color="gray",width=.7) +
+  # scale_fill_grey(start=0.7,end=0.2) +
+  scale_x_continuous(expand = c(0,0),
+                     breaks = seq(0,15, by = 1)) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(0,90,by=10),
+                     limits=c(0,90)) +
+  theme_classic()
+# Save bar graph
+# ggsave("les_vs_cbclext_bygender.tiff",width=14,height=6,unit="in",path="figures")
+
+##### Bargraph of LES vs BPM internalizing by gender ####
+ggplot(yr4data, 
+       aes(x=total_bad_le,y=bpm_int, fill=genderid)) +
+  geom_bar(stat="summary",fun="mean",
+           position=position_dodge2(preserve = "single"),
+           color="gray",width=.7) +
+  # scale_fill_grey(start=0.7,end=0.2) +
+  scale_x_continuous(expand = c(0,0),
+                     breaks = seq(0,15, by = 1)) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(0,90,by=10),
+                     limits=c(0,90)) +
+  theme_classic()
+# Save bar graph
+# ggsave("les_vs_bpmint_bygender.tiff",width=14,height=6,unit="in",path="figures")
+
+##### Bargraph of LES vs BPM externalizing by gender ####
+ggplot(yr4data, 
+       aes(x=total_bad_le,y=bpm_ext, fill=genderid)) +
+  geom_bar(stat="summary",fun="mean",
+           position=position_dodge2(preserve = "single"),
+           color="gray",width=.7) +
+  # scale_fill_grey(start=0.7,end=0.2) +
+  scale_x_continuous(expand = c(0,0),
+                     breaks = seq(0,15, by = 1)) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(0,90,by=10),
+                     limits=c(0,90)) +
+  theme_classic()
+# Save bar graph
+# ggsave("les_vs_bpmext_bygender.tiff",width=14,height=6,unit="in",path="figures")
+
+##### Scatterplots of DERS vs CBCL by gender ####
+outcome_list <- c("cbcl_int","cbcl_ext")
+cbcl_ders_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  cbcl_ders_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]],
+                               color=genderid),data=yr4data) +
+    geom_point(size=1,) +
+    geom_smooth(method="lm",
+                se=FALSE,
+                linewidth=1.25) +
+    # geom_hline(yintercept=70,linetype='dashed') +
+    scale_x_continuous(expand = c(0,0),
+                       breaks=seq(25,150,25),
+                       limits = c(25,155)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks=seq(20,90,10),
+                       limits = c(20,90)) +
+    theme_classic()
+  cbcl_ders_plot_list[[outcome]] <- cbcl_ders_plot
+  # Save plot
+  # ggsave(paste0("ders_vs_",outcome,"_bygender.tiff"),
+  #        width=7,height=6,units = "in",path="figures")
+}
+
+##### Scatterplots of DERS vs BPM by gender ####
+outcome_list <- c("bpm_int","bpm_ext")
+bpm_ders_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  bpm_ders_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]],
+                              color=genderid),data=yr4data) +
+    geom_point(size=1) +
+    geom_smooth(method="lm",
+                se=FALSE,
+                linewidth=1.25) +
+    # geom_hline(yintercept=65,linetype='dashed') +
+    scale_x_continuous(expand = c(0,0),
+                       breaks=seq(25,150,25),
+                       limits = c(25,155)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks=seq(40,80,10),
+                       limits = c(40,80)) +
+    theme_classic()
+  bpm_ders_plot_list[[outcome]] <- bpm_ders_plot
+  # Save plot
+  # ggsave(paste0("ders_vs_",outcome,"_bygender.tiff"),
+  #        width=7,height=6,units = "in",path="figures")
+}
+
+####### Create bar graph of BPM internalizing by gender group ####
+# Use bpm internalizing on x-axis and proportion of subjects with a given
+# bpm internalizing score for each specific gender group (rather than raw 
+# number of subjects per gender group) so that differences in GD group are 
+# more clear despite having a much smaller sample size
+# Create data frame with proportions rather than raw numbers
+bpm_int_df_proportions <- 
+  yr4data %>%
+  # Create bins
+  mutate(bpm_int_bin = cut(bpm_int, 
+                           breaks = seq(45, 80, by = 5), 
+                           right = FALSE)) %>% # Create bins
+  group_by(genderid, bpm_int_bin) %>%
+  count() %>%
+  group_by(genderid) %>%
+  mutate(yr4_proportion = n / sum(n)) %>%
+  ungroup() %>%
+  # ensure all combinations of gender and number of bad events are
+  # present so can be included on plot
+  complete(bpm_int_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
+  mutate(yr4_proportion = replace_na(yr4_proportion,0))
+# Make actual bar graph
+ggplot(bpm_int_df_proportions, 
+       aes(x = bpm_int_bin,y=yr4_proportion,fill=genderid)) +
+  geom_bar(stat="identity",position="dodge",color="black") +
+  scale_x_discrete(labels=c("45-49","50-54","55-59","60-64","65-69",
+                            "70-74","75-79")) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(
+                       min(bpm_int_df_proportions$yr4_proportion),
+                       1,
+                       by=.2),limits = c(0,1)) +
+  theme_classic()
+# Save bar graph
+# ggsave("bpm_int_bygender.tiff",width=7,height=6,unit="in",path="figures")
+
+####### Create bar graph of BPM externalizing by gender group ####
+# Use bpm externalizing on x-axis and proportion of subjects with a given
+# bpm externalizing score for each specific gender group (rather than raw 
+# number of subjects per gender group) so that differences in GD group are 
+# more clear despite having a much smaller sample size
+# Create data frame with proportions rather than raw numbers
+bpm_ext_df_proportions <- 
+  yr4data %>%
+  # Create bins
+  mutate(bpm_ext_bin = cut(bpm_ext, 
+                           breaks = seq(45, 80, by = 5), 
+                           right = FALSE)) %>% # Create bins
+  group_by(genderid, bpm_ext_bin) %>%
+  count() %>%
+  group_by(genderid) %>%
+  mutate(yr4_proportion = n / sum(n)) %>%
+  ungroup() %>%
+  # ensure all combinations of gender and number of bad events are
+  # present so can be included on plot
+  complete(bpm_ext_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
+  mutate(yr4_proportion = replace_na(yr4_proportion,0))
+# Make actual bar graph
+ggplot(bpm_ext_df_proportions, 
+       aes(x = bpm_ext_bin,y=yr4_proportion,fill=genderid)) +
+  geom_bar(stat="identity",position="dodge",color="black") +
+  scale_x_discrete(labels=c("45-49","50-54","55-59","60-64","65-69",
+                            "70-74","75-79")) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(
+                       min(bpm_ext_df_proportions$yr4_proportion),
+                       1,
+                       by=.2),limits = c(0,1)) +
+  theme_classic()
+# Save bar graph
+# ggsave("bpm_ext_bygender.tiff",width=7,height=6,unit="in",path="figures")
+
+
+
+
+
+
+
+
+
+
+
+
 
 ####### Create bar graph of CBCL internalizing by gender group ####
 # Use CBCL internalizing on x-axis and proportion of subjects with a given
@@ -822,81 +1084,6 @@ ggplot(cbcl_ext_df_proportions,
 # Save bar graph
 # ggsave("cbcl_ext_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
 
-####### Create bar graph of BPM internalizing by gender group ####
-# Use bpm internalizing on x-axis and proportion of subjects with a given
-# bpm internalizing score for each specific gender group (rather than raw 
-# number of subjects per gender group) so that differences in GD group are 
-# more clear despite having a much smaller sample size
-# Create data frame with proportions rather than raw numbers
-bpm_int_df_proportions <- 
-  yr4data %>%
-  # Create bins
-  mutate(bpm_int_bin = cut(bpm_int, 
-                           breaks = seq(0, 100, by = 10), 
-                           right = FALSE)) %>% # Create bins
-  group_by(genderid, bpm_int_bin) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(yr4_proportion = n / sum(n)) %>%
-  ungroup() %>%
-  # ensure all combinations of gender and number of bad events are
-  # present so can be included on plot
-  complete(bpm_int_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
-  mutate(yr4_proportion = replace_na(yr4_proportion,0))
-# Make actual bar graph
-ggplot(bpm_int_df_proportions, 
-       aes(x = bpm_int_bin,y=yr4_proportion,fill=genderid)) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49",
-                            "50-59","60-69","70-79","80-89","90-99")) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(
-                       min(bpm_int_df_proportions$yr4_proportion),
-                       0.9,
-                       by=0.05),limits = c(0,0.9)) + 
-  theme_classic()
-
-# Save bar graph
-# ggsave("bpm_int_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
-
-####### Create bar graph of BPM externalizing by gender group ####
-# Use bpm externalizing on x-axis and proportion of subjects with a given
-# bpm externalizing score for each specific gender group (rather than raw 
-# number of subjects per gender group) so that differences in GD group are 
-# more clear despite having a much smaller sample size
-# Create data frame with proportions rather than raw numbers
-bpm_ext_df_proportions <- 
-  yr4data %>%
-  # Create bins
-  mutate(bpm_ext_bin = cut(bpm_ext, 
-                           breaks = seq(0, 100, by = 10), 
-                           right = FALSE)) %>% # Create bins
-  group_by(genderid, bpm_ext_bin) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(yr4_proportion = n / sum(n)) %>%
-  ungroup() %>%
-  # ensure all combinations of gender and number of bad events are
-  # present so can be included on plot
-  complete(bpm_ext_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
-  mutate(yr4_proportion = replace_na(yr4_proportion,0))
-# Make actual bar graph
-ggplot(bpm_ext_df_proportions, 
-       aes(x = bpm_ext_bin,y=yr4_proportion,fill=genderid)) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49",
-                            "50-59","60-69","70-79","80-89","90-99")) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(
-                       min(bpm_ext_df_proportions$yr4_proportion),
-                       1,
-                       by=0.05),limits = c(0,1)) +
-  theme_classic()
-
-# Save bar graph
-# ggsave("bpm_ext_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
-
-
 
 ## STEP ONE: BASIC GROUP DIFFERENCES AND REGRESSION ####
 
@@ -905,10 +1092,13 @@ ggplot(bpm_ext_df_proportions,
 ### gender
 #### Age (year 4) does not differ significantly based on gender (p = 0.1779)
 kruskal.test(age ~ genderid, data = yr4data)
+# kruskal.test(age ~ gender_details, data = yr4data)
 #### LES (year 4) does differ significantly based on gender (p = 4.803e-11), and
 #### all gender groups are significantly different from each other
 kruskal.test(total_bad_le ~ genderid, data = yr4data)
+# kruskal.test(total_bad_le ~ gender_details, data = yr4data)
 dunnTest(yr4data$total_bad_le, yr4data$genderid, method = "bh")
+# dunnTest(yr4data$total_bad_le, yr4data$gender_details, method = "bh")
 #### LES (year 3) does differ significantly based on gender (p = 0.002221), and
 #### all gender groups are significantly different from each other
 kruskal.test(total_bad_le ~ genderid, data = yr3data)
@@ -916,7 +1106,9 @@ dunnTest(yr3data$total_bad_le, yr3data$genderid, method = "bh")
 #### DERS (year 4) does differ significantly based on gender (p = 2.022e-13), 
 #### and all gender groups are significantly different from each other
 kruskal.test(ders_total ~ genderid, data = yr4data)
+# kruskal.test(ders_total ~ gender_details, data = yr4data)
 dunnTest(yr4data$ders_total, yr4data$genderid, method = "bh")
+# dunnTest(yr4data$ders_total, yr4data$gender_details, method = "bh")
 #### DERS (year 3) does differ significantly based on gender (p < 2.2e-16), and
 #### all gender groups are significantly different from each other
 kruskal.test(ders_total ~ genderid, data = yr3data)
@@ -925,7 +1117,9 @@ dunnTest(yr3data$ders_total, yr3data$genderid, method = "bh")
 #### (p < 2.2e-16). GD are significantly different from cis boy and cis girls, 
 #### but cis boy and cis girls are not significantly different from each other.
 kruskal.test(cbcl_int ~ genderid, data = yr4data)
+# kruskal.test(cbcl_int ~ gender_details, data = yr4data)
 dunnTest(yr4data$cbcl_int, yr4data$genderid, method = "bh")
+# dunnTest(yr4data$cbcl_int, yr4data$gender_details, method = "bh")
 #### CBCL internalizing (year 3) does differ significantly based on gender 
 #### (p < 2.2e-16), and all gender groups are significantly different from each
 #### other.
@@ -935,7 +1129,9 @@ dunnTest(yr3data$cbcl_int, yr3data$genderid, method = "bh")
 #### (p = 9.4e-09), and all gender groups are significantly different from each
 #### other.
 kruskal.test(cbcl_ext ~ genderid, data = yr4data)
+# kruskal.test(cbcl_ext ~ gender_details, data = yr4data)
 dunnTest(yr4data$cbcl_ext, yr4data$genderid, method = "bh")
+# dunnTest(yr4data$cbcl_ext, yr4data$gender_details, method = "bh")
 #### CBCL externalizing (year 3) does differ significantly based on gender 
 #### (p < 2.2e-16), and all gender groups are significantly different from each
 #### other.
@@ -945,7 +1141,9 @@ dunnTest(yr3data$cbcl_ext, yr3data$genderid, method = "bh")
 #### (p < 2.2e-16), and all gender groups are significantly different from each
 #### other. 
 kruskal.test(bpm_int ~ genderid, data = yr4data)
+# kruskal.test(bpm_int ~ gender_details, data = yr4data)
 dunnTest(yr4data$bpm_int, yr4data$genderid, method = "bh")
+# dunnTest(yr4data$bpm_int, yr4data$gender_details, method = "bh")
 #### BPM internalizing (year 3) does differ significantly based on gender 
 #### (p < 2.2e-16). GD are significantly different from cis boy and cis girls, 
 #### but cis boy and cis girls are not significantly different from each other.
@@ -955,7 +1153,9 @@ dunnTest(yr3data$bpm_int, yr3data$genderid, method = "bh")
 #### (p = 2.073e-13), and all gender groups are significantly different from each
 #### other.
 kruskal.test(bpm_ext ~ genderid, data = yr4data)
+# kruskal.test(bpm_ext ~ gender_details, data = yr4data)
 dunnTest(yr4data$bpm_ext, yr4data$genderid, method = "bh")
+# dunnTest(yr4data$bpm_ext, yr4data$gender_details, method = "bh")
 #### BPM externalizing (year 3) does differ significantly based on gender 
 #### (p = 5.787e-06), and all gender groups are significantly different from each
 #### other.
@@ -1309,6 +1509,9 @@ summary(bpm_ext_ders_sex_reg)
 
 
 
+
+
+
 ## STEP TWO: MEDIATING EFFECT OF ER ON CBCL OR BPM ~ LES (HAYES MODEL 4) #### 
 
 ### Combine year 4 and year 3 data to have option to use year 3 as x variable ####
@@ -1342,11 +1545,12 @@ meddata <- yr4data %>%
          Z_yr3_age = Z_age)
 
 #### make version of data for mediation which excludes participants who answered
-#### "refuse" or "dont_know" to sex question
+#### "refuse" or "dont_know" to sex question, set male as reference level
 
 sex_meddata <- meddata %>% 
                   filter(sex!="refuse",
-                         sex!="dont_know")
+                         sex!="dont_know") %>%
+                  mutate(sex = fct_relevel(sex, "male"))
 
 ### Simple mediation model (Hayes model 4) to test whether DERS mediates #### 
 ### relationship between LES and CBCL internalizing
@@ -1479,6 +1683,9 @@ bpm_ext_model4 <- PROCESS(
   center = TRUE,
   std = FALSE,
   digits = 3)
+
+
+
 
 
 ## STEP THREE: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION (HAYES MODEL 15) ####
@@ -1752,29 +1959,3 @@ bpm_ext_sex_model15 <- PROCESS(
   center = TRUE,
   std = FALSE,
   digits = 3)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# DERS partially mediates relationship between LES and CBCL internalizing when
-# all variables at yr 4; and when LES at yr 3 but DERS and CBCL internalizing at
-# yr 4; and when all variables at yr 4 but log transformed
-
-
-
