@@ -572,237 +572,14 @@ corrmat$p.adj
 
 ## PLOTS ####
 
-### Plot variables against each other ####
-#### Without gender
-##### Scatterplots of DERS vs CBCL internalizing and externalizing ####
-outcome_list <- c("cbcl_int","cbcl_ext")
-cbcl_ders_plot_list <- list()
-for (outcome in outcome_list) {
-  # Create plot
-  cbcl_ders_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]]),data=yr4data) +
-                  geom_point(size=1) +
-                  geom_smooth(method="lm",
-                              se=FALSE,
-                              linewidth=1.25,color="black") +
-                  scale_x_continuous(expand = c(0,0),
-                                     breaks=seq(25,150,25),
-                                     limits = c(25,155)) +
-                  scale_y_continuous(expand = c(0,0),
-                                     breaks=seq(0,100,20),
-                                     limits = c(0,100)) +
-                  theme_classic()
-  cbcl_ders_plot_list[[outcome]] <- cbcl_ders_plot
-  # Save plot
-  ggsave(paste0("ders_vs_",outcome,"_nogender.tiff"),
-         width=6,height=6,units = "in",
-         path="figures/")
-}
-
-##### Scatterplots of DERS vs BPM internalizing and externalizing ####
-outcome_list <- c("bpm_int","bpm_ext")
-bpm_ders_plot_list <- list()
-for (outcome in outcome_list) {
-  # Create plot
-  bpm_ders_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]]),data=yr4data) +
-    geom_point(size=1) +
-    geom_smooth(method="lm",
-                se=FALSE,
-                linewidth=1.25,color="black") +
-    scale_x_continuous(expand = c(0,0),
-                       breaks=seq(25,150,25),
-                       limits = c(25,155)) +
-    scale_y_continuous(expand = c(0,0),
-                       breaks=seq(40,80,10),
-                       limits = c(40,80)) +
-    theme_classic()
-  bpm_ders_plot_list[[outcome]] <- bpm_ders_plot
-  # Save plot
-  # ggsave(paste0("ders_vs_",outcome,"_nogender.tiff"),
-  #        width=6,height=6,units = "in")
-}
-
-##### Barplots of LES vs CBCL total problems, internalizing, and externalizing ####
-###### Create table with summary stats for barplot ####
-les_vs_cbcl_bpm_summary_stats <- yr4data %>% 
-  group_by(total_bad_le) %>% 
-  summarise(cbcl_total=mean(cbcl_total,na.rm=TRUE),
-            cbcl_int=mean(cbcl_int,na.rm=TRUE),
-            cbcl_ext=mean(cbcl_ext,na.rm=TRUE),
-            bpm_total=mean(bpm_total,na.rm=TRUE),
-            bpm_int=mean(bpm_int,na.rm=TRUE),
-            bpm_ext=mean(bpm_ext,na.rm=TRUE),
-            n=n(),
-            .groups="drop") %>%
-  complete(total_bad_le)
-###### Create barplots ####
-outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext",
-                  "bpm_total","bpm_int","bpm_ext")
-les_plot_list <- list()
-for (outcome in outcome_list) {
-  # Create plot
-  les_plot <- ggplot(aes(x=total_bad_le,y=.data[[outcome]]),
-                     data=les_vs_cbcl_bpm_summary_stats) +
-                geom_bar(stat="identity",
-                         position="dodge",
-                         color="black",width=0.75) +
-                scale_y_continuous(expand=c(0,0),
-                                   breaks=seq(0,80,10),limits = c(0,80)) +
-                scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0)) +
-                theme_classic()
-  les_plot_list[[outcome]] <- les_plot
-  # Save plot
-  # ggsave(paste0("les_vs_",outcome,"_nogender.tiff"),
-  #        width=6,height=6,units = "in")
-}
-
-#### With gender
-##### Scatterplots of DERS vs CBCL total problems, internalizing, externalizing ####
-outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext",
-                  "bpm_total","bpm_int","bpm_ext")
-ders_gender_plot_list <- list()
-for (outcome in outcome_list) {
-  # Create plot
-  ders_gender_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]],
-                                 color=genderid,
-                                 shape=genderid),
-                             data=yr4data) +
-    geom_point(size=1) +
-    geom_smooth(method="lm",
-                se=FALSE,
-                size=1.25) +
-    scale_x_continuous(expand = c(0,0),
-                       breaks=seq(25,150,25),
-                       limits = c(25,155)) +
-    scale_y_continuous(expand = c(0,0),
-                       breaks=seq(0,100,20),
-                       limits = c(0,100)) +
-    theme_classic()
-  ders_gender_plot_list[[outcome]] <- ders_gender_plot
-  # Save plot
-  # ggsave(paste0("ders_vs_",outcome,"_gender.tiff"),
-  #        width=6,height=6,units = "in")
-}
-
-##### Barplots of LES vs CBCL total problems, internalizing, and externalizing ####
-###### Create table with summary stats for barplot ####
-les_vs_cbcl_bpm_w_gender_summary_stats <- 
-  yr4data %>% 
-  group_by(total_bad_le,genderid) %>% 
-  summarise(cbcl_total=mean(cbcl_total,na.rm=TRUE),
-            cbcl_int=mean(cbcl_int,na.rm=TRUE),
-            cbcl_ext=mean(cbcl_ext,na.rm=TRUE),
-            bpm_total=mean(bpm_total,na.rm=TRUE),
-            bpm_int=mean(bpm_int,na.rm=TRUE),
-            bpm_ext=mean(bpm_ext,na.rm=TRUE),
-            n=n(),
-            .groups="drop") %>%
-  # ensure all combinations of gender and number of bad events are
-  # present so can be included on plot
-  complete(total_bad_le, genderid, fill = list(n = 0, prop = 0)) %>% 
-  mutate(total_bad_le = replace_na(total_bad_le,0))
-###### Create barplots ####
-outcome_list <- c("cbcl_total","cbcl_int","cbcl_ext",
-                  "bpm_total","bpm_int","bpm_ext")
-les_gender_plot_list <- list()
-for (outcome in outcome_list) {
-  # Create plot
-  les_plot <- ggplot(aes(x=total_bad_le,y=.data[[outcome]],
-                         color=genderid,
-                         fill=genderid),
-                     data=les_vs_cbcl_bpm_w_gender_summary_stats) +
-    geom_bar(stat="identity",
-             position="dodge",
-             width=0.75) +
-    scale_y_continuous(expand=c(0,0),
-                       breaks=seq(0,80,10),limits = c(0,80)) +
-    scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0)) +
-    theme_classic()
-  les_gender_plot_list[[outcome]] <- les_plot
-  # Save plot
-  # ggsave(paste0("les_vs_",outcome,"_nogender.tiff"),
-  #        width=6,height=6,units = "in")
-}
-
-####### Create bar graph of LES by gender group ####
-# Use LES on x-axis and proportion of subjects with a given LES score for 
-# each specific gender group (rather than raw number of subjects per gender
-# group) so that differences in GD group are more clear despite having a
-# much smaller sample size
-# Create data frame with proportions rather than raw numbers
-les_df_proportions <- 
-  yr4data %>%
-  group_by(genderid, total_bad_le) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(yr4_proportion = n / sum(n)) %>%
-  ungroup() %>%
-  # ensure all combinations of gender and number of bad events are
-  # present so can be included on plot
-  complete(total_bad_le, genderid, fill = list(n = 0, prop = 0)) %>% 
-  mutate(yr4_proportion = replace_na(yr4_proportion,0))
-# Make actual bar graph
-ggplot(les_df_proportions, 
-       aes(x=total_bad_le,y=yr4_proportion, fill=genderid)) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_x_continuous(expand = c(0,0),
-                     breaks = seq(min(les_df_proportions$total_bad_le),
-                                  max(les_df_proportions$total_bad_le), by = 1)) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(0,0.3,by=0.05),
-                     limits=c(0,0.30)) +
-  theme_classic()
-# Save bar graph
-# ggsave("LES_by_gender.tiff",width=7,height=3,unit="in")
-
-
-####### Create bar graph of DERS by gender group ####
-# Use DERS on x-axis and proportion of subjects with a given DERS score for
-# each specific gender group (rather than raw number of subjects per gender
-# group) so that differences in GD group are more clear despite having a
-# much smaller sample size
-# Create data frame with proportions rather than raw numbers
-ders_df_proportions <- 
-  yr4data %>%
-  # create bins
-  mutate(ders_total_bin = 
-           cut(ders_total, 
-               breaks = seq(0, 
-                            max(ders_total,na.rm=TRUE)+10, by = 10), 
-               right = FALSE)) %>% 
-  group_by(genderid, ders_total_bin) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(yr4_proportion = n / sum(n)) %>%
-  ungroup() %>%
-  # ensure all combinations of gender and number of bad events are
-  # present so can be included on plot
-  complete(ders_total_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
-  mutate(yr4_proportion = replace_na(yr4_proportion,0))
-
-# Make actual bar graph
-ggplot(ders_df_proportions, 
-       aes(x = ders_total_bin,y=yr4_proportion,fill=genderid)) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49","50-59",
-                            "60-69","70-79","80-89","90-99","100-109",
-                            "110-119","120-129","130-139")) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(min(ders_df_proportions$yr4_proportion),
-                                0.3,
-                                by=0.05),limits = c(0,0.31)) +
-  theme_classic()
-
-# Save bar graph
-# ggsave("DERS_by_gender.tiff",width=7,height=3,unit="in")
-
-
 ##### Bargraph of LES vs DERS by gender ####
 ggplot(yr4data, 
        aes(x=total_bad_le,y=ders_total, fill=genderid)) +
   geom_bar(stat="summary",fun="mean",
            position=position_dodge2(preserve = "single"),
-           color="gray",width=.7) +
-  scale_fill_grey(start=0.7,end=0.2) +
+           color="black",width=.7) +
+  scale_fill_manual(values=c("grey40","grey85","black")) +
+  # scale_fill_grey(start=0.9,end=0) +
   scale_x_continuous(expand = c(0,0),
                      breaks = seq(0,15, by = 1)) +
   scale_y_continuous(expand = c(0,0),
@@ -817,8 +594,9 @@ ggplot(yr4data,
        aes(x=total_bad_le,y=cbcl_int, fill=genderid)) +
   geom_bar(stat="summary",fun="mean",
            position=position_dodge2(preserve = "single"),
-           color="gray",width=.7) +
-  # scale_fill_grey(start=0.7,end=0.2) +
+           color="black",width=.7) +
+  scale_fill_manual(values=c("grey40","grey85","black")) +
+  # scale_fill_grey(start=0.9,end=0) +
   scale_x_continuous(expand = c(0,0),
                      breaks = seq(0,15, by = 1)) +
   scale_y_continuous(expand = c(0,0),
@@ -833,8 +611,9 @@ ggplot(yr4data,
        aes(x=total_bad_le,y=cbcl_ext, fill=genderid)) +
   geom_bar(stat="summary",fun="mean",
            position=position_dodge2(preserve = "single"),
-           color="gray",width=.7) +
-  # scale_fill_grey(start=0.7,end=0.2) +
+           color="black",width=.7) +
+  scale_fill_manual(values=c("grey40","grey85","black")) +
+  # scale_fill_grey(start=0.9,end=0) +
   scale_x_continuous(expand = c(0,0),
                      breaks = seq(0,15, by = 1)) +
   scale_y_continuous(expand = c(0,0),
@@ -849,8 +628,9 @@ ggplot(yr4data,
        aes(x=total_bad_le,y=bpm_int, fill=genderid)) +
   geom_bar(stat="summary",fun="mean",
            position=position_dodge2(preserve = "single"),
-           color="gray",width=.7) +
-  # scale_fill_grey(start=0.7,end=0.2) +
+           color="black",width=.7) +
+  scale_fill_manual(values=c("grey40","grey85","black")) +
+  # scale_fill_grey(start=0.9,end=0) +
   scale_x_continuous(expand = c(0,0),
                      breaks = seq(0,15, by = 1)) +
   scale_y_continuous(expand = c(0,0),
@@ -865,8 +645,9 @@ ggplot(yr4data,
        aes(x=total_bad_le,y=bpm_ext, fill=genderid)) +
   geom_bar(stat="summary",fun="mean",
            position=position_dodge2(preserve = "single"),
-           color="gray",width=.7) +
-  # scale_fill_grey(start=0.7,end=0.2) +
+           color="black",width=.7) +
+  scale_fill_manual(values=c("grey40","grey85","black")) +
+  # scale_fill_grey(start=0.9,end=0) +
   scale_x_continuous(expand = c(0,0),
                      breaks = seq(0,15, by = 1)) +
   scale_y_continuous(expand = c(0,0),
@@ -881,24 +662,44 @@ outcome_list <- c("cbcl_int","cbcl_ext")
 cbcl_ders_plot_list <- list()
 for (outcome in outcome_list) {
   # Create plot
-  cbcl_ders_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]],
-                               color=genderid),data=yr4data) +
-    geom_point(size=1,) +
+  cbcl_ders_plot <-
+    ggplot(aes(x=ders_total,y=.data[[outcome]],
+                               # color=genderid,
+                               linetype=genderid,
+                               shape = genderid,
+                               fill = genderid
+                               ),data=yr4data) +
+    geom_point(alpha=.6) +
     geom_smooth(method="lm",
                 se=FALSE,
-                linewidth=1.25) +
+                # linewidth=1.75,
+                color="black") +
+    # geom_smooth(aes(color=genderid),method="lm",
+    #             se=FALSE,
+    #             linewidth=1) +    
     # geom_hline(yintercept=70,linetype='dashed') +
+    scale_linetype_manual(values = c("cis_boy"="31",
+                                     "cis_girl"="11",
+                                     "gd"="solid")) +
+    scale_shape_manual(values=c(21,22,23)) +
+    scale_fill_manual(values=c("grey40","grey85","black")) +
+    # scale_fill_grey(start=0.9,end=0) +
+    scale_colour_grey(start=0.9,end=0) +
     scale_x_continuous(expand = c(0,0),
                        breaks=seq(25,150,25),
                        limits = c(25,155)) +
     scale_y_continuous(expand = c(0,0),
-                       breaks=seq(20,90,10),
-                       limits = c(20,90)) +
-    theme_classic()
+                       breaks=seq(30,90,10),
+                       limits = c(30,90)) +
+    theme_classic() +
+    guides(
+      shape = guide_legend(override.aes = list(size = 2)),
+      fill = guide_legend(override.aes = list(size = 2)) 
+    )
   cbcl_ders_plot_list[[outcome]] <- cbcl_ders_plot
   # Save plot
   # ggsave(paste0("ders_vs_",outcome,"_bygender.tiff"),
-  #        width=7,height=6,units = "in",path="figures")
+  #        width=7,height=5,units = "in",path="figures")
 }
 
 ##### Scatterplots of DERS vs BPM by gender ####
@@ -907,182 +708,49 @@ bpm_ders_plot_list <- list()
 for (outcome in outcome_list) {
   # Create plot
   bpm_ders_plot <- ggplot(aes(x=ders_total,y=.data[[outcome]],
-                              color=genderid),data=yr4data) +
-    geom_point(size=1) +
+                              # color=genderid,
+                              linetype=genderid,
+                              shape = genderid,
+                              fill = genderid
+  ),data=yr4data) +
+    geom_point(alpha=.6) +
     geom_smooth(method="lm",
                 se=FALSE,
-                linewidth=1.25) +
-    # geom_hline(yintercept=65,linetype='dashed') +
+                # linewidth=1.75,
+                color="black") +
+    # geom_smooth(aes(color=genderid),method="lm",
+    #             se=FALSE,
+    #             linewidth=1) +    
+    # geom_hline(yintercept=70,linetype='dashed') +
+    scale_linetype_manual(values = c("cis_boy"="31",
+                                     "cis_girl"="11",
+                                     "gd"="solid")) +
+    scale_shape_manual(values=c(21,22,23)) +
+    scale_fill_manual(values=c("grey40","grey85","black")) +
+    # scale_fill_grey(start=0.9,end=0) +
+    scale_colour_grey(start=0.9,end=0) +
+    # scale_x_continuous(expand = c(0,0),
+    #                    breaks=seq(25,150,25),
+    #                    limits = c(25,155)) +
+    # scale_y_continuous(expand = c(0,0),
+    #                    breaks=seq(20,90,10),
+    #                    limits = c(20,90)) +
     scale_x_continuous(expand = c(0,0),
                        breaks=seq(25,150,25),
                        limits = c(25,155)) +
     scale_y_continuous(expand = c(0,0),
                        breaks=seq(40,80,10),
                        limits = c(40,80)) +
-    theme_classic()
+  theme_classic() +
+    guides(
+      shape = guide_legend(override.aes = list(size = 2)),
+      fill = guide_legend(override.aes = list(size = 2)) 
+    )
   bpm_ders_plot_list[[outcome]] <- bpm_ders_plot
   # Save plot
   # ggsave(paste0("ders_vs_",outcome,"_bygender.tiff"),
-  #        width=7,height=6,units = "in",path="figures")
+  #        width=7,height=5,units = "in",path="figures")
 }
-
-####### Create bar graph of BPM internalizing by gender group ####
-# Use bpm internalizing on x-axis and proportion of subjects with a given
-# bpm internalizing score for each specific gender group (rather than raw 
-# number of subjects per gender group) so that differences in GD group are 
-# more clear despite having a much smaller sample size
-# Create data frame with proportions rather than raw numbers
-bpm_int_df_proportions <- 
-  yr4data %>%
-  # Create bins
-  mutate(bpm_int_bin = cut(bpm_int, 
-                           breaks = seq(45, 80, by = 5), 
-                           right = FALSE)) %>% # Create bins
-  group_by(genderid, bpm_int_bin) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(yr4_proportion = n / sum(n)) %>%
-  ungroup() %>%
-  # ensure all combinations of gender and number of bad events are
-  # present so can be included on plot
-  complete(bpm_int_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
-  mutate(yr4_proportion = replace_na(yr4_proportion,0))
-# Make actual bar graph
-ggplot(bpm_int_df_proportions, 
-       aes(x = bpm_int_bin,y=yr4_proportion,fill=genderid)) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_x_discrete(labels=c("45-49","50-54","55-59","60-64","65-69",
-                            "70-74","75-79")) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(
-                       min(bpm_int_df_proportions$yr4_proportion),
-                       1,
-                       by=.2),limits = c(0,1)) +
-  theme_classic()
-# Save bar graph
-# ggsave("bpm_int_bygender.tiff",width=7,height=6,unit="in",path="figures")
-
-####### Create bar graph of BPM externalizing by gender group ####
-# Use bpm externalizing on x-axis and proportion of subjects with a given
-# bpm externalizing score for each specific gender group (rather than raw 
-# number of subjects per gender group) so that differences in GD group are 
-# more clear despite having a much smaller sample size
-# Create data frame with proportions rather than raw numbers
-bpm_ext_df_proportions <- 
-  yr4data %>%
-  # Create bins
-  mutate(bpm_ext_bin = cut(bpm_ext, 
-                           breaks = seq(45, 80, by = 5), 
-                           right = FALSE)) %>% # Create bins
-  group_by(genderid, bpm_ext_bin) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(yr4_proportion = n / sum(n)) %>%
-  ungroup() %>%
-  # ensure all combinations of gender and number of bad events are
-  # present so can be included on plot
-  complete(bpm_ext_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
-  mutate(yr4_proportion = replace_na(yr4_proportion,0))
-# Make actual bar graph
-ggplot(bpm_ext_df_proportions, 
-       aes(x = bpm_ext_bin,y=yr4_proportion,fill=genderid)) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_x_discrete(labels=c("45-49","50-54","55-59","60-64","65-69",
-                            "70-74","75-79")) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(
-                       min(bpm_ext_df_proportions$yr4_proportion),
-                       1,
-                       by=.2),limits = c(0,1)) +
-  theme_classic()
-# Save bar graph
-# ggsave("bpm_ext_bygender.tiff",width=7,height=6,unit="in",path="figures")
-
-
-
-
-
-
-
-
-
-
-
-
-
-####### Create bar graph of CBCL internalizing by gender group ####
-# Use CBCL internalizing on x-axis and proportion of subjects with a given
-# CBCL internalizing score for each specific gender group (rather than raw 
-# number of subjects per gender group) so that differences in GD group are 
-# more clear despite having a much smaller sample size
-# Create data frame with proportions rather than raw numbers
-cbcl_int_df_proportions <- 
-  yr4data %>%
-  # Create bins
-  mutate(cbcl_int_bin = cut(cbcl_int, 
-                            breaks = seq(0, 100, by = 10), 
-                            right = FALSE)) %>% # Create bins
-  group_by(genderid, cbcl_int_bin) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(yr4_proportion = n / sum(n)) %>%
-  ungroup() %>%
-  # ensure all combinations of gender and number of bad events are
-  # present so can be included on plot
-  complete(cbcl_int_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
-  mutate(yr4_proportion = replace_na(yr4_proportion,0))
-# Make actual bar graph
-ggplot(cbcl_int_df_proportions, 
-       aes(x = cbcl_int_bin,y=yr4_proportion,fill=genderid)) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49",
-                            "50-59","60-69","70-79","80-89","90-99")) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(
-                       min(cbcl_int_df_proportions$yr4_proportion),
-                       0.4,
-                       by=0.05),limits = c(0,0.4)) + 
-  theme_classic()
-
-# Save bar graph
-# ggsave("cbcl_int_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
-
-####### Create bar graph of CBCL externalizing by gender group ####
-# Use CBCL externalizing on x-axis and proportion of subjects with a given
-# CBCL externalizing score for each specific gender group (rather than raw 
-# number of subjects per gender group) so that differences in GD group are 
-# more clear despite having a much smaller sample size
-# Create data frame with proportions rather than raw numbers
-cbcl_ext_df_proportions <- 
-  yr4data %>%
-  # Create bins
-  mutate(cbcl_ext_bin = cut(cbcl_ext, 
-                            breaks = seq(0, 100, by = 10), 
-                            right = FALSE)) %>% # Create bins
-  group_by(genderid, cbcl_ext_bin) %>%
-  count() %>%
-  group_by(genderid) %>%
-  mutate(yr4_proportion = n / sum(n)) %>%
-  ungroup() %>%
-  # ensure all combinations of gender and number of bad events are
-  # present so can be included on plot
-  complete(cbcl_ext_bin, genderid, fill = list(n = 0, prop = 0)) %>% 
-  mutate(yr4_proportion = replace_na(yr4_proportion,0))
-# Make actual bar graph
-ggplot(cbcl_ext_df_proportions, 
-       aes(x = cbcl_ext_bin,y=yr4_proportion,fill=genderid)) +
-  geom_bar(stat="identity",position="dodge",color="black") +
-  scale_x_discrete(labels=c("0-9","10-19","20-29","30-39","40-49",
-                            "50-59","60-69","70-79","80-89","90-99")) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(
-                       min(cbcl_ext_df_proportions$yr4_proportion),
-                       0.4,
-                       by=0.05),limits = c(0,0.41)) + 
-  theme_classic()
-
-# Save bar graph
-# ggsave("cbcl_ext_problems_by_gender.tiff",width=5.45,height=3.5,unit="in")
 
 
 ## STEP ONE: BASIC GROUP DIFFERENCES AND REGRESSION ####
@@ -1345,10 +1013,7 @@ summary(bpm_ext_age_gendercisgirl_reg)
 ders_les_gendercisboy_reg <- lmer(Z_ders_total ~ Z_total_bad_le*genderid_refcisboy + Z_age + (1|site), 
                          data=yr4data)
 summary(ders_les_gendercisboy_reg)
-ders_les_gendercisgirl_reg <- lmer(Z_ders_total ~ Z_total_bad_le*genderid_refcisgirl + Z_age + (1|site), 
-                                      data=yr4data)
-summary(ders_les_gendercisgirl_reg)
-
+anova(ders_les_gendercisboy_reg)
 ### Mixed effect linear regression to determine whether gender moderates ####
 ### relationship between LES or DERS and CBCL or BPM, using age as fixed effect 
 ### covariate and site as random intercept
@@ -1357,68 +1022,57 @@ summary(ders_les_gendercisgirl_reg)
 cbcl_int_les_gendercisboy_reg <- lmer(Z_cbcl_int ~ Z_total_bad_le*genderid_refcisboy + Z_age + (1|site), 
                              data=yr4data)
 summary(cbcl_int_les_gendercisboy_reg)
-cbcl_int_les_gendercisgirl_reg <- lmer(Z_cbcl_int ~ Z_total_bad_le*genderid_refcisgirl + Z_age + (1|site), 
-                                      data=yr4data)
-summary(cbcl_int_les_gendercisgirl_reg)
+anova(cbcl_int_les_gendercisboy_reg)
 #### CBCL externalizing ~ LES*gender + age + (1|site) ####
 # Relationship between LES and CBCL externalizing does not differ based on gender
 cbcl_ext_les_gendercisboy_reg <- lmer(Z_cbcl_ext ~ Z_total_bad_le*genderid_refcisboy + Z_age + (1|site), 
                                       data=yr4data)
 summary(cbcl_ext_les_gendercisboy_reg)
-cbcl_ext_les_gendercisgirl_reg <- lmer(Z_cbcl_ext ~ Z_total_bad_le*genderid_refcisgirl + Z_age + (1|site), 
-                                       data=yr4data)
-summary(cbcl_ext_les_gendercisgirl_reg)
+anova(cbcl_ext_les_gendercisboy_reg)
 #### BPM internalizing ~ LES*gender + age + (1|site) ####
 # Relationship between LES and BPM internalizing differs significantly for cis
 # girls vs cis boys and for gd vs cis boys but not for gd vs cis girls
 bpm_int_les_gendercisboy_reg <- lmer(Z_bpm_int ~ Z_total_bad_le*genderid_refcisboy + Z_age + (1|site), 
                                       data=yr4data)
 summary(bpm_int_les_gendercisboy_reg)
-bpm_int_les_gendercisgirl_reg <- lmer(Z_bpm_int ~ Z_total_bad_le*genderid_refcisgirl + Z_age + (1|site), 
-                                       data=yr4data)
-summary(bpm_int_les_gendercisgirl_reg)
+anova(bpm_int_les_gendercisboy_reg)
+emmeans(bpm_int_les_gendercisboy_reg, list(pairwise ~ Z_total_bad_le*genderid_refcisboy), 
+        adjust = "fdr",pbkrtest.limit = 4000)
 #### BPM externalizing ~ LES*gender + age + (1|site) ####
 # Relationship between LES and BPM externalizing does not differ based on gender
 bpm_ext_les_gendercisboy_reg <- lmer(Z_bpm_ext ~ Z_total_bad_le*genderid_refcisboy + Z_age + (1|site), 
                                       data=yr4data)
 summary(bpm_ext_les_gendercisboy_reg)
-bpm_ext_les_gendercisgirl_reg <- lmer(Z_bpm_ext ~ Z_total_bad_le*genderid_refcisgirl + Z_age + (1|site), 
-                                       data=yr4data)
-summary(bpm_ext_les_gendercisgirl_reg)
+anova(bpm_ext_les_gendercisboy_reg)
 #### CBCL internalizing ~ DERS*gender + age + (1|site) ####
 # Relationship between DERS and CBCL internalizing differs significantly for cis
 # girls vs cis boy but not for gd vs cis boys or for gd vs cis girls
 cbcl_int_ders_gendercisboy_reg <- lmer(Z_cbcl_int ~ Z_ders_total*genderid_refcisboy + Z_age + (1|site), 
                                       data=yr4data)
 summary(cbcl_int_ders_gendercisboy_reg)
-cbcl_int_ders_gendercisgirl_reg <- lmer(Z_cbcl_int ~ Z_ders_total*genderid_refcisgirl + Z_age + (1|site), 
-                                       data=yr4data)
-summary(cbcl_int_ders_gendercisgirl_reg)
+anova(cbcl_int_ders_gendercisboy_reg)
+emmeans(cbcl_int_ders_gendercisboy_reg, list(pairwise ~ Z_ders_total*genderid_refcisboy), 
+        adjust = "fdr",pbkrtest.limit = 4000)
 #### CBCL externalizing ~ DERS*gender + age + (1|site) ####
 # Relationship between DERS and CBCL externalizing does not differ based on gender
 cbcl_ext_ders_gendercisboy_reg <- lmer(Z_cbcl_ext ~ Z_ders_total*genderid_refcisboy + Z_age + (1|site), 
                                       data=yr4data)
 summary(cbcl_ext_ders_gendercisboy_reg)
-cbcl_ext_ders_gendercisgirl_reg <- lmer(Z_cbcl_ext ~ Z_ders_total*genderid_refcisgirl + Z_age + (1|site), 
-                                       data=yr4data)
-summary(cbcl_ext_ders_gendercisgirl_reg)
+anova(cbcl_ext_ders_gendercisboy_reg)
 #### BPM internalizing ~ DERS*gender + age + (1|site) ####
 # Relationship between DERS and BPM internalizing does not differ based on gender
 bpm_int_ders_gendercisboy_reg <- lmer(Z_bpm_int ~ Z_ders_total*genderid_refcisboy + Z_age + (1|site), 
                                      data=yr4data)
 summary(bpm_int_ders_gendercisboy_reg)
-bpm_int_ders_gendercisgirl_reg <- lmer(Z_bpm_int ~ Z_ders_total*genderid_refcisgirl + Z_age + (1|site), 
-                                      data=yr4data)
-summary(bpm_int_ders_gendercisgirl_reg)
+anova(bpm_int_ders_gendercisboy_reg)
+emmeans(bpm_int_ders_gendercisboy_reg, list(pairwise ~ Z_ders_total*genderid_refcisboy), 
+        adjust = "fdr",pbkrtest.limit = 4000)
 #### BPM externalizing ~ DERS*gender + age + (1|site) ####
 # Relationship between DERS and BPM externalizing does not differ based on gender
 bpm_ext_ders_gendercisboy_reg <- lmer(Z_bpm_ext ~ Z_ders_total*genderid_refcisboy + Z_age + (1|site), 
                                      data=yr4data)
 summary(bpm_ext_ders_gendercisboy_reg)
-bpm_ext_ders_gendercisgirl_reg <- lmer(Z_bpm_ext ~ Z_ders_total*genderid_refcisgirl + Z_age + (1|site), 
-                                      data=yr4data)
-summary(bpm_ext_ders_gendercisgirl_reg)
-
+anova(bpm_ext_ders_gendercisboy_reg)
 ### Mixed effect linear regression to determine whether sex moderates ####
 ### relationship between age and any variable, using site as random intercept
 #### LES ~ age*sex + (1|site) ####
@@ -1458,7 +1112,7 @@ summary(bpm_ext_age_sex_reg)
 ders_les_sex_reg <- lmer(Z_ders_total ~ Z_total_bad_le*sex + Z_age + (1|site), 
                                   data=yr4sexdata)
 summary(ders_les_sex_reg)
-
+anova(ders_les_sex_reg)
 ### Mixed effect linear regression to determine whether sex moderates ####
 ### relationship between LES or DERS and CBCL or BPM, using age as fixed effect 
 ### covariate and site as random intercept
@@ -1468,49 +1122,52 @@ summary(ders_les_sex_reg)
 cbcl_int_les_sex_reg <- lmer(Z_cbcl_int ~ Z_total_bad_le*sex + Z_age + (1|site), 
                                       data=yr4sexdata)
 summary(cbcl_int_les_sex_reg)
+anova(cbcl_int_les_sex_reg)
 #### CBCL externalizing ~ LES*sex + age + (1|site) ####
 # Relationship between LES and CBCL externalizing does not differ based on sex
 cbcl_ext_les_sex_reg <- lmer(Z_cbcl_ext ~ Z_total_bad_le*sex + Z_age + (1|site), 
                                       data=yr4sexdata)
 summary(cbcl_ext_les_sex_reg)
+anova(cbcl_ext_les_sex_reg)
 #### BPM internalizing ~ LES*sex + age + (1|site) ####
 # Relationship between LES and BPM internalizing does differ significantly 
 # based on sex
 bpm_int_les_sex_reg <- lmer(Z_bpm_int ~ Z_total_bad_le*sex + Z_age + (1|site), 
                                      data=yr4sexdata)
 summary(bpm_int_les_sex_reg)
+anova(bpm_int_les_sex_reg)
 #### BPM externalizing ~ LES*sex + age + (1|site) ####
 # Relationship between LES and BPM externalizing does not differ based on sex
 bpm_ext_les_sex_reg <- lmer(Z_bpm_ext ~ Z_total_bad_le*sex + Z_age + (1|site), 
                                      data=yr4sexdata)
 summary(bpm_ext_les_sex_reg)
+anova(bpm_ext_les_sex_reg)
 #### CBCL internalizing ~ DERS*sex + age + (1|site) ####
 # Relationship between DERS and CBCL internalizing does differ significantly
 # based on sex
 cbcl_int_ders_sex_reg <- lmer(Z_cbcl_int ~ Z_ders_total*sex + Z_age + (1|site), 
                                        data=yr4sexdata)
 summary(cbcl_int_ders_sex_reg)
+anova(cbcl_int_ders_sex_reg)
 #### CBCL externalizing ~ DERS*sex + age + (1|site) ####
 # Relationship between DERS and CBCL externalizing does not differ based on sex
 cbcl_ext_ders_sex_reg <- lmer(Z_cbcl_ext ~ Z_ders_total*sex + Z_age + (1|site), 
                                        data=yr4sexdata)
 summary(cbcl_ext_ders_sex_reg)
+anova(cbcl_ext_ders_sex_reg)
 #### BPM internalizing ~ DERS*sex + age + (1|site) ####
 # Relationship between DERS and BPM internalizing does differ significantly
 # based on sex
 bpm_int_ders_sex_reg <- lmer(Z_bpm_int ~ Z_ders_total*sex + Z_age + (1|site), 
                                       data=yr4sexdata)
 summary(bpm_int_ders_sex_reg)
+anova(bpm_int_ders_sex_reg)
 #### BPM externalizing ~ DERS*sex + age + (1|site) ####
 # Relationship between DERS and BPM externalizing does not differ based on sex
 bpm_ext_ders_sex_reg <- lmer(Z_bpm_ext ~ Z_ders_total*sex + Z_age + (1|site), 
                                       data=yr4sexdata)
 summary(bpm_ext_ders_sex_reg)
-
-
-
-
-
+anova(bpm_ext_ders_sex_reg)
 
 ## STEP TWO: MEDIATING EFFECT OF ER ON CBCL OR BPM ~ LES (HAYES MODEL 4) #### 
 
@@ -1551,6 +1208,11 @@ sex_meddata <- meddata %>%
                   filter(sex!="refuse",
                          sex!="dont_know") %>%
                   mutate(sex = fct_relevel(sex, "male"))
+
+#### make version of data for mediation which excludes participants who are GD
+
+nogd_meddata <- meddata %>%
+                  filter(genderid != "gd")
 
 ### Simple mediation model (Hayes model 4) to test whether DERS mediates #### 
 ### relationship between LES and CBCL internalizing
@@ -1688,13 +1350,14 @@ bpm_ext_model4 <- PROCESS(
 
 
 
-## STEP THREE: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION (HAYES MODEL 15) ####
+## STEP THREE: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION (HAYES MODEL 5) ####
 
 ### Moderated mediation model (Hayes model 15) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### internalizing 
 cbcl_int_gender_model15 <- PROCESS(
   meddata,
+  # nogd_meddata,
   y = "Z_yr4_cbcl_int",
   x = "Z_yr4_total_bad_le",
   meds = c("Z_yr4_ders_total"),
@@ -1729,6 +1392,7 @@ cbcl_int_gender_model15 <- PROCESS(
 ### externalizing 
 cbcl_ext_gender_model15 <- PROCESS(
   meddata,
+  # nogd_meddata,
   y = "Z_yr4_cbcl_ext",
   x = "Z_yr4_total_bad_le",
   meds = c("Z_yr4_ders_total"),
@@ -1763,6 +1427,7 @@ cbcl_ext_gender_model15 <- PROCESS(
 ### internalizing 
 bpm_int_gender_model15 <- PROCESS(
   meddata,
+  # nogd_meddata,
   y = "Z_yr4_bpm_int",
   x = "Z_yr4_total_bad_le",
   meds = c("Z_yr4_ders_total"),
@@ -1791,12 +1456,41 @@ bpm_int_gender_model15 <- PROCESS(
   center = TRUE,
   std = FALSE,
   digits = 3)
+# significant interaction effect on BPM int for LES*genderid_refcisboy (p = .006)
+# therefore, look at significant differences between gender groups. 
+# Table in part 1 of results says for 
+# Z_yr4_total_bad_le:genderid_refcisboycis_girl, beta = 0.096 (0.034) with 
+# sig at **. To find actual p-value, first find t-statistic where test is 
+# (beta hat - beta not) / SE, null hypothesis for betas is that beta = 0, beta 
+# hat = estimate from table, and SE = estimate from table in parentheses. 
+# Therefore, t = beta from table / SE from table ie t = 0.096 / 0.034 = 2.823529.
+# To convert from t statistic to p-value, need to know df where df = N - number 
+# of parameters estimated. In this case, N = 3661 and 8 parameters were 
+# estimated, so df = 3661 - 8 = 3653. To find p-value from t statistic, now 
+# need to use pt() command. Because t > 0, use argument lower.tail = FALSE. 
+# Because test is two-sided, need to multiply value by 2. p-value for difference
+# between cis girls and cis boys ends up being 0.005 rounded to three decimal 
+# places.
+# Table in part 1 of results also says for 
+# Z_yr4_total_bad_le:genderid_refcisboygd, beta = 0.146 (0.064) with sig at *.
+# Following process above, p-value for difference between gd and cis boys ends
+# up being 0.023 rounded to three decimal places.
+# Using model with cis girls as reference group, there is no significant 
+# difference between cis girls and gd. Table in part 1 of results also says for 
+# Z_yr4_total_bad_le:genderid_refcisgirlgd, beta = 0.049 (0.064) which is not
+# sig. Following the process above, p-value for difference between gd and cis
+# girls ends up being 0.444 rounded to three decimal places.
+pt((0.096/0.034), (3661-8), lower.tail = FALSE) * 2
+pt((0.146/0.064), (3661-8), lower.tail = FALSE) * 2
+pt((0.049/0.064), (3661-8), lower.tail = FALSE) * 2
+
 
 ### Moderated mediation model (Hayes model 15) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### externalizing 
 bpm_ext_gender_model15 <- PROCESS(
   meddata,
+  # nogd_meddata,
   y = "Z_yr4_bpm_ext",
   x = "Z_yr4_total_bad_le",
   meds = c("Z_yr4_ders_total"),
@@ -1925,6 +1619,23 @@ bpm_int_sex_model15 <- PROCESS(
   center = TRUE,
   std = FALSE,
   digits = 3)
+
+# significant interaction effect on BPM int for sex * LES (p < 0.001)
+# therefore, look at significant differences between sex groups. 
+# Table in part 1 of results says for 
+# Z_yr4_total_bad_le:sexfemale, beta = 0.125 (0.034) with sig at ***. To find 
+# actual p-value, first find t-statistic where test is 
+# (beta hat - beta not) / SE, null hypothesis for betas is that beta = 0, beta 
+# hat = estimate from table, and SE = estimate from table in parentheses. 
+# Therefore, t = beta from table / SE from table ie t = 0.125 / 0.034 = 3.676471.
+# To convert from t statistic to p-value, need to know df where df = N - number 
+# of parameters estimated. In this case, N = 3638 and 6 parameters were 
+# estimated, so df = 3638 - 6 = 3632. To find p-value from t statistic, now 
+# need to use pt() command. Because t > 0, use argument lower.tail = FALSE. 
+# Because test is two-sided, need to multiply value by 2. p-value for difference
+# between males and females ends up being 0.008 rounded to three decimal 
+# places.
+pt((0.125/0.034), (3638-6), lower.tail = FALSE) * 2
 
 ### Moderated mediation model (Hayes model 15) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
