@@ -965,7 +965,53 @@ summary(bpm_ext_ders_age_reg)
 
 
 
+
+### Mixed effect linear regression to determine relationship between LES, DERS, 
+### and CBCL or BPM using age as fixed effect covariate and site as random intercept
+
 ## STEP TWO: MODERATING EFFECTS OF GENDER OR SEX ####
+### Combine year 4 and year 3 data to have option to use year 3 as x variable ####
+meddata <- yr4data %>%
+  rename(
+    C_yr4_total_bad_le = C_total_bad_le,
+    C_yr4_ders_total = C_ders_total,
+    C_yr4_cbcl_int = C_cbcl_int,
+    C_yr4_cbcl_ext = C_cbcl_ext,
+    C_yr4_bpm_int = C_bpm_int,
+    C_yr4_bpm_ext = C_bpm_ext,
+    C_log_yr4_total_bad_le = C_log_total_bad_le,
+    C_log_yr4_ders_total = C_log_ders_total,
+    C_log_yr4_cbcl_int = C_log_cbcl_int,
+    C_log_yr4_cbcl_ext = C_log_cbcl_ext,
+    C_log_yr4_bpm_int = C_log_bpm_int,
+    C_log_yr4_bpm_ext = C_log_bpm_ext,
+    C_yr4_age = C_age) %>%
+  left_join(select(yr3data, 
+                   c(src_subject_id,C_age,
+                     C_total_bad_le,C_ders_total,
+                     C_cbcl_int,C_cbcl_ext,
+                     C_bpm_int,C_bpm_ext)),
+            by="src_subject_id") %>%
+  rename(C_yr3_total_bad_le = C_total_bad_le,
+         C_yr3_ders_total = C_ders_total,
+         C_yr3_cbcl_int = C_cbcl_int,
+         C_yr3_cbcl_ext = C_cbcl_ext,
+         C_yr3_bpm_int = C_bpm_int,
+         C_yr3_bpm_ext = C_bpm_ext,
+         C_yr3_age = C_age)
+
+#### make version of data for mediation which excludes participants who answered
+#### "refuse" or "dont_know" to sex question, set male as reference level
+
+sex_meddata <- meddata %>% 
+  filter(sex!="refuse",
+         sex!="dont_know") %>%
+  mutate(sex = fct_relevel(sex, "male"))
+
+#### make version of data for mediation which excludes participants who are GD
+
+nogd_meddata <- meddata %>%
+  filter(genderid != "gd")
 
 ### Mixed effect linear regression to determine whether gender moderates ####
 ### relationship between age and any variable, using site as random intercept
@@ -1180,50 +1226,424 @@ bpm_ext_ders_sex_reg <- lmer(C_bpm_ext ~ C_ders_total*sex + C_age + (1|site),
 summary(bpm_ext_ders_sex_reg)
 # anova(bpm_ext_ders_sex_reg)
 
+
+### Mixed effect linear regression to determine whether gender moderates ####
+### relationship between LES, DERS, and CBCL or BPM using age as fixed effect
+### covariate and site as random intercept
+#### CBCL internalizing ~ LES*gender + DERS*gender + age + (1|site) ####
+cbcl_int_les_gendercisboy_reg <- 
+  lmer(C_yr4_cbcl_int ~ C_yr4_total_bad_le*genderid_refcisboy + 
+         C_yr4_ders_total*genderid_refcisboy + 
+         C_yr4_age + (1|site),  
+       data=meddata, REML=FALSE)
+summary(cbcl_int_les_gendercisboy_reg)
+anova(cbcl_int_les_gendercisboy_reg)
+# emmeans(cbcl_int_les_gendercisboy_reg, list(pairwise ~ C_total_bad_le*genderid_refcisboy), 
+#         adjust = "fdr",pbkrtest.limit = 4000)
+
+#### Calculate total R2 using Liz Sanders' code
+model_Yhat_var <- var(predict(cbcl_int_les_gendercisboy_reg))
+model_Yhat_var
+model_variances <- as.data.frame(VarCorr(cbcl_int_les_gendercisboy_reg))
+model_variances
+res_var <- model_variances[2,'vcov']
+res_var
+R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
+R2_total_alt2
+rsq.lmm(cbcl_int_les_gendercisboy_reg,adj=TRUE)
+
+#### Calculate squared semi-partial correlation ie amount of variance in Y
+#### "uniquely" explained by that predictor (not overlapping with other Xs)
+res_df <- as.numeric(summary(cbcl_int_les_gendercisboy_reg)$AICtab[5])
+les_t <- summary(cbcl_int_les_gendercisboy_reg)$coefficients[2,4]
+gendercisboycisgirl_t <- summary(cbcl_int_les_gendercisboy_reg)$coefficients[3,4]
+gendercisboygd_t <- summary(cbcl_int_les_gendercisboy_reg)$coefficients[4,4]
+ders_t <- summary(cbcl_int_les_gendercisboy_reg)$coefficients[5,4]
+age_t <- summary(cbcl_int_les_gendercisboy_reg)$coefficients[6,4]
+les_x_gendercisboycisgirl_t <- summary(cbcl_int_les_gendercisboy_reg)$coefficients[7,4]
+les_x_gendercisboygd_t <- summary(cbcl_int_les_gendercisboy_reg)$coefficients[8,4]
+ders_x_gendercisboycisgirl_t <- summary(cbcl_int_les_gendercisboy_reg)$coefficients[9,4]
+ders_x_gendercisboygd_t <- summary(cbcl_int_les_gendercisboy_reg)$coefficients[10,4]
+tvals <- as.data.frame(c(les_t,gendercisboycisgirl_t,gendercisboygd_t,
+                         ders_t,age_t,les_x_gendercisboycisgirl_t,
+                         les_x_gendercisboygd_t,ders_x_gendercisboycisgirl_t,
+                         ders_x_gendercisboygd_t))
+colnames(tvals) <- "tvals"
+tvals
+les_sr2 <- ((les_t**2/(les_t**2+res_df))*(1-R2_total_alt2))/(1-(les_t**2/(les_t**2+res_df)))
+gendercisboycisgirl_sr2 <- ((gendercisboycisgirl_t**2/(gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(gendercisboycisgirl_t**2/(gendercisboycisgirl_t**2+res_df)))
+gendercisboygd_sr2 <- ((gendercisboygd_t**2/(gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(gendercisboygd_t**2/(gendercisboygd_t**2+res_df)))
+ders_sr2 <- ((ders_t**2/(ders_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_t**2/(ders_t**2+res_df)))
+age_sr2 <- ((age_t**2/(age_t**2+res_df))*(1-R2_total_alt2))/(1-(age_t**2/(age_t**2+res_df)))
+les_x_gendercisboycisgirl_sr2 <- ((les_x_gendercisboycisgirl_t**2/(les_x_gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_gendercisboycisgirl_t**2/(les_x_gendercisboycisgirl_t**2+res_df)))
+les_x_gendercisboygd_sr2 <- ((les_x_gendercisboygd_t**2/(les_x_gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_gendercisboygd_t**2/(les_x_gendercisboygd_t**2+res_df)))
+ders_x_gendercisboycisgirl_sr2 <- ((ders_x_gendercisboycisgirl_t**2/(ders_x_gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_gendercisboycisgirl_t**2/(ders_x_gendercisboycisgirl_t**2+res_df)))
+ders_x_gendercisboygd_sr2 <- ((ders_x_gendercisboygd_t**2/(ders_x_gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_gendercisboygd_t**2/(ders_x_gendercisboygd_t**2+res_df)))
+sr2vals <- as.data.frame(c(les_sr2,gendercisboycisgirl_sr2,gendercisboygd_sr2,
+                           ders_sr2,age_sr2,les_x_gendercisboycisgirl_sr2,
+                           les_x_gendercisboygd_sr2,ders_x_gendercisboycisgirl_sr2,
+                           ders_x_gendercisboygd_sr2))
+colnames(sr2vals) <- "sr2vals"
+rownames(sr2vals) <- rownames(summary(cbcl_int_les_gendercisboy_reg)$coefficients)[2:10]
+sr2vals
+
+#### CBCL externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
+cbcl_ext_les_gendercisboy_reg <- 
+  lmer(C_yr4_cbcl_ext ~ C_yr4_total_bad_le*genderid_refcisboy + 
+         C_yr4_ders_total*genderid_refcisboy + 
+         C_yr4_age + (1|site), 
+       data=meddata, REML=FALSE)
+summary(cbcl_ext_les_gendercisboy_reg)
+anova(cbcl_ext_les_gendercisboy_reg)
+# emmeans(cbcl_ext_les_gendercisboy_reg, list(pairwise ~ C_total_bad_le*genderid_refcisboy), 
+#         adjust = "fdr",pbkrtest.limit = 4000)
+
+#### Calculate total R2 using Liz Sanders' code
+model_Yhat_var <- var(predict(cbcl_ext_les_gendercisboy_reg))
+model_Yhat_var
+model_variances <- as.data.frame(VarCorr(cbcl_ext_les_gendercisboy_reg))
+model_variances
+res_var <- model_variances[2,'vcov']
+res_var
+R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
+R2_total_alt2
+
+#### Calculate squared semi-partial correlation ie amount of variance in Y
+#### "uniquely" explained by that predictor (not overlapping with other Xs)
+res_df <- as.numeric(summary(cbcl_ext_les_gendercisboy_reg)$AICtab[5])
+les_t <- summary(cbcl_ext_les_gendercisboy_reg)$coefficients[2,4]
+gendercisboycisgirl_t <- summary(cbcl_ext_les_gendercisboy_reg)$coefficients[3,4]
+gendercisboygd_t <- summary(cbcl_ext_les_gendercisboy_reg)$coefficients[4,4]
+ders_t <- summary(cbcl_ext_les_gendercisboy_reg)$coefficients[5,4]
+age_t <- summary(cbcl_ext_les_gendercisboy_reg)$coefficients[6,4]
+les_x_gendercisboycisgirl_t <- summary(cbcl_ext_les_gendercisboy_reg)$coefficients[7,4]
+les_x_gendercisboygd_t <- summary(cbcl_ext_les_gendercisboy_reg)$coefficients[8,4]
+ders_x_gendercisboycisgirl_t <- summary(cbcl_ext_les_gendercisboy_reg)$coefficients[9,4]
+ders_x_gendercisboygd_t <- summary(cbcl_ext_les_gendercisboy_reg)$coefficients[10,4]
+tvals <- as.data.frame(c(les_t,gendercisboycisgirl_t,gendercisboygd_t,
+                         ders_t,age_t,les_x_gendercisboycisgirl_t,
+                         les_x_gendercisboygd_t,ders_x_gendercisboycisgirl_t,
+                         ders_x_gendercisboygd_t))
+colnames(tvals) <- "tvals"
+tvals
+les_sr2 <- ((les_t**2/(les_t**2+res_df))*(1-R2_total_alt2))/(1-(les_t**2/(les_t**2+res_df)))
+gendercisboycisgirl_sr2 <- ((gendercisboycisgirl_t**2/(gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(gendercisboycisgirl_t**2/(gendercisboycisgirl_t**2+res_df)))
+gendercisboygd_sr2 <- ((gendercisboygd_t**2/(gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(gendercisboygd_t**2/(gendercisboygd_t**2+res_df)))
+ders_sr2 <- ((ders_t**2/(ders_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_t**2/(ders_t**2+res_df)))
+age_sr2 <- ((age_t**2/(age_t**2+res_df))*(1-R2_total_alt2))/(1-(age_t**2/(age_t**2+res_df)))
+les_x_gendercisboycisgirl_sr2 <- ((les_x_gendercisboycisgirl_t**2/(les_x_gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_gendercisboycisgirl_t**2/(les_x_gendercisboycisgirl_t**2+res_df)))
+les_x_gendercisboygd_sr2 <- ((les_x_gendercisboygd_t**2/(les_x_gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_gendercisboygd_t**2/(les_x_gendercisboygd_t**2+res_df)))
+ders_x_gendercisboycisgirl_sr2 <- ((ders_x_gendercisboycisgirl_t**2/(ders_x_gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_gendercisboycisgirl_t**2/(ders_x_gendercisboycisgirl_t**2+res_df)))
+ders_x_gendercisboygd_sr2 <- ((ders_x_gendercisboygd_t**2/(ders_x_gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_gendercisboygd_t**2/(ders_x_gendercisboygd_t**2+res_df)))
+sr2vals <- as.data.frame(c(les_sr2,gendercisboycisgirl_sr2,gendercisboygd_sr2,
+                           ders_sr2,age_sr2,les_x_gendercisboycisgirl_sr2,
+                           les_x_gendercisboygd_sr2,ders_x_gendercisboycisgirl_sr2,
+                           ders_x_gendercisboygd_sr2))
+colnames(sr2vals) <- "sr2vals"
+rownames(sr2vals) <- rownames(summary(cbcl_ext_les_gendercisboy_reg)$coefficients)[2:10]
+sr2vals
+
+#### BPM internalizing ~ LES*gender + DERS*gender + age + (1|site) ####
+bpm_int_les_gendercisboy_reg <- 
+  lmer(C_yr4_bpm_int ~ C_yr4_total_bad_le*genderid_refcisboy + 
+         C_yr4_ders_total*genderid_refcisboy + 
+         C_yr4_age + (1|site), 
+       data=meddata, REML=FALSE)
+summary(bpm_int_les_gendercisboy_reg)
+anova(bpm_int_les_gendercisboy_reg)
+emmeans(bpm_int_les_gendercisboy_reg, list(pairwise ~ C_yr4_total_bad_le*genderid_refcisboy),
+        adjust = "fdr",pbkrtest.limit = 4000)
+
+#### Calculate total R2 using Liz Sanders' code
+model_Yhat_var <- var(predict(bpm_int_les_gendercisboy_reg))
+model_Yhat_var
+model_variances <- as.data.frame(VarCorr(bpm_int_les_gendercisboy_reg))
+model_variances
+res_var <- model_variances[2,'vcov']
+res_var
+R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
+R2_total_alt2
+
+#### Calculate squared semi-partial correlation ie amount of variance in Y
+#### "uniquely" explained by that predictor (not overlapping with other Xs)
+res_df <- as.numeric(summary(bpm_int_les_gendercisboy_reg)$AICtab[5])
+les_t <- summary(bpm_int_les_gendercisboy_reg)$coefficients[2,4]
+gendercisboycisgirl_t <- summary(bpm_int_les_gendercisboy_reg)$coefficients[3,4]
+gendercisboygd_t <- summary(bpm_int_les_gendercisboy_reg)$coefficients[4,4]
+ders_t <- summary(bpm_int_les_gendercisboy_reg)$coefficients[5,4]
+age_t <- summary(bpm_int_les_gendercisboy_reg)$coefficients[6,4]
+les_x_gendercisboycisgirl_t <- summary(bpm_int_les_gendercisboy_reg)$coefficients[7,4]
+les_x_gendercisboygd_t <- summary(bpm_int_les_gendercisboy_reg)$coefficients[8,4]
+ders_x_gendercisboycisgirl_t <- summary(bpm_int_les_gendercisboy_reg)$coefficients[9,4]
+ders_x_gendercisboygd_t <- summary(bpm_int_les_gendercisboy_reg)$coefficients[10,4]
+tvals <- as.data.frame(c(les_t,gendercisboycisgirl_t,gendercisboygd_t,
+                         ders_t,age_t,les_x_gendercisboycisgirl_t,
+                         les_x_gendercisboygd_t,ders_x_gendercisboycisgirl_t,
+                         ders_x_gendercisboygd_t))
+colnames(tvals) <- "tvals"
+tvals
+les_sr2 <- ((les_t**2/(les_t**2+res_df))*(1-R2_total_alt2))/(1-(les_t**2/(les_t**2+res_df)))
+gendercisboycisgirl_sr2 <- ((gendercisboycisgirl_t**2/(gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(gendercisboycisgirl_t**2/(gendercisboycisgirl_t**2+res_df)))
+gendercisboygd_sr2 <- ((gendercisboygd_t**2/(gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(gendercisboygd_t**2/(gendercisboygd_t**2+res_df)))
+ders_sr2 <- ((ders_t**2/(ders_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_t**2/(ders_t**2+res_df)))
+age_sr2 <- ((age_t**2/(age_t**2+res_df))*(1-R2_total_alt2))/(1-(age_t**2/(age_t**2+res_df)))
+les_x_gendercisboycisgirl_sr2 <- ((les_x_gendercisboycisgirl_t**2/(les_x_gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_gendercisboycisgirl_t**2/(les_x_gendercisboycisgirl_t**2+res_df)))
+les_x_gendercisboygd_sr2 <- ((les_x_gendercisboygd_t**2/(les_x_gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_gendercisboygd_t**2/(les_x_gendercisboygd_t**2+res_df)))
+ders_x_gendercisboycisgirl_sr2 <- ((ders_x_gendercisboycisgirl_t**2/(ders_x_gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_gendercisboycisgirl_t**2/(ders_x_gendercisboycisgirl_t**2+res_df)))
+ders_x_gendercisboygd_sr2 <- ((ders_x_gendercisboygd_t**2/(ders_x_gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_gendercisboygd_t**2/(ders_x_gendercisboygd_t**2+res_df)))
+sr2vals <- as.data.frame(c(les_sr2,gendercisboycisgirl_sr2,gendercisboygd_sr2,
+                           ders_sr2,age_sr2,les_x_gendercisboycisgirl_sr2,
+                           les_x_gendercisboygd_sr2,ders_x_gendercisboycisgirl_sr2,
+                           ders_x_gendercisboygd_sr2))
+colnames(sr2vals) <- "sr2vals"
+rownames(sr2vals) <- rownames(summary(bpm_int_les_gendercisboy_reg)$coefficients)[2:10]
+sr2vals
+
+#### BPM externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
+bpm_ext_les_gendercisboy_reg <- 
+  lmer(C_yr4_bpm_ext ~ C_yr4_total_bad_le*genderid_refcisboy + 
+         C_yr4_ders_total*genderid_refcisboy + 
+         C_yr4_age + (1|site), 
+       data=meddata, REML=FALSE)
+summary(bpm_ext_les_gendercisboy_reg)
+anova(bpm_ext_les_gendercisboy_reg)
+# emmeans(bpm_ext_les_gendercisboy_reg, list(pairwise ~ C_total_bad_le*genderid_refcisboy), 
+#         adjust = "fdr",pbkrtest.limit = 4000)
+
+#### Calculate total R2 using Liz Sanders' code
+model_Yhat_var <- var(predict(bpm_ext_les_gendercisboy_reg))
+model_Yhat_var
+model_variances <- as.data.frame(VarCorr(bpm_ext_les_gendercisboy_reg))
+model_variances
+res_var <- model_variances[2,'vcov']
+res_var
+R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
+R2_total_alt2
+
+#### Calculate squared semi-partial correlation ie amount of variance in Y
+#### "uniquely" explained by that predictor (not overlapping with other Xs)
+res_df <- as.numeric(summary(bpm_ext_les_gendercisboy_reg)$AICtab[5])
+les_t <- summary(bpm_ext_les_gendercisboy_reg)$coefficients[2,4]
+gendercisboycisgirl_t <- summary(bpm_ext_les_gendercisboy_reg)$coefficients[3,4]
+gendercisboygd_t <- summary(bpm_ext_les_gendercisboy_reg)$coefficients[4,4]
+ders_t <- summary(bpm_ext_les_gendercisboy_reg)$coefficients[5,4]
+age_t <- summary(bpm_ext_les_gendercisboy_reg)$coefficients[6,4]
+les_x_gendercisboycisgirl_t <- summary(bpm_ext_les_gendercisboy_reg)$coefficients[7,4]
+les_x_gendercisboygd_t <- summary(bpm_ext_les_gendercisboy_reg)$coefficients[8,4]
+ders_x_gendercisboycisgirl_t <- summary(bpm_ext_les_gendercisboy_reg)$coefficients[9,4]
+ders_x_gendercisboygd_t <- summary(bpm_ext_les_gendercisboy_reg)$coefficients[10,4]
+tvals <- as.data.frame(c(les_t,gendercisboycisgirl_t,gendercisboygd_t,
+                         ders_t,age_t,les_x_gendercisboycisgirl_t,
+                         les_x_gendercisboygd_t,ders_x_gendercisboycisgirl_t,
+                         ders_x_gendercisboygd_t))
+colnames(tvals) <- "tvals"
+tvals
+les_sr2 <- ((les_t**2/(les_t**2+res_df))*(1-R2_total_alt2))/(1-(les_t**2/(les_t**2+res_df)))
+gendercisboycisgirl_sr2 <- ((gendercisboycisgirl_t**2/(gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(gendercisboycisgirl_t**2/(gendercisboycisgirl_t**2+res_df)))
+gendercisboygd_sr2 <- ((gendercisboygd_t**2/(gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(gendercisboygd_t**2/(gendercisboygd_t**2+res_df)))
+ders_sr2 <- ((ders_t**2/(ders_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_t**2/(ders_t**2+res_df)))
+age_sr2 <- ((age_t**2/(age_t**2+res_df))*(1-R2_total_alt2))/(1-(age_t**2/(age_t**2+res_df)))
+les_x_gendercisboycisgirl_sr2 <- ((les_x_gendercisboycisgirl_t**2/(les_x_gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_gendercisboycisgirl_t**2/(les_x_gendercisboycisgirl_t**2+res_df)))
+les_x_gendercisboygd_sr2 <- ((les_x_gendercisboygd_t**2/(les_x_gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_gendercisboygd_t**2/(les_x_gendercisboygd_t**2+res_df)))
+ders_x_gendercisboycisgirl_sr2 <- ((ders_x_gendercisboycisgirl_t**2/(ders_x_gendercisboycisgirl_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_gendercisboycisgirl_t**2/(ders_x_gendercisboycisgirl_t**2+res_df)))
+ders_x_gendercisboygd_sr2 <- ((ders_x_gendercisboygd_t**2/(ders_x_gendercisboygd_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_gendercisboygd_t**2/(ders_x_gendercisboygd_t**2+res_df)))
+sr2vals <- as.data.frame(c(les_sr2,gendercisboycisgirl_sr2,gendercisboygd_sr2,
+                           ders_sr2,age_sr2,les_x_gendercisboycisgirl_sr2,
+                           les_x_gendercisboygd_sr2,ders_x_gendercisboycisgirl_sr2,
+                           ders_x_gendercisboygd_sr2))
+colnames(sr2vals) <- "sr2vals"
+rownames(sr2vals) <- rownames(summary(bpm_ext_les_gendercisboy_reg)$coefficients)[2:10]
+sr2vals
+
+### Mixed effect linear regression to determine whether sex moderates ####
+### relationship between LES, DERS, and CBCL or BPM using age as fixed effect
+### covariate and site as random intercept
+#### CBCL internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
+cbcl_int_les_sex_reg <- 
+  lmer(C_yr4_cbcl_int ~ C_yr4_total_bad_le*sex + 
+         C_yr4_ders_total*sex + 
+         C_yr4_age + (1|site), 
+       data=sex_meddata, REML=FALSE)
+summary(cbcl_int_les_sex_reg)
+anova(cbcl_int_les_sex_reg)
+# emmeans(cbcl_int_les_sex_reg, list(pairwise ~ sex:C_yr4_ders_total), 
+#         adjust = "fdr",pbkrtest.limit = 4000)
+
+#### Calculate total R2 using Liz Sanders' code
+model_Yhat_var <- var(predict(cbcl_int_les_sex_reg))
+model_Yhat_var
+model_variances <- as.data.frame(VarCorr(cbcl_int_les_sex_reg))
+model_variances
+res_var <- model_variances[2,'vcov']
+res_var
+R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
+R2_total_alt2
+rsq.lmm(cbcl_int_les_sex_reg,adj=TRUE)
+
+#### Calculate squared semi-partial correlation ie amount of variance in Y
+#### "uniquely" explained by that predictor (not overlapping with other Xs)
+res_df <- as.numeric(summary(cbcl_int_les_sex_reg)$AICtab[5])
+les_t <- summary(cbcl_int_les_sex_reg)$coefficients[2,4]
+sex_t <- summary(cbcl_int_les_sex_reg)$coefficients[3,4]
+ders_t <- summary(cbcl_int_les_sex_reg)$coefficients[4,4]
+age_t <- summary(cbcl_int_les_sex_reg)$coefficients[5,4]
+les_x_sex_t <- summary(cbcl_int_les_sex_reg)$coefficients[6,4]
+ders_x_sex_t <- summary(cbcl_int_les_sex_reg)$coefficients[7,4]
+tvals <- as.data.frame(c(les_t,sex_t,ders_t,age_t,
+                         les_x_sex_t,ders_x_sex_t))
+colnames(tvals) <- "tvals"
+tvals
+les_sr2 <- ((les_t**2/(les_t**2+res_df))*(1-R2_total_alt2))/(1-(les_t**2/(les_t**2+res_df)))
+sex_sr2 <- ((sex_t**2/(sex_t**2+res_df))*(1-R2_total_alt2))/(1-(sex_t**2/(sex_t**2+res_df)))
+ders_sr2 <- ((ders_t**2/(ders_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_t**2/(ders_t**2+res_df)))
+age_sr2 <- ((age_t**2/(age_t**2+res_df))*(1-R2_total_alt2))/(1-(age_t**2/(age_t**2+res_df)))
+les_x_sex_sr2 <- ((les_x_sex_t**2/(les_x_sex_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_sex_t**2/(les_x_sex_t**2+res_df)))
+ders_x_sex_sr2 <- ((ders_x_sex_t**2/(ders_x_sex_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_sex_t**2/(ders_x_sex_t**2+res_df)))
+sr2vals <- as.data.frame(c(les_sr2,sex_sr2,ders_sr2,age_sr2,
+                           les_x_sex_sr2,ders_x_sex_sr2))
+colnames(sr2vals) <- "sr2vals"
+rownames(sr2vals) <- rownames(summary(cbcl_int_les_sex_reg)$coefficients)[2:7]
+sr2vals
+
+#### CBCL externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
+cbcl_ext_les_sex_reg <- 
+  lmer(C_yr4_cbcl_ext ~ C_yr4_total_bad_le*sex + 
+         C_yr4_ders_total*sex + 
+         C_yr4_age + (1|site), 
+       data=sex_meddata, REML=FALSE)
+summary(cbcl_ext_les_sex_reg)
+anova(cbcl_ext_les_sex_reg)
+# emmeans(cbcl_ext_les_sex_reg, list(pairwise ~ sex:C_yr4_ders_total), 
+#         adjust = "fdr",pbkrtest.limit = 4000)
+
+#### Calculate total R2 using Liz Sanders' code
+model_Yhat_var <- var(predict(cbcl_ext_les_sex_reg))
+model_Yhat_var
+model_variances <- as.data.frame(VarCorr(cbcl_ext_les_sex_reg))
+model_variances
+res_var <- model_variances[2,'vcov']
+res_var
+R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
+R2_total_alt2
+
+#### Calculate squared semi-partial correlation ie amount of variance in Y
+#### "uniquely" explained by that predictor (not overlapping with other Xs)
+res_df <- as.numeric(summary(cbcl_ext_les_sex_reg)$AICtab[5])
+les_t <- summary(cbcl_ext_les_sex_reg)$coefficients[2,4]
+sex_t <- summary(cbcl_ext_les_sex_reg)$coefficients[3,4]
+ders_t <- summary(cbcl_ext_les_sex_reg)$coefficients[4,4]
+age_t <- summary(cbcl_ext_les_sex_reg)$coefficients[5,4]
+les_x_sex_t <- summary(cbcl_ext_les_sex_reg)$coefficients[6,4]
+ders_x_sex_t <- summary(cbcl_ext_les_sex_reg)$coefficients[7,4]
+tvals <- as.data.frame(c(les_t,sex_t,ders_t,age_t,
+                         les_x_sex_t,ders_x_sex_t))
+colnames(tvals) <- "tvals"
+tvals
+les_sr2 <- ((les_t**2/(les_t**2+res_df))*(1-R2_total_alt2))/(1-(les_t**2/(les_t**2+res_df)))
+sex_sr2 <- ((sex_t**2/(sex_t**2+res_df))*(1-R2_total_alt2))/(1-(sex_t**2/(sex_t**2+res_df)))
+ders_sr2 <- ((ders_t**2/(ders_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_t**2/(ders_t**2+res_df)))
+age_sr2 <- ((age_t**2/(age_t**2+res_df))*(1-R2_total_alt2))/(1-(age_t**2/(age_t**2+res_df)))
+les_x_sex_sr2 <- ((les_x_sex_t**2/(les_x_sex_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_sex_t**2/(les_x_sex_t**2+res_df)))
+ders_x_sex_sr2 <- ((ders_x_sex_t**2/(ders_x_sex_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_sex_t**2/(ders_x_sex_t**2+res_df)))
+sr2vals <- as.data.frame(c(les_sr2,sex_sr2,ders_sr2,age_sr2,
+                           les_x_sex_sr2,ders_x_sex_sr2))
+colnames(sr2vals) <- "sr2vals"
+rownames(sr2vals) <- rownames(summary(cbcl_ext_les_sex_reg)$coefficients)[2:7]
+sr2vals
+
+#### BPM internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
+bpm_int_les_sex_reg <- 
+  lmer(C_yr4_bpm_int ~ C_yr4_total_bad_le*sex + 
+         C_yr4_ders_total*sex + 
+         C_yr4_age + (1|site), 
+       data=sex_meddata, REML=FALSE)
+summary(bpm_int_les_sex_reg)
+anova(bpm_int_les_sex_reg)
+# emmeans(bpm_int_les_sex_reg, list(pairwise ~ sex:C_yr4_ders_total), 
+#         adjust = "fdr",pbkrtest.limit = 4000)
+
+#### Calculate total R2 using Liz Sanders' code
+model_Yhat_var <- var(predict(bpm_int_les_sex_reg))
+model_Yhat_var
+model_variances <- as.data.frame(VarCorr(bpm_int_les_sex_reg))
+model_variances
+res_var <- model_variances[2,'vcov']
+res_var
+R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
+R2_total_alt2
+
+#### Calculate squared semi-partial correlation ie amount of variance in Y
+#### "uniquely" explained by that predictor (not overlapping with other Xs)
+res_df <- as.numeric(summary(bpm_int_les_sex_reg)$AICtab[5])
+les_t <- summary(bpm_int_les_sex_reg)$coefficients[2,4]
+sex_t <- summary(bpm_int_les_sex_reg)$coefficients[3,4]
+ders_t <- summary(bpm_int_les_sex_reg)$coefficients[4,4]
+age_t <- summary(bpm_int_les_sex_reg)$coefficients[5,4]
+les_x_sex_t <- summary(bpm_int_les_sex_reg)$coefficients[6,4]
+ders_x_sex_t <- summary(bpm_int_les_sex_reg)$coefficients[7,4]
+tvals <- as.data.frame(c(les_t,sex_t,ders_t,age_t,
+                         les_x_sex_t,ders_x_sex_t))
+colnames(tvals) <- "tvals"
+tvals
+les_sr2 <- ((les_t**2/(les_t**2+res_df))*(1-R2_total_alt2))/(1-(les_t**2/(les_t**2+res_df)))
+sex_sr2 <- ((sex_t**2/(sex_t**2+res_df))*(1-R2_total_alt2))/(1-(sex_t**2/(sex_t**2+res_df)))
+ders_sr2 <- ((ders_t**2/(ders_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_t**2/(ders_t**2+res_df)))
+age_sr2 <- ((age_t**2/(age_t**2+res_df))*(1-R2_total_alt2))/(1-(age_t**2/(age_t**2+res_df)))
+les_x_sex_sr2 <- ((les_x_sex_t**2/(les_x_sex_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_sex_t**2/(les_x_sex_t**2+res_df)))
+ders_x_sex_sr2 <- ((ders_x_sex_t**2/(ders_x_sex_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_sex_t**2/(ders_x_sex_t**2+res_df)))
+sr2vals <- as.data.frame(c(les_sr2,sex_sr2,ders_sr2,age_sr2,
+                           les_x_sex_sr2,ders_x_sex_sr2))
+colnames(sr2vals) <- "sr2vals"
+rownames(sr2vals) <- rownames(summary(bpm_int_les_sex_reg)$coefficients)[2:7]
+sr2vals
+
+#### BPM externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
+bpm_ext_les_sex_reg <- 
+  lmer(C_yr4_bpm_ext ~ C_yr4_total_bad_le*sex + 
+         C_yr4_ders_total*sex + 
+         C_yr4_age + (1|site), 
+       data=sex_meddata, REML=FALSE)
+summary(bpm_ext_les_sex_reg)
+anova(bpm_ext_les_sex_reg)
+# emmeans(bpm_ext_les_sex_reg, list(pairwise ~ sex:C_yr4_ders_total), 
+#         adjust = "fdr",pbkrtest.limit = 4000)
+
+#### Calculate total R2 using Liz Sanders' code
+model_Yhat_var <- var(predict(bpm_ext_les_sex_reg))
+model_Yhat_var
+model_variances <- as.data.frame(VarCorr(bpm_ext_les_sex_reg))
+model_variances
+res_var <- model_variances[2,'vcov']
+res_var
+R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
+R2_total_alt2
+
+#### Calculate squared semi-partial correlation ie amount of variance in Y
+#### "uniquely" explained by that predictor (not overlapping with other Xs)
+res_df <- as.numeric(summary(bpm_ext_les_sex_reg)$AICtab[5])
+les_t <- summary(bpm_ext_les_sex_reg)$coefficients[2,4]
+sex_t <- summary(bpm_ext_les_sex_reg)$coefficients[3,4]
+ders_t <- summary(bpm_ext_les_sex_reg)$coefficients[4,4]
+age_t <- summary(bpm_ext_les_sex_reg)$coefficients[5,4]
+les_x_sex_t <- summary(bpm_ext_les_sex_reg)$coefficients[6,4]
+ders_x_sex_t <- summary(bpm_ext_les_sex_reg)$coefficients[7,4]
+tvals <- as.data.frame(c(les_t,sex_t,ders_t,age_t,
+                         les_x_sex_t,ders_x_sex_t))
+colnames(tvals) <- "tvals"
+tvals
+les_sr2 <- ((les_t**2/(les_t**2+res_df))*(1-R2_total_alt2))/(1-(les_t**2/(les_t**2+res_df)))
+sex_sr2 <- ((sex_t**2/(sex_t**2+res_df))*(1-R2_total_alt2))/(1-(sex_t**2/(sex_t**2+res_df)))
+ders_sr2 <- ((ders_t**2/(ders_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_t**2/(ders_t**2+res_df)))
+age_sr2 <- ((age_t**2/(age_t**2+res_df))*(1-R2_total_alt2))/(1-(age_t**2/(age_t**2+res_df)))
+les_x_sex_sr2 <- ((les_x_sex_t**2/(les_x_sex_t**2+res_df))*(1-R2_total_alt2))/(1-(les_x_sex_t**2/(les_x_sex_t**2+res_df)))
+ders_x_sex_sr2 <- ((ders_x_sex_t**2/(ders_x_sex_t**2+res_df))*(1-R2_total_alt2))/(1-(ders_x_sex_t**2/(ders_x_sex_t**2+res_df)))
+sr2vals <- as.data.frame(c(les_sr2,sex_sr2,ders_sr2,age_sr2,
+                           les_x_sex_sr2,ders_x_sex_sr2))
+colnames(sr2vals) <- "sr2vals"
+rownames(sr2vals) <- rownames(summary(bpm_ext_les_sex_reg)$coefficients)[2:7]
+sr2vals
 ## STEP TWO: MEDIATING EFFECT OF ER ON CBCL OR BPM ~ LES (HAYES MODEL 4) #### 
 
-### Combine year 4 and year 3 data to have option to use year 3 as x variable ####
-meddata <- yr4data %>%
-  rename(
-    C_yr4_total_bad_le = C_total_bad_le,
-    C_yr4_ders_total = C_ders_total,
-    C_yr4_cbcl_int = C_cbcl_int,
-    C_yr4_cbcl_ext = C_cbcl_ext,
-    C_yr4_bpm_int = C_bpm_int,
-    C_yr4_bpm_ext = C_bpm_ext,
-    C_log_yr4_total_bad_le = C_log_total_bad_le,
-    C_log_yr4_ders_total = C_log_ders_total,
-    C_log_yr4_cbcl_int = C_log_cbcl_int,
-    C_log_yr4_cbcl_ext = C_log_cbcl_ext,
-    C_log_yr4_bpm_int = C_log_bpm_int,
-    C_log_yr4_bpm_ext = C_log_bpm_ext,
-    C_yr4_age = C_age) %>%
-  left_join(select(yr3data, 
-                   c(src_subject_id,C_age,
-                     C_total_bad_le,C_ders_total,
-                     C_cbcl_int,C_cbcl_ext,
-                     C_bpm_int,C_bpm_ext)),
-            by="src_subject_id") %>%
-  rename(C_yr3_total_bad_le = C_total_bad_le,
-         C_yr3_ders_total = C_ders_total,
-         C_yr3_cbcl_int = C_cbcl_int,
-         C_yr3_cbcl_ext = C_cbcl_ext,
-         C_yr3_bpm_int = C_bpm_int,
-         C_yr3_bpm_ext = C_bpm_ext,
-         C_yr3_age = C_age)
-
-#### make version of data for mediation which excludes participants who answered
-#### "refuse" or "dont_know" to sex question, set male as reference level
-
-sex_meddata <- meddata %>% 
-                  filter(sex!="refuse",
-                         sex!="dont_know") %>%
-                  mutate(sex = fct_relevel(sex, "male"))
-
-#### make version of data for mediation which excludes participants who are GD
-
-nogd_meddata <- meddata %>%
-                  filter(genderid != "gd")
 
 ### Simple mediation model (Hayes model 4) to test whether DERS mediates #### 
 ### relationship between LES and CBCL internalizing
@@ -1363,7 +1783,7 @@ bpm_ext_model4 <- PROCESS(
 
 
 
-## STEP THREE: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION (HAYES MODEL 5) ####
+## STEP THREE: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION (HAYES MODEL 15) ####
 
 ### Moderated mediation model (Hayes model 15) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
@@ -1387,10 +1807,10 @@ cbcl_int_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
+    # "x-y",
     # "x-m",
-    "m-y"
-    # "all"
+    # "m-y"
+    "all"
   ),
   cov.path = c("both"),
   # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
@@ -1422,10 +1842,10 @@ cbcl_ext_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
+    # "x-y",
     # "x-m",
-    "m-y"
-    # "all"
+    # "m-y"
+    "all"
   ),
   cov.path = c("both"),
   # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
@@ -1527,10 +1947,10 @@ bpm_int_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
+    # "x-y",
     # "x-m",
-    "m-y"
-    # "all"
+    # "m-y"
+    "all"
   ),
   cov.path = c("both"),
   # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
@@ -1610,10 +2030,10 @@ bpm_ext_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
+    # "x-y",
     # "x-m",
-    "m-y"
-    # "all"
+    # "m-y"
+    "all"
   ),
   cov.path = c("both"),
   # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
