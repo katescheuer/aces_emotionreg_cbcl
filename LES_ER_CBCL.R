@@ -434,6 +434,49 @@ yr3sexdata <- yr3data %>%
          sex!="dont_know")
 
 
+### Combine year 4 and year 3 data to have option to use year 3 as x variable ####
+meddata <- yr4data %>%
+  rename(
+    C_yr4_total_bad_le = C_total_bad_le,
+    C_yr4_ders_total = C_ders_total,
+    C_yr4_cbcl_int = C_cbcl_int,
+    C_yr4_cbcl_ext = C_cbcl_ext,
+    C_yr4_bpm_int = C_bpm_int,
+    C_yr4_bpm_ext = C_bpm_ext,
+    C_log_yr4_total_bad_le = C_log_total_bad_le,
+    C_log_yr4_ders_total = C_log_ders_total,
+    C_log_yr4_cbcl_int = C_log_cbcl_int,
+    C_log_yr4_cbcl_ext = C_log_cbcl_ext,
+    C_log_yr4_bpm_int = C_log_bpm_int,
+    C_log_yr4_bpm_ext = C_log_bpm_ext,
+    C_yr4_age = C_age) %>%
+  left_join(select(yr3data, 
+                   c(src_subject_id,C_age,
+                     C_total_bad_le,C_ders_total,
+                     C_cbcl_int,C_cbcl_ext,
+                     C_bpm_int,C_bpm_ext)),
+            by="src_subject_id") %>%
+  rename(C_yr3_total_bad_le = C_total_bad_le,
+         C_yr3_ders_total = C_ders_total,
+         C_yr3_cbcl_int = C_cbcl_int,
+         C_yr3_cbcl_ext = C_cbcl_ext,
+         C_yr3_bpm_int = C_bpm_int,
+         C_yr3_bpm_ext = C_bpm_ext,
+         C_yr3_age = C_age)
+
+#### make version of data which excludes participants who answered
+#### "refuse" or "dont_know" to sex question, set male as reference level
+
+sex_meddata <- meddata %>% 
+  filter(sex!="refuse",
+         sex!="dont_know") %>%
+  mutate(sex = fct_relevel(sex, "male"))
+
+#### make version of data which excludes participants who are GD
+
+nogd_meddata <- meddata %>%
+  filter(genderid != "gd")
+
 #### Get general summary of values for each column for data from year 4 visit ####
 yr4data %>% describe()
 
@@ -872,372 +915,134 @@ wilcox.test(bpm_ext ~ sex, data = yr4sexdata)
 #### (p = 0.003231)
 wilcox.test(bpm_ext ~ sex, data = yr3sexdata)
 
-### Mixed effect linear regression to determine whether any variable differs ####
-### based on age, using site as random intercept  
-#### LES ~ age + (1|site) ####
-# LES scores differ significantly based on age (p = 0.0105)
-les_age_reg <- lmer(C_total_bad_le ~ C_age + (1|site), data=yr4data)
-summary(les_age_reg)
-#### DERS ~ age + (1|site) ####
-# DERS scores do not differ significantly based on age (p = 0.2704)
-ders_age_reg <- lmer(C_ders_total ~ C_age + (1|site), data=yr4data)
-summary(ders_age_reg)
-#### CBCL internalizing ~ age + (1|site) ####
-# CBCL internalizing scores do not differ significantly based on age (p = 0.489)
-cbcl_int_age_reg <- lmer(C_cbcl_int ~ C_age + (1|site), data=yr4data)
-summary(cbcl_int_age_reg)
-#### CBCL externalizing ~ age + (1|site) ####
-# CBCL externalizing scores do differ significantly based on age (p = 0.0098)
-cbcl_ext_age_reg <- lmer(C_cbcl_ext ~ C_age + (1|site), data=yr4data)
-summary(cbcl_ext_age_reg)
-#### BPM internalizing ~ age + (1|site) ####
-# BPM internalizing scores do differ significantly based on age (p = 0.0413)
-bpm_int_age_reg <- lmer(C_bpm_int ~ C_age + (1|site), data=yr4data)
-summary(bpm_int_age_reg)
-#### BPM externalizing ~ age + (1|site) ####
-# BPM externalizing scores do not differ significantly based on age (p = 0.400)
-bpm_ext_age_reg <- lmer(C_bpm_ext ~ C_age + (1|site), data=yr4data)
-summary(bpm_ext_age_reg)
-
 ### Mixed effect linear regression to determine whether DERS differs based ####
 ### on LES, using age as fixed effect covariate and site as random intercept
 #### DERS ~ LES + age + (1|site) ####
 # DERS scores differ significantly based on LES (p = 1.71e-11)
-ders_les_age_reg <- lmer(C_ders_total ~ C_total_bad_le + C_age + (1|site),
-# ders_les_age_reg <- lmer(C_log_ders_total ~ C_log_total_bad_le + C_age + (1|site),
-                         data=yr4data)
-                         # data=yr3data)
+ders_les_age_reg <- lmer(C_yr4_ders_total ~ C_yr4_total_bad_le + C_yr4_age + (1|site),
+# ders_les_age_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+# ders_les_age_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
+                         data=meddata)
 summary(ders_les_age_reg)
+rsq(ders_les_age_reg,adj=TRUE)
 
 ### Mixed effect linear regression to determine whether CBCL or BPM differ ####
-### based on LES or DERS, using age as fixed effect covariate and site as random 
+### based on LES and/or DERS, using age as fixed effect covariate and site as random 
 ### intercept
 #### CBCL internalizing ~ LES + age + (1|site) ####
-# CBCL internalizing scores differ significantly based on LES (p < 2e-16)
-cbcl_int_les_age_reg <- lmer(C_cbcl_int ~ C_total_bad_le + C_age + (1|site),
-# cbcl_int_les_age_reg <- lmer(C_log_cbcl_int ~ C_log_total_bad_le + C_age + (1|site), 
-                           data=yr4data)
-                         # data=yr3data)
+cbcl_int_les_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr4_total_bad_le + C_yr4_age + (1|site),
+# cbcl_int_les_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+# cbcl_int_les_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
+                           data=meddata)
 summary(cbcl_int_les_age_reg)
 #### CBCL externalizing ~ LES + age + (1|site) ####
-# CBCL externalizing scores differ significantly based on LES (p = 3.48e-16)
-cbcl_ext_les_age_reg <- lmer(C_cbcl_ext ~ C_total_bad_le + C_age + (1|site),
-# cbcl_ext_les_age_reg <- lmer(C_log_cbcl_ext ~ C_log_total_bad_le + C_age + (1|site), 
-                             data=yr4data)
-                             # data=yr3data)
+cbcl_ext_les_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr4_total_bad_le + C_yr4_age + (1|site),
+# cbcl_ext_les_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+# cbcl_ext_les_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
+                           data=meddata)
 summary(cbcl_ext_les_age_reg)
-# BPM internalizing scores differ significantly based on LES (p < 2e-16)
-bpm_int_les_age_reg <- lmer(C_bpm_int ~ C_total_bad_le + C_age + (1|site),
-# bpm_int_les_age_reg <- lmer(C_log_bpm_int ~ C_log_total_bad_le + C_age + (1|site), 
-                            data=yr4data)
-                             # data=yr3data)
+#### BPM internalizing ~ LES + age + (1|site) ####
+bpm_int_les_age_reg <- lmer(C_yr4_bpm_int ~ C_yr4_total_bad_le + C_yr4_age + (1|site),
+ # bpm_int_les_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+ # bpm_int_les_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
+                             data=meddata)
 summary(bpm_int_les_age_reg)
 #### BPM externalizing ~ LES + age + (1|site) ####
-# BPM externalizing scores differ significantly based on LES (p < 2e-16)
-bpm_ext_les_age_reg <- lmer(C_bpm_ext ~ C_total_bad_le + C_age + (1|site),
-# bpm_ext_les_age_reg <- lmer(C_log_bpm_ext ~ C_log_total_bad_le + C_age + (1|site), 
-                            data=yr4data)
-                             # data=yr3data)
+bpm_ext_les_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr4_total_bad_le + C_yr4_age + (1|site),
+ # bpm_ext_les_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+ # bpm_ext_les_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
+                             data=meddata)
 summary(bpm_ext_les_age_reg)
 #### CBCL internalizing ~ DERS + age + (1|site) ####
-# CBCL internalizing scores differ significantly based on DERS (p < 2e-16)
-cbcl_int_ders_age_reg <- lmer(C_cbcl_int ~ C_ders_total + C_age + (1|site),
-# cbcl_int_ders_age_reg <- lmer(C_log_cbcl_int ~ C_log_ders_total + C_age + (1|site), 
-                              data=yr4data)
+cbcl_int_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr4_ders_total + C_yr4_age + (1|site),
+ # cbcl_int_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_ders_total + C_yr4_age + (1|site),
+ # cbcl_int_ders_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr4_ders_total + C_yr4_age + (1|site),
+                           data=meddata)
 summary(cbcl_int_ders_age_reg)
 #### CBCL externalizing ~ DERS + age + (1|site) ####
-# CBCL externalizing scores differ significantly based on DERS (p < 2e-16)
-cbcl_ext_ders_age_reg <- lmer(C_cbcl_ext ~ C_ders_total + C_age + (1|site),
-# cbcl_ext_ders_age_reg <- lmer(C_log_cbcl_ext ~ C_log_ders_total + C_age + (1|site), 
-                              data=yr4data)
+cbcl_ext_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr4_ders_total + C_yr4_age + (1|site),
+ # cbcl_ext_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_ders_total + C_yr4_age + (1|site),
+ # cbcl_ext_ders_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_ders_total + C_yr4_age + (1|site),
+                             data=meddata)
 summary(cbcl_ext_ders_age_reg)
-# BPM internalizing scores differ significantly based on DERS (p < 2e-16)
-bpm_int_ders_age_reg <- lmer(C_bpm_int ~ C_ders_total + C_age + (1|site),
-# bpm_int_ders_age_reg <- lmer(C_log_bpm_int ~ C_log_ders_total + C_age + (1|site), 
-                             data=yr4data)
+#### BPM internalizing ~ DERS + age + (1|site) ####
+bpm_int_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr4_ders_total + C_yr4_age + (1|site),
+  # bpm_int_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_ders_total + C_yr4_age + (1|site),
+  # bpm_int_ders_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr4_ders_total + C_yr4_age + (1|site),
+                            data=meddata)
 summary(bpm_int_ders_age_reg)
 #### BPM externalizing ~ DERS + age + (1|site) ####
-# BPM externalizing scores differ significantly based on DERS (p < 2e-16)
-bpm_ext_ders_age_reg <- lmer(C_bpm_ext ~ C_ders_total + C_age + (1|site),
-# bpm_ext_ders_age_reg <- lmer(C_log_bpm_ext ~ C_log_ders_total + C_age + (1|site), 
-                             data=yr4data)
+bpm_ext_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr4_ders_total + C_yr4_age + (1|site),
+  # bpm_ext_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_ders_total + C_yr4_age + (1|site),
+  # bpm_ext_ders_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr4_ders_total + C_yr4_age + (1|site),
+                            data=meddata)
 summary(bpm_ext_ders_age_reg)
+#### CBCL internalizing ~ LES + DERS + age + (1|site) ####
+cbcl_int_les_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr4_total_bad_le + C_yr4_ders_total + C_yr4_age + (1|site),
+# cbcl_int_les_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+# cbcl_int_les_ders_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le + C_log_yr4_ders_total + C_yr4_age + (1|site),
+                              data=meddata)
+summary(cbcl_int_les_ders_age_reg)
+rsq(cbcl_int_les_ders_age_reg, adj=TRUE)
+#### CBCL externalizing ~ LES + DERS + age + (1|site) ####
+cbcl_ext_les_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr4_total_bad_le + C_yr4_ders_total + C_yr4_age + (1|site),
+# cbcl_ext_les_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+# cbcl_ext_les_ders_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le + C_log_yr4_ders_total + C_yr4_age + (1|site),
+                              data=meddata)
+summary(cbcl_ext_les_ders_age_reg)
+rsq(cbcl_ext_les_ders_age_reg, adj=TRUE)
+#### BPM internalizing ~ LES + DERS + age + (1|site) ####
+bpm_int_les_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr4_total_bad_le + C_yr4_ders_total + C_yr4_age + (1|site),
+# bpm_int_les_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+# bpm_int_les_ders_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le + C_log_yr4_ders_total + C_yr4_age + (1|site),
+                              data=meddata)
+summary(bpm_int_les_ders_age_reg)
+rsq(bpm_int_les_ders_age_reg, adj=TRUE)
+#### BPM externalizing ~ LES + DERS + age + (1|site) ####
+bpm_ext_les_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr4_total_bad_le + C_yr4_ders_total + C_yr4_age + (1|site),
+# bpm_ext_les_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+# bpm_ext_les_ders_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr4_total_bad_le + C_log_yr4_ders_total + C_yr4_age + (1|site),
+                              data=meddata)
+summary(bpm_ext_les_ders_age_reg)
+rsq(bpm_ext_les_ders_age_reg, adj=TRUE)
 
-
-
-
-### Mixed effect linear regression to determine relationship between LES, DERS, 
-### and CBCL or BPM using age as fixed effect covariate and site as random intercept
 
 ## STEP TWO: MODERATING EFFECTS OF GENDER OR SEX ####
-### Combine year 4 and year 3 data to have option to use year 3 as x variable ####
-meddata <- yr4data %>%
-  rename(
-    C_yr4_total_bad_le = C_total_bad_le,
-    C_yr4_ders_total = C_ders_total,
-    C_yr4_cbcl_int = C_cbcl_int,
-    C_yr4_cbcl_ext = C_cbcl_ext,
-    C_yr4_bpm_int = C_bpm_int,
-    C_yr4_bpm_ext = C_bpm_ext,
-    C_log_yr4_total_bad_le = C_log_total_bad_le,
-    C_log_yr4_ders_total = C_log_ders_total,
-    C_log_yr4_cbcl_int = C_log_cbcl_int,
-    C_log_yr4_cbcl_ext = C_log_cbcl_ext,
-    C_log_yr4_bpm_int = C_log_bpm_int,
-    C_log_yr4_bpm_ext = C_log_bpm_ext,
-    C_yr4_age = C_age) %>%
-  left_join(select(yr3data, 
-                   c(src_subject_id,C_age,
-                     C_total_bad_le,C_ders_total,
-                     C_cbcl_int,C_cbcl_ext,
-                     C_bpm_int,C_bpm_ext)),
-            by="src_subject_id") %>%
-  rename(C_yr3_total_bad_le = C_total_bad_le,
-         C_yr3_ders_total = C_ders_total,
-         C_yr3_cbcl_int = C_cbcl_int,
-         C_yr3_cbcl_ext = C_cbcl_ext,
-         C_yr3_bpm_int = C_bpm_int,
-         C_yr3_bpm_ext = C_bpm_ext,
-         C_yr3_age = C_age)
-
-#### make version of data for mediation which excludes participants who answered
-#### "refuse" or "dont_know" to sex question, set male as reference level
-
-sex_meddata <- meddata %>% 
-  filter(sex!="refuse",
-         sex!="dont_know") %>%
-  mutate(sex = fct_relevel(sex, "male"))
-
-#### make version of data for mediation which excludes participants who are GD
-
-nogd_meddata <- meddata %>%
-  filter(genderid != "gd")
-
-### Mixed effect linear regression to determine whether gender moderates ####
-### relationship between age and any variable, using site as random intercept
-#### LES ~ age*gender + (1|site) ####
-# Relationship between LES and age does not differ significantly based on gender
-les_age_gendercisboy_reg <- lmer(C_total_bad_le ~ C_age*genderid_refcisboy + (1|site), data=yr4data)
-summary(les_age_gendercisboy_reg)
-les_age_gendercisgirl_reg <- lmer(C_total_bad_le ~ C_age*genderid_refcisgirl + (1|site), data=yr4data)
-summary(les_age_gendercisgirl_reg)
-#### DERS ~ age*gender + (1|site) ####
-# Relationship between DERS and age does not differ significantly based on gender
-ders_age_gendercisboy_reg <- lmer(C_ders_total ~ C_age*genderid_refcisboy + (1|site), data=yr4data)
-summary(ders_age_gendercisboy_reg)
-ders_age_gendercisgirl_reg <- lmer(C_ders_total ~ C_age*genderid_refcisgirl + (1|site), data=yr4data)
-summary(ders_age_gendercisgirl_reg)
-#### CBCL internalizing ~ age*gender + (1|site) ####
-# Relationship between CBCL internalizing and age significantly different for 
-# gd vs cis girls and for gd vs cis boys
-cbcl_int_age_gendercisboy_reg <- lmer(C_cbcl_int ~ C_age*genderid_refcisboy + (1|site), data=yr4data)
-summary(cbcl_int_age_gendercisboy_reg)
-cbcl_int_age_gendercisgirl_reg <- lmer(C_cbcl_int ~ C_age*genderid_refcisgirl + (1|site), data=yr4data)
-summary(cbcl_int_age_gendercisgirl_reg)
-#### CBCL externalizing ~ age*gender + (1|site) ####
-# Relationship between CBCL externalizing and age does not differ significantly 
-# based on gender
-cbcl_ext_age_gendercisboy_reg <- lmer(C_cbcl_ext ~ C_age*genderid_refcisboy + (1|site), data=yr4data)
-summary(cbcl_ext_age_gendercisboy_reg)
-cbcl_ext_age_gendercisgirl_reg <- lmer(C_cbcl_ext ~ C_age*genderid_refcisgirl + (1|site), data=yr4data)
-summary(cbcl_ext_age_gendercisgirl_reg)
-#### BPM internalizing ~ age*gender + (1|site) ####
-# Relationship between BPM internalizing and age does not differ significantly 
-# based on gender
-bpm_int_age_gendercisboy_reg <- lmer(C_bpm_int ~ C_age*genderid_refcisboy + (1|site), data=yr4data)
-summary(bpm_int_age_gendercisboy_reg)
-anova(bpm_int_age_gendercisboy_reg)
-emmeans(bpm_int_age_gendercisboy_reg, list(pairwise ~ genderid_refcisboy), 
-        adjust = "fdr",pbkrtest.limit = 4000)
-bpm_int_age_gendercisgirl_reg <- lmer(C_bpm_int ~ C_age*genderid_refcisgirl + (1|site), data=yr4data)
-summary(bpm_int_age_gendercisgirl_reg)
-anova(bpm_int_age_gendercisgirl_reg)
-emmeans(bpm_int_age_gendercisgirl_reg, list(pairwise ~ genderid_refcisgirl), 
-        adjust = "fdr",pbkrtest.limit = 4000)
-#### BPM externalizing ~ age*gender + (1|site) ####
-# Relationship between BPM externalizing and age significantly different for gd
-# vs cis boys and for gd vs cis girls
-bpm_ext_age_gendercisboy_reg <- lmer(C_bpm_ext ~ C_age*genderid_refcisboy + (1|site), data=yr4data)
-summary(bpm_ext_age_gendercisboy_reg)
-bpm_ext_age_gendercisgirl_reg <- lmer(C_bpm_ext ~ C_age*genderid_refcisgirl + (1|site), data=yr4data)
-summary(bpm_ext_age_gendercisgirl_reg)
-
 ### Mixed effect linear regression to determine whether gender moderates ####
 ### relationship between DERS and LES, use age as fixed effect covariate and
 ### site as random intercept
 #### DERS ~ LES*gender + age + (1|site) ####
-# Relationship between DERS and LES does not differ significantly based on gender
-ders_les_gendercisboy_reg <- lmer(C_ders_total ~ C_total_bad_le*genderid_refcisboy + C_age + (1|site), 
-                         data=yr4data)
+ders_les_gendercisboy_reg <- lmer(C_yr4_ders_total ~ C_yr4_total_bad_le*genderid_refcisboy + C_yr4_age + (1|site),
+# ders_les_gendercisboy_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr4_age + (1|site),
+# ders_les_gendercisboy_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_yr4_age + (1|site),
+                         data=meddata)
 summary(ders_les_gendercisboy_reg)
 anova(ders_les_gendercisboy_reg)
-### Mixed effect linear regression to determine whether gender moderates ####
-### relationship between LES or DERS and CBCL or BPM, using age as fixed effect 
-### covariate and site as random intercept
-#### CBCL internalizing ~ LES*gender + age + (1|site) ####
-# Relationship between LES and CBCL internalizing does not differ based on gender
-cbcl_int_les_gendercisboy_reg <- lmer(C_cbcl_int ~ C_total_bad_le*genderid_refcisboy + C_age + (1|site), 
-                             data=yr4data)
-summary(cbcl_int_les_gendercisboy_reg)
-anova(cbcl_int_les_gendercisboy_reg)
-#### CBCL externalizing ~ LES*gender + age + (1|site) ####
-# Relationship between LES and CBCL externalizing does not differ based on gender
-cbcl_ext_les_gendercisboy_reg <- lmer(C_cbcl_ext ~ C_total_bad_le*genderid_refcisboy + C_age + (1|site), 
-                                      data=yr4data)
-summary(cbcl_ext_les_gendercisboy_reg)
-anova(cbcl_ext_les_gendercisboy_reg)
-#### BPM internalizing ~ LES*gender + age + (1|site) ####
-# Relationship between LES and BPM internalizing differs significantly for cis
-# girls vs cis boys and for gd vs cis boys but not for gd vs cis girls
-bpm_int_les_gendercisboy_reg <- lmer(C_bpm_int ~ C_total_bad_le*genderid_refcisboy + C_age + (1|site), 
-                                      data=yr4data)
-summary(bpm_int_les_gendercisboy_reg)
-anova(bpm_int_les_gendercisboy_reg)
-emmeans(bpm_int_les_gendercisboy_reg, list(pairwise ~ C_total_bad_le*genderid_refcisboy), 
-        adjust = "fdr",pbkrtest.limit = 4000)
-#### BPM externalizing ~ LES*gender + age + (1|site) ####
-# Relationship between LES and BPM externalizing does not differ based on gender
-bpm_ext_les_gendercisboy_reg <- lmer(C_bpm_ext ~ C_total_bad_le*genderid_refcisboy + C_age + (1|site), 
-                                      data=yr4data)
-summary(bpm_ext_les_gendercisboy_reg)
-anova(bpm_ext_les_gendercisboy_reg)
-#### CBCL internalizing ~ DERS*gender + age + (1|site) ####
-# Relationship between DERS and CBCL internalizing differs significantly for cis
-# girls vs cis boy but not for gd vs cis boys or for gd vs cis girls
-cbcl_int_ders_gendercisboy_reg <- lmer(C_cbcl_int ~ C_ders_total*genderid_refcisboy + C_age + (1|site), 
-                                      data=yr4data)
-summary(cbcl_int_ders_gendercisboy_reg)
-anova(cbcl_int_ders_gendercisboy_reg)
-emmeans(cbcl_int_ders_gendercisboy_reg, list(pairwise ~ C_ders_total*genderid_refcisboy), 
-        adjust = "fdr",pbkrtest.limit = 4000)
-#### CBCL externalizing ~ DERS*gender + age + (1|site) ####
-# Relationship between DERS and CBCL externalizing does not differ based on gender
-cbcl_ext_ders_gendercisboy_reg <- lmer(C_cbcl_ext ~ C_ders_total*genderid_refcisboy + C_age + (1|site), 
-                                      data=yr4data)
-summary(cbcl_ext_ders_gendercisboy_reg)
-anova(cbcl_ext_ders_gendercisboy_reg)
-#### BPM internalizing ~ DERS*gender + age + (1|site) ####
-# Relationship between DERS and BPM internalizing does not differ based on gender
-bpm_int_ders_gendercisboy_reg <- lmer(C_bpm_int ~ C_ders_total*genderid_refcisboy + C_age + (1|site), 
-                                     data=yr4data)
-summary(bpm_int_ders_gendercisboy_reg)
-anova(bpm_int_ders_gendercisboy_reg)
-emmeans(bpm_int_ders_gendercisboy_reg, list(pairwise ~ C_ders_total*genderid_refcisboy), 
-        adjust = "fdr",pbkrtest.limit = 4000)
-#### BPM externalizing ~ DERS*gender + age + (1|site) ####
-# Relationship between DERS and BPM externalizing does not differ based on gender
-bpm_ext_ders_gendercisboy_reg <- lmer(C_bpm_ext ~ C_ders_total*genderid_refcisboy + C_age + (1|site), 
-                                     data=yr4data)
-summary(bpm_ext_ders_gendercisboy_reg)
-anova(bpm_ext_ders_gendercisboy_reg)
-### Mixed effect linear regression to determine whether sex moderates ####
-### relationship between age and any variable, using site as random intercept
-#### LES ~ age*sex + (1|site) ####
-# Relationship between LES and age does not differ significantly based on sex
-les_age_sex_reg <- lmer(C_total_bad_le ~ C_age*sex + (1|site), data=yr4sexdata)
-summary(les_age_sex_reg)
-#### DERS ~ age*sex + (1|site) ####
-# Relationship between DERS and age does not differ significantly based on sex
-ders_age_sex_reg <- lmer(C_ders_total ~ C_age*sex + (1|site), data=yr4sexdata)
-summary(ders_age_sex_reg)
-#### CBCL internalizing ~ age*sex + (1|site) ####
-# Relationship between CBCL internalizing and age does not differ significantly 
-# based on sex
-cbcl_int_age_sex_reg <- lmer(C_cbcl_int ~ C_age*sex + (1|site), data=yr4sexdata)
-summary(cbcl_int_age_sex_reg)
-#### CBCL externalizing ~ age*sex + (1|site) ####
-# Relationship between CBCL externalizing and age does not differ significantly 
-# based on sex
-cbcl_ext_age_sex_reg <- lmer(C_cbcl_ext ~ C_age*sex + (1|site), data=yr4sexdata)
-summary(cbcl_ext_age_sex_reg)
-#### BPM internalizing ~ age*sex + (1|site) ####
-# Relationship between BPM internalizing and age does not differ significantly 
-# based on sex
-bpm_int_age_sex_reg <- lmer(C_bpm_int ~ C_age*sex + (1|site), data=yr4sexdata)
-summary(bpm_int_age_sex_reg)
-#### BPM externalizing ~ age*sex + (1|site) ####
-# Relationship between BPM externalizing and age does not differ significantly 
-# based on sex
-bpm_ext_age_sex_reg <- lmer(C_bpm_ext ~ C_age*sex + (1|site), data=yr4sexdata)
-summary(bpm_ext_age_sex_reg)
-
+rsq(ders_les_gendercisboy_reg,adj=TRUE)
 ### Mixed effect linear regression to determine whether sex moderates ####
 ### relationship between DERS and LES, use age as fixed effect covariate and
 ### site as random intercept
 #### DERS ~ LES*sex + age + (1|site) ####
 # Relationship between DERS and LES does not differ significantly based on sex
-ders_les_sex_reg <- lmer(C_ders_total ~ C_total_bad_le*sex + C_age + (1|site), 
-                                  data=yr4sexdata)
+ders_les_sex_reg <- lmer(C_yr4_ders_total ~ C_yr4_total_bad_le*sex + C_yr4_age + (1|site),
+# ders_les_sex_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le*sex + C_yr4_age + (1|site),
+# ders_les_sex_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr4_total_bad_le*sex + C_yr4_age + (1|site),
+                                  data=sex_meddata)
 summary(ders_les_sex_reg)
-# anova(ders_les_sex_reg)
-### Mixed effect linear regression to determine whether sex moderates ####
-### relationship between LES or DERS and CBCL or BPM, using age as fixed effect 
-### covariate and site as random intercept
-#### CBCL internalizing ~ LES*sex + age + (1|site) ####
-# Relationship between LES and CBCL internalizing does differ significantly
-# based on sex
-cbcl_int_les_sex_reg <- lmer(C_cbcl_int ~ C_total_bad_le*sex + C_age + (1|site), 
-                                      data=yr4sexdata)
-summary(cbcl_int_les_sex_reg)
-# anova(cbcl_int_les_sex_reg)
-#### CBCL externalizing ~ LES*sex + age + (1|site) ####
-# Relationship between LES and CBCL externalizing does not differ based on sex
-cbcl_ext_les_sex_reg <- lmer(C_cbcl_ext ~ C_total_bad_le*sex + C_age + (1|site), 
-                                      data=yr4sexdata)
-summary(cbcl_ext_les_sex_reg)
-# anova(cbcl_ext_les_sex_reg)
-#### BPM internalizing ~ LES*sex + age + (1|site) ####
-# Relationship between LES and BPM internalizing does differ significantly 
-# based on sex
-bpm_int_les_sex_reg <- lmer(C_bpm_int ~ C_total_bad_le*sex + C_age + (1|site), 
-                                     data=yr4sexdata)
-summary(bpm_int_les_sex_reg)
-anova(bpm_int_les_sex_reg)
-#### BPM externalizing ~ LES*sex + age + (1|site) ####
-# Relationship between LES and BPM externalizing does not differ based on sex
-bpm_ext_les_sex_reg <- lmer(C_bpm_ext ~ C_total_bad_le*sex + C_age + (1|site), 
-                                     data=yr4sexdata)
-summary(bpm_ext_les_sex_reg)
-anova(bpm_ext_les_sex_reg)
-#### CBCL internalizing ~ DERS*sex + age + (1|site) ####
-# Relationship between DERS and CBCL internalizing does differ significantly
-# based on sex
-cbcl_int_ders_sex_reg <- lmer(C_cbcl_int ~ C_ders_total*sex + C_age + (1|site), 
-                                       data=yr4sexdata)
-summary(cbcl_int_ders_sex_reg)
-# anova(cbcl_int_ders_sex_reg)
-#### CBCL externalizing ~ DERS*sex + age + (1|site) ####
-# Relationship between DERS and CBCL externalizing does not differ based on sex
-cbcl_ext_ders_sex_reg <- lmer(C_cbcl_ext ~ C_ders_total*sex + C_age + (1|site), 
-                                       data=yr4sexdata)
-summary(cbcl_ext_ders_sex_reg)
-# anova(cbcl_ext_ders_sex_reg)
-#### BPM internalizing ~ DERS*sex + age + (1|site) ####
-# Relationship between DERS and BPM internalizing does differ significantly
-# based on sex
-bpm_int_ders_sex_reg <- lmer(C_bpm_int ~ C_ders_total*sex + C_age + (1|site), 
-                                      data=yr4sexdata)
-summary(bpm_int_ders_sex_reg)
-# anova(bpm_int_ders_sex_reg)
-#### BPM externalizing ~ DERS*sex + age + (1|site) ####
-# Relationship between DERS and BPM externalizing does not differ based on sex
-bpm_ext_ders_sex_reg <- lmer(C_bpm_ext ~ C_ders_total*sex + C_age + (1|site), 
-                                      data=yr4sexdata)
-summary(bpm_ext_ders_sex_reg)
-# anova(bpm_ext_ders_sex_reg)
-
-
+rsq(ders_les_sex_reg, adj=TRUE)
 ### Mixed effect linear regression to determine whether gender moderates ####
 ### relationship between LES, DERS, and CBCL or BPM using age as fixed effect
 ### covariate and site as random intercept
 #### CBCL internalizing ~ LES*gender + DERS*gender + age + (1|site) ####
 cbcl_int_les_gendercisboy_reg <- 
-  lmer(C_yr4_cbcl_int ~ C_yr4_total_bad_le*genderid_refcisboy + 
-         C_yr4_ders_total*genderid_refcisboy + 
-         C_yr4_age + (1|site),  
+  lmer(C_yr4_cbcl_int ~ C_yr4_total_bad_le*genderid_refcisboy + C_yr4_ders_total*genderid_refcisboy +
+  # lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
+  # lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
+       C_yr4_age + (1|site),  
        data=meddata, REML=FALSE)
 summary(cbcl_int_les_gendercisboy_reg)
 anova(cbcl_int_les_gendercisboy_reg)
+rsq(cbcl_int_les_gendercisboy_reg,adj=TRUE)
 # emmeans(cbcl_int_les_gendercisboy_reg, list(pairwise ~ C_total_bad_le*genderid_refcisboy), 
 #         adjust = "fdr",pbkrtest.limit = 4000)
 
@@ -1250,7 +1055,6 @@ res_var <- model_variances[2,'vcov']
 res_var
 R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
 R2_total_alt2
-rsq.lmm(cbcl_int_les_gendercisboy_reg,adj=TRUE)
 
 #### Calculate squared semi-partial correlation ie amount of variance in Y
 #### "uniquely" explained by that predictor (not overlapping with other Xs)
@@ -1307,6 +1111,7 @@ res_var <- model_variances[2,'vcov']
 res_var
 R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
 R2_total_alt2
+rsq(cbcl_ext_les_gendercisboy_reg,adj=TRUE)
 
 #### Calculate squared semi-partial correlation ie amount of variance in Y
 #### "uniquely" explained by that predictor (not overlapping with other Xs)
@@ -1351,8 +1156,16 @@ bpm_int_les_gendercisboy_reg <-
        data=meddata, REML=FALSE)
 summary(bpm_int_les_gendercisboy_reg)
 anova(bpm_int_les_gendercisboy_reg)
-emmeans(bpm_int_les_gendercisboy_reg, list(pairwise ~ C_yr4_total_bad_le*genderid_refcisboy),
-        adjust = "fdr",pbkrtest.limit = 4000)
+# emmeans(bpm_int_les_gendercisboy_reg, list(pairwise ~ genderid_refcisboy),
+# emmeans(bpm_int_les_gendercisboy_reg, list(pairwise ~ C_yr4_total_bad_le*genderid_refcisboy),
+#         adjust = "fdr",pbkrtest.limit = 4000)
+bpm_int_les_gendercisgirl_reg <- 
+  lmer(C_yr4_bpm_int ~ C_yr4_total_bad_le*genderid_refcisgirl + 
+         C_yr4_ders_total*genderid_refcisgirl + 
+         C_yr4_age + (1|site), 
+       data=meddata, REML=FALSE)
+summary(bpm_int_les_gendercisgirl_reg)
+anova(bpm_int_les_gendercisgirl_reg)
 
 #### Calculate total R2 using Liz Sanders' code
 model_Yhat_var <- var(predict(bpm_int_les_gendercisboy_reg))
@@ -1363,6 +1176,7 @@ res_var <- model_variances[2,'vcov']
 res_var
 R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
 R2_total_alt2
+rsq(bpm_int_les_gendercisboy_reg,adj=TRUE)
 
 #### Calculate squared semi-partial correlation ie amount of variance in Y
 #### "uniquely" explained by that predictor (not overlapping with other Xs)
@@ -1419,6 +1233,7 @@ res_var <- model_variances[2,'vcov']
 res_var
 R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
 R2_total_alt2
+rsq(bpm_ext_les_gendercisboy_reg,adj=TRUE)
 
 #### Calculate squared semi-partial correlation ie amount of variance in Y
 #### "uniquely" explained by that predictor (not overlapping with other Xs)
@@ -1478,7 +1293,7 @@ res_var <- model_variances[2,'vcov']
 res_var
 R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
 R2_total_alt2
-rsq.lmm(cbcl_int_les_sex_reg,adj=TRUE)
+rsq(cbcl_int_les_sex_reg,adj=TRUE)
 
 #### Calculate squared semi-partial correlation ie amount of variance in Y
 #### "uniquely" explained by that predictor (not overlapping with other Xs)
@@ -1525,6 +1340,7 @@ res_var <- model_variances[2,'vcov']
 res_var
 R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
 R2_total_alt2
+rsq(cbcl_ext_les_sex_reg,adj=TRUE)
 
 #### Calculate squared semi-partial correlation ie amount of variance in Y
 #### "uniquely" explained by that predictor (not overlapping with other Xs)
@@ -1571,6 +1387,7 @@ res_var <- model_variances[2,'vcov']
 res_var
 R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
 R2_total_alt2
+rsq(bpm_int_les_sex_reg,adj=TRUE)
 
 #### Calculate squared semi-partial correlation ie amount of variance in Y
 #### "uniquely" explained by that predictor (not overlapping with other Xs)
@@ -1617,7 +1434,7 @@ res_var <- model_variances[2,'vcov']
 res_var
 R2_total_alt2 <- model_Yhat_var/(model_Yhat_var + res_var)
 R2_total_alt2
-
+rsq(bpm_ext_les_sex_reg,adj=TRUE)
 #### Calculate squared semi-partial correlation ie amount of variance in Y
 #### "uniquely" explained by that predictor (not overlapping with other Xs)
 res_df <- as.numeric(summary(bpm_ext_les_sex_reg)$AICtab[5])
