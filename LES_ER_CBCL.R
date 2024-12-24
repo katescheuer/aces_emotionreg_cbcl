@@ -68,12 +68,20 @@ genderdata <- gish_y_gi %>%
   filter(eventname=="3_year_follow_up_y_arm_1"|
          eventname=="4_year_follow_up_y_arm_1") %>%
   # convert numeric sex values to human-readable character strings
-  mutate(sex = case_when(
+  # mutate(sex = case_when(
+    mutate(sex_details = case_when(
                   kbi_sex_assigned_at_birth==1 ~ "male",
                   kbi_sex_assigned_at_birth==2 ~ "female",
                   kbi_sex_assigned_at_birth==777 ~ "dont_know",
                   kbi_sex_assigned_at_birth==999 ~ "refuse"
                   )) %>%
+  # set "don't know" or "refuse" to be NA for sex
+  mutate(sex = case_when(
+    sex_details=="male" ~ "male",
+    sex_details=="female" ~ "female",
+    sex_details=="dont_know" ~ NA_character_,
+    sex_details=="refuse" ~ NA_character_
+  )) %>%
   # effect code sex
   # mutate(sex_female = if_else(sex=="female",1,-1)) %>%
   # dummy code sex
@@ -441,7 +449,7 @@ yr3sexdata <- yr3data %>%
 
 
 ### Combine year 4 and year 3 data to have option to use year 3 as x variable ####
-meddata <- yr4data %>%
+analysis_data <- yr4data %>%
   rename(
     C_yr4_total_bad_le = C_total_bad_le,
     C_yr4_ders_total = C_ders_total,
@@ -470,17 +478,9 @@ meddata <- yr4data %>%
          C_yr3_bpm_ext = C_bpm_ext,
          C_yr3_age = C_age)
 
-#### make version of data which excludes participants who answered
-#### "refuse" or "dont_know" to sex question, set male as reference level
-
-sex_meddata <- meddata %>% 
-  filter(sex!="refuse",
-         sex!="dont_know") %>%
-  mutate(sex = fct_relevel(sex, "male"))
-
 #### make version of data which excludes participants who are GD
 
-nogd_meddata <- meddata %>%
+nogd_analysis_data <- analysis_data %>%
   filter(genderid != "gd")
 
 #### Get general summary of values for each column for data from year 4 visit ####
@@ -517,7 +517,6 @@ yr4data %>%
 yr4data %>%
   group_by(genderid, sex) %>%
   count()
-
 
 
 ## BASIC STATS ####
@@ -1011,7 +1010,7 @@ wilcox.test(bpm_ext ~ sex, data = yr3sexdata)
 ders_les_age_reg <- lmer(C_yr4_ders_total ~ C_yr4_total_bad_le + C_yr4_age + (1|site),
 # ders_les_age_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
 # ders_les_age_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
-                         data=meddata)
+                         data=analysis_data)
 summary(ders_les_age_reg)
 rsq(ders_les_age_reg,adj=TRUE)
 
@@ -1022,55 +1021,55 @@ rsq(ders_les_age_reg,adj=TRUE)
 cbcl_int_les_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr4_total_bad_le + C_yr4_age + (1|site),
 # cbcl_int_les_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
 # cbcl_int_les_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
-                           data=meddata)
+                           data=analysis_data)
 summary(cbcl_int_les_age_reg)
 #### CBCL externalizing ~ LES + age + (1|site) ####
 cbcl_ext_les_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr4_total_bad_le + C_yr4_age + (1|site),
 # cbcl_ext_les_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
 # cbcl_ext_les_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
-                           data=meddata)
+                           data=analysis_data)
 summary(cbcl_ext_les_age_reg)
 #### BPM internalizing ~ LES + age + (1|site) ####
 bpm_int_les_age_reg <- lmer(C_yr4_bpm_int ~ C_yr4_total_bad_le + C_yr4_age + (1|site),
  # bpm_int_les_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
  # bpm_int_les_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
-                             data=meddata)
+                             data=analysis_data)
 summary(bpm_int_les_age_reg)
 #### BPM externalizing ~ LES + age + (1|site) ####
 bpm_ext_les_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr4_total_bad_le + C_yr4_age + (1|site),
  # bpm_ext_les_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
  # bpm_ext_les_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
-                             data=meddata)
+                             data=analysis_data)
 summary(bpm_ext_les_age_reg)
 #### CBCL internalizing ~ DERS + age + (1|site) ####
 cbcl_int_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr4_ders_total + C_yr4_age + (1|site),
  # cbcl_int_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_ders_total + C_yr4_age + (1|site),
  # cbcl_int_ders_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr4_ders_total + C_yr4_age + (1|site),
-                           data=meddata)
+                           data=analysis_data)
 summary(cbcl_int_ders_age_reg)
 #### CBCL externalizing ~ DERS + age + (1|site) ####
 cbcl_ext_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr4_ders_total + C_yr4_age + (1|site),
  # cbcl_ext_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_ders_total + C_yr4_age + (1|site),
  # cbcl_ext_ders_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_ders_total + C_yr4_age + (1|site),
-                             data=meddata)
+                             data=analysis_data)
 summary(cbcl_ext_ders_age_reg)
 #### BPM internalizing ~ DERS + age + (1|site) ####
 bpm_int_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr4_ders_total + C_yr4_age + (1|site),
   # bpm_int_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_ders_total + C_yr4_age + (1|site),
   # bpm_int_ders_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr4_ders_total + C_yr4_age + (1|site),
-                            data=meddata)
+                            data=analysis_data)
 summary(bpm_int_ders_age_reg)
 #### BPM externalizing ~ DERS + age + (1|site) ####
 bpm_ext_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr4_ders_total + C_yr4_age + (1|site),
   # bpm_ext_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_ders_total + C_yr4_age + (1|site),
   # bpm_ext_ders_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr4_ders_total + C_yr4_age + (1|site),
-                            data=meddata)
+                            data=analysis_data)
 summary(bpm_ext_ders_age_reg)
 #### CBCL internalizing ~ LES + DERS + age + (1|site) ####
 cbcl_int_les_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr4_total_bad_le + C_yr4_ders_total + C_yr4_age + (1|site),
 # cbcl_int_les_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
 # cbcl_int_les_ders_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le + C_log_yr4_ders_total + C_yr4_age + (1|site),
-                              data=meddata)
+                              data=analysis_data)
 summary(cbcl_int_les_ders_age_reg)
 BIC(cbcl_int_les_ders_age_reg)
 rsq(cbcl_int_les_ders_age_reg, adj=TRUE)
@@ -1078,21 +1077,21 @@ rsq(cbcl_int_les_ders_age_reg, adj=TRUE)
 cbcl_ext_les_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr4_total_bad_le + C_yr4_ders_total + C_yr4_age + (1|site),
 # cbcl_ext_les_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
 # cbcl_ext_les_ders_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le + C_log_yr4_ders_total + C_yr4_age + (1|site),
-                              data=meddata)
+                              data=analysis_data)
 summary(cbcl_ext_les_ders_age_reg)
 rsq(cbcl_ext_les_ders_age_reg, adj=TRUE)
 #### BPM internalizing ~ LES + DERS + age + (1|site) ####
 bpm_int_les_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr4_total_bad_le + C_yr4_ders_total + C_yr4_age + (1|site),
 # bpm_int_les_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
 # bpm_int_les_ders_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le + C_log_yr4_ders_total + C_yr4_age + (1|site),
-                              data=meddata)
+                              data=analysis_data)
 summary(bpm_int_les_ders_age_reg)
 rsq(bpm_int_les_ders_age_reg, adj=TRUE)
 #### BPM externalizing ~ LES + DERS + age + (1|site) ####
 bpm_ext_les_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr4_total_bad_le + C_yr4_ders_total + C_yr4_age + (1|site),
 # bpm_ext_les_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
 # bpm_ext_les_ders_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr4_total_bad_le + C_log_yr4_ders_total + C_yr4_age + (1|site),
-                              data=meddata)
+                              data=analysis_data)
 summary(bpm_ext_les_ders_age_reg)
 rsq(bpm_ext_les_ders_age_reg, adj=TRUE)
 
@@ -1106,7 +1105,7 @@ rsq(bpm_ext_les_ders_age_reg, adj=TRUE)
 ders_les_gendercisboy_reg <- lmer(C_yr4_ders_total ~ C_yr4_total_bad_le*genderid_refcisboy + C_yr4_age + (1|site),
 # ders_les_gendercisboy_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr4_age + (1|site),
 # ders_les_gendercisboy_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_yr4_age + (1|site),
-                         data=meddata)
+                         data=analysis_data)
 summary(ders_les_gendercisboy_reg)
 anova(ders_les_gendercisboy_reg)
 rsq(ders_les_gendercisboy_reg,adj=TRUE)
@@ -1118,7 +1117,7 @@ rsq(ders_les_gendercisboy_reg,adj=TRUE)
 ders_les_sex_reg <- lmer(C_yr4_ders_total ~ C_yr4_total_bad_le*sex + C_yr4_age + (1|site),
 # ders_les_sex_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le*sex + C_yr4_age + (1|site),
 # ders_les_sex_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr4_total_bad_le*sex + C_yr4_age + (1|site),
-                                  data=sex_meddata)
+                                  data=analysis_data)
 summary(ders_les_sex_reg)
 rsq(ders_les_sex_reg, adj=TRUE)
 ### Mixed effect linear regression to determine whether gender moderates ####
@@ -1130,7 +1129,7 @@ cbcl_int_les_gendercisboy_reg <-
   # lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
   # lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
        C_yr4_age + (1|site),  
-       data=meddata, REML=FALSE)
+       data=analysis_data, REML=FALSE)
 summary(cbcl_int_les_gendercisboy_reg)
 anova(cbcl_int_les_gendercisboy_reg)
 rsq(cbcl_int_les_gendercisboy_reg,adj=TRUE)
@@ -1140,7 +1139,7 @@ cbcl_ext_les_gendercisboy_reg <-
    # lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
    # lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
          C_yr4_age + (1|site),  
-       data=meddata, REML=FALSE)
+       data=analysis_data, REML=FALSE)
 summary(cbcl_ext_les_gendercisboy_reg)
 anova(cbcl_ext_les_gendercisboy_reg)
 rsq(bpm_ext_les_gendercisboy_reg,adj=TRUE)
@@ -1150,7 +1149,7 @@ bpm_int_les_gendercisboy_reg <-
    # lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
    # lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
          C_yr4_age + (1|site),  
-       data=meddata, REML=FALSE)
+       data=analysis_data, REML=FALSE)
 summary(bpm_int_les_gendercisboy_reg)
 anova(bpm_int_les_gendercisboy_reg)
 rsq(bpm_int_les_gendercisboy_reg,adj=TRUE)
@@ -1160,7 +1159,7 @@ bpm_ext_les_gendercisboy_reg <-
    # lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
    # lmer(C_log_yr4_bpm_ext ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
          C_yr4_age + (1|site),  
-       data=meddata, REML=FALSE)
+       data=analysis_data, REML=FALSE)
 summary(bpm_ext_les_gendercisboy_reg)
 anova(bpm_ext_les_gendercisboy_reg)
 rsq(bpm_ext_les_gendercisboy_reg,adj=TRUE)
@@ -1173,7 +1172,7 @@ cbcl_int_les_sex_reg <-
   lmer(C_yr4_cbcl_int ~ C_yr4_total_bad_le*sex + C_yr4_ders_total*sex + C_yr4_age + (1|site),
   # lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
   # lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
-       data=sex_meddata, REML=FALSE)
+       data=analysis_data, REML=FALSE)
 summary(cbcl_int_les_sex_reg)
 anova(cbcl_int_les_sex_reg)
 rsq(cbcl_int_les_sex_reg,adj=TRUE)
@@ -1182,7 +1181,7 @@ cbcl_ext_les_sex_reg <-
   lmer(C_yr4_cbcl_ext ~ C_yr4_total_bad_le*sex + C_yr4_ders_total*sex + C_yr4_age + (1|site),
    # lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
    # lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
-       data=sex_meddata, REML=FALSE)
+       data=analysis_data, REML=FALSE)
 summary(cbcl_ext_les_sex_reg)
 anova(cbcl_ext_les_sex_reg)
 rsq(bpm_ext_les_sex_reg,adj=TRUE)
@@ -1191,7 +1190,7 @@ bpm_int_les_sex_reg <-
   # lmer(C_yr4_bpm_int ~ C_yr4_total_bad_le*sex + C_yr4_ders_total*sex + C_yr4_age + (1|site),
   lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
   # lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
-       data=sex_meddata, REML=FALSE)
+       data=analysis_data, REML=FALSE)
 summary(bpm_int_les_sex_reg)
 anova(bpm_int_les_sex_reg)
 rsq(bpm_int_les_sex_reg,adj=TRUE)
@@ -1200,7 +1199,7 @@ bpm_ext_les_sex_reg <-
   lmer(C_yr4_bpm_ext ~ C_yr4_total_bad_le*sex + C_yr4_ders_total*sex + C_yr4_age + (1|site),
    # lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
    # lmer(C_log_yr4_bpm_ext ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
-       data=sex_meddata, REML=FALSE)
+       data=analysis_data, REML=FALSE)
 summary(bpm_ext_les_sex_reg)
 anova(bpm_ext_les_sex_reg)
 rsq(bpm_ext_les_sex_reg,adj=TRUE)
@@ -1220,8 +1219,30 @@ cbclint_model <-
         ab := a*b
       # total effect
         total := c + (a*b)'
+# cbclint_model <- 
+#   ' # direct effect
+#         C_yr4_cbcl_int~ c*C_yr3_total_bad_le + C_yr4_age
+#       # mediator
+#         C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
+#       # indirect effect
+#         C_yr4_cbcl_int~ b*C_yr3_ders_total
+#       # indirect effect (a*b)
+#         ab := a*b
+#       # total effect
+#         total := c + (a*b)'
+# cbclint_model <-
+#   ' # direct effect
+#         C_log_yr4_cbcl_int~ c*C_log_yr4_total_bad_le + C_yr4_age
+#       # mediator
+#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
+#       # indirect effect
+#         C_log_yr4_cbcl_int~ b*C_log_yr4_ders_total
+#       # indirect effect (a*b)
+#         ab := a*b
+#       # total effect
+#         total := c + (a*b)'
 cbclint_model <- sem(cbclint_model, 
-                             data = meddata, 
+                             data = analysis_data, 
                              meanstructure = TRUE,
                              se = "robust.cluster",
                              # group = "genderid",
@@ -1242,8 +1263,30 @@ cbclext_model <-
         ab := a*b
       # total effect
         total := c + (a*b)'
+# cbclext_model <- 
+#   ' # direct effect
+#         C_yr4_cbcl_ext~ c*C_yr3_total_bad_le + C_yr4_age
+#       # mediator
+#         C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
+#       # indirect effect
+#         C_yr4_cbcl_ext~ b*C_yr3_ders_total
+#       # indirect effect (a*b)
+#         ab := a*b
+#       # total effect
+#         total := c + (a*b)'
+# cbclext_model <- 
+#   ' # direct effect
+#         C_log_yr4_cbcl_ext~ c*C_log_yr4_total_bad_le + C_yr4_age
+#       # mediator
+#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
+#       # indirect effect
+#         C_log_yr4_cbcl_ext~ b*C_log_yr4_ders_total
+#       # indirect effect (a*b)
+#         ab := a*b
+#       # total effect
+#         total := c + (a*b)'
 cbclext_model <- sem(cbclext_model, 
-                     data = meddata, 
+                     data = analysis_data, 
                      meanstructure = TRUE,
                      se = "robust.cluster",
                      # group = "genderid",
@@ -1264,8 +1307,30 @@ bpmint_model <-
         ab := a*b
       # total effect
         total := c + (a*b)'
+# bpmint_model <- 
+#   ' # direct effect
+#         C_yr4_bpm_int~ c*C_yr3_total_bad_le + C_yr4_age
+#       # mediator
+#         C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
+#       # indirect effect
+#         C_yr4_bpm_int~ b*C_yr3_ders_total
+#       # indirect effect (a*b)
+#         ab := a*b
+#       # total effect
+#         total := c + (a*b)'
+# bpmint_model <- 
+#   ' # direct effect
+#         C_log_yr4_bpm_int~ c*C_log_yr4_total_bad_le + C_yr4_age
+#       # mediator
+#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
+#       # indirect effect
+#         C_log_yr4_bpm_int~ b*C_log_yr4_ders_total
+#       # indirect effect (a*b)
+#         ab := a*b
+#       # total effect
+#         total := c + (a*b)'
 bpmint_model <- sem(bpmint_model, 
-                     data = meddata, 
+                     data = analysis_data, 
                      meanstructure = TRUE,
                      se = "robust.cluster",
                      # group = "genderid",
@@ -1286,8 +1351,30 @@ bpmext_model <-
         ab := a*b
       # total effect
         total := c + (a*b)'
+bpmext_model <- 
+  ' # direct effect
+        C_yr4_bpm_ext~ c*C_yr3_total_bad_le + C_yr4_age
+      # mediator
+        C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
+      # indirect effect
+        C_yr4_bpm_ext~ b*C_yr3_ders_total
+      # indirect effect (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b)'
+bpmext_model <- 
+  ' # direct effect
+        C_log_yr4_bpm_ext~ c*C_log_yr4_total_bad_le + C_yr4_age
+      # mediator
+        C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
+      # indirect effect
+        C_log_yr4_bpm_ext~ b*C_log_yr4_ders_total
+      # indirect effect (a*b)
+        ab := a*b
+      # total effect
+        total := c + (a*b)'
 bpmext_model <- sem(bpmext_model, 
-                     data = meddata, 
+                     data = analysis_data, 
                      meanstructure = TRUE,
                      se = "robust.cluster",
                      # group = "genderid",
@@ -1296,1210 +1383,569 @@ summary(bpmext_model, fit.measures=T,
         standardized=F, ci=TRUE, rsquare=TRUE)
 parameterEstimates(bpmext_model, boot.ci.type = "bca.simple")
 
+
 ## STEP FOUR: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION ####
-### Moderated mediation model for CBCL internalizing based on gender ####
-#### Constrained gender model by group
-cbclint_constrained_gender_model <- 
-  ' # direct effect
-        C_yr4_cbcl_int~ c*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_cbcl_int~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-# ' # direct effect
-#         C_yr4_cbcl_int~ c*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_cbcl_int~ b*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-# ' # direct effect
-#         C_log_yr4_cbcl_int~ c*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_cbcl_int~ b*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-cbclint_constrained_gender_model <- sem(cbclint_constrained_gender_model, 
-                     data = meddata, 
-                     meanstructure = TRUE,
-                     se = "robust.cluster",
-                     group = "genderid",
-                     cluster = "site")
-summary(cbclint_constrained_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclint_constrained_gender_model, boot.ci.type = "bca.simple")
 
-#### Unconstrained gender model by group
-cbclint_unconstrained_gender_model <- 
-  ' # direct effect
-        C_yr4_cbcl_int~ c(c1,c2,c3)*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ c(a1,a2,a3)*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_cbcl_int~ c(b1,b2,b3)*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab1 := a1*b1
-        ab2 := a2*b2
-        ab3 := a3*b3
-      # total effect
-        total1 := c1 + (a1*b1)
-        total2 := c2 + (a2*b2)
-        total3 := c3 + (a3*b3)
-'
-# ' # direct effect
-#         C_yr4_cbcl_int~ c(c1,c2,c3)*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ c(a1,a2,a3)*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_cbcl_int~ c(b1,b2,b3)*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#         ab3 := a3*b3
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-#         total3 := c3 + (a3*b3)
-# '
-#   ' # direct effect
-#         C_log_yr4_cbcl_int~ c(c1,c2,c3)*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ c(a1,a2,a3)*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_cbcl_int~ c(b1,b2,b3)*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#         ab3 := a3*b3
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-#         total3 := c3 + (a3*b3)
-# '
-cbclint_unconstrained_gender_model <- sem(cbclint_unconstrained_gender_model, 
-                                        data = meddata, 
-                                        meanstructure = TRUE,
-                                        se = "robust.cluster",
-                                        group = "genderid",
-                                        cluster = "site")
-summary(cbclint_unconstrained_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclint_unconstrained_gender_model, boot.ci.type = "bca.simple")
+### Moderated mediation model (Hayes model 59) to test whether gender ####
+### moderates mediating effect of DERS on relationship between LES and CBCL
+### internalizing 
+cbcl_int_gender_model15 <- PROCESS(
+  analysis_data,
+  # nogd_analysis_data,
+  y = "C_yr4_cbcl_int",
+  # y = "C_log_yr4_cbcl_int",
+  x = "C_yr4_total_bad_le",
+  # x = "C_yr3_total_bad_le",
+  # x = "C_log_yr4_total_bad_le",
+  meds = c("C_yr4_ders_total"),
+  # meds = c("C_yr3_ders_total"),
+  # meds = c("C_log_yr4_ders_total"),
+  # mods = c("genderid"),
+  mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c(
+    # "C_yr3_age"
+    "C_yr4_age"
+    # "C_yr3_ders_total"
+    # "C_yr3_cbcl_int"
+    # "C_yr3_total_bad_le"
+  ),
+  hlm.re.m = "site",
+  hlm.re.y = "site",
+  mod.path = c(
+    # "x-y",
+    # "x-m",
+    # "m-y"
+    "all"
+  ),
+  cov.path = c("both"),
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = FALSE,
+  std = FALSE,
+  digits = 5)
 
-#### Does the unconstrained model fit better than the constrained model?
-anova(cbclint_constrained_gender_model,cbclint_unconstrained_gender_model)
+### Moderated mediation model (Hayes model 59) to test whether gender ####
+### moderates mediating effect of DERS on relationship between LES and CBCL
+### externalizing 
+cbcl_ext_gender_model15 <- PROCESS(
+  analysis_data,
+  # nogd_analysis_data,
+  y = "C_yr4_cbcl_ext",
+  # y = "C_log_yr4_cbcl_ext",
+  x = "C_yr4_total_bad_le",
+  # x = "C_yr3_total_bad_le",
+  # x = "C_log_yr4_total_bad_le",
+  meds = c("C_yr4_ders_total"),
+  # meds = c("C_yr3_ders_total"),
+  # meds = c("C_log_yr4_ders_total"),
+  # mods = c("genderid"),
+  mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c(
+    # "C_yr3_age"
+    "C_yr4_age"
+    # "C_yr3_ders_total"
+    # "C_yr3_cbcl_ext"
+    # "C_yr3_total_bad_le"
+  ),
+  hlm.re.m = "site",
+  hlm.re.y = "site",
+  mod.path = c(
+    # "x-y",
+    # "x-m",
+    # "m-y"
+    "all"
+  ),
+  cov.path = c("both"),
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = FALSE,
+  std = FALSE,
+  digits = 5)
 
-#### Does the constrained model fit better than the model without gender?
-anova(cbclint_model,cbclint_constrained_gender_model)
-
-#### Dummy-coded gender model (not by group)
-cbclint_dummy_gender_model <- 
-  ' # direct effect
-        C_yr4_cbcl_int~ c*C_yr4_total_bad_le + gender_cisgirl + gender_gd + C_yr4_age + C_yr4_total_bad_le*gender_cisgirl + C_yr4_total_bad_le*gender_gd
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + gender_cisgirl + gender_gd + C_yr4_age + C_yr4_total_bad_le*gender_cisgirl + C_yr4_total_bad_le*gender_gd
-      # indirect effect
-        C_yr4_cbcl_int~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-cbclint_dummy_gender_model <- sem(cbclint_dummy_gender_model, 
-                                          data = meddata, 
-                                          meanstructure = TRUE,
-                                          se = "robust.cluster",
-                                          # group = "genderid",
-                                          cluster = "site")
-summary(cbclint_dummy_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclint_dummy_gender_model, boot.ci.type = "bca.simple")
-
-### Moderated mediation model for CBCL externalizing based on gender ####
-#### Constrained gender model by group
-cbclext_constrained_gender_model <- 
-  ' # direct effect
-        C_yr4_cbcl_ext~ c*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_cbcl_ext~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-# ' # direct effect
-#         C_yr4_cbcl_ext~ c*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_cbcl_ext~ b*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-# ' # direct effect
-#         C_log_yr4_cbcl_ext~ c*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_cbcl_ext~ b*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-cbclext_constrained_gender_model <- sem(cbclext_constrained_gender_model, 
-                                        data = meddata, 
-                                        meanstructure = TRUE,
-                                        se = "robust.cluster",
-                                        group = "genderid",
-                                        cluster = "site")
-summary(cbclext_constrained_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclext_constrained_gender_model, boot.ci.type = "bca.simple")
-
-#### Unconstrained gender model by group
-cbclext_unconstrained_gender_model <- 
-  ' # direct effect
-        C_yr4_cbcl_ext~ c(c1,c2,c3)*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ c(a1,a2,a3)*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_cbcl_ext~ c(b1,b2,b3)*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab1 := a1*b1
-        ab2 := a2*b2
-        ab3 := a3*b3
-      # total effect
-        total1 := c1 + (a1*b1)
-        total2 := c2 + (a2*b2)
-        total3 := c3 + (a3*b3)
-'
-# ' # direct effect
-#         C_yr4_cbcl_ext~ c(c1,c2,c3)*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ c(a1,a2,a3)*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_cbcl_ext~ c(b1,b2,b3)*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#         ab3 := a3*b3
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-#         total3 := c3 + (a3*b3)
-# '
-# ' # direct effect
-#         C_log_yr4_cbcl_ext~ c(c1,c2,c3)*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ c(a1,a2,a3)*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_cbcl_ext~ c(b1,b2,b3)*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#         ab3 := a3*b3
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-#         total3 := c3 + (a3*b3)
-# '
-cbclext_unconstrained_gender_model <- sem(cbclext_unconstrained_gender_model, 
-                                          data = meddata, 
-                                          meanstructure = TRUE,
-                                          se = "robust.cluster",
-                                          group = "genderid",
-                                          cluster = "site")
-summary(cbclext_unconstrained_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclext_unconstrained_gender_model, boot.ci.type = "bca.simple")
-
-#### Does the unconstrained model fit better than the constrained model?
-anova(cbclext_constrained_gender_model,cbclext_unconstrained_gender_model)
-
-#### Does the constrained model fit better than the model without gender?
-anova(cbclext_model,cbclext_constrained_gender_model)
-
-#### Dummy-coded gender model (not by group)
-cbclext_dummy_gender_model <- 
-  ' # direct effect
-        C_yr4_cbcl_ext~ c*C_yr4_total_bad_le + gender_cisgirl + gender_gd + C_yr4_age + C_yr4_total_bad_le*gender_cisgirl + C_yr4_total_bad_le*gender_gd
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + gender_cisgirl + gender_gd + C_yr4_age + C_yr4_total_bad_le*gender_cisgirl + C_yr4_total_bad_le*gender_gd
-      # indirect effect
-        C_yr4_cbcl_ext~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-cbclext_dummy_gender_model <- sem(cbclext_dummy_gender_model, 
-                                  data = meddata, 
-                                  meanstructure = TRUE,
-                                  se = "robust.cluster",
-                                  # group = "genderid",
-                                  cluster = "site")
-summary(cbclext_dummy_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclext_dummy_gender_model, boot.ci.type = "bca.simple")
-
-### Moderated mediation model for BPM internalizing based on gender ####
-#### Constrained gender model by group
-bpmint_constrained_gender_model <- 
-  ' # direct effect
-        C_yr4_bpm_int~ c*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_bpm_int~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-# ' # direct effect
-#         C_yr4_bpm_int~ c*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_bpm_int~ b*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-# ' # direct effect
-#         C_log_yr4_bpm_int~ c*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_bpm_int~ b*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-bpmint_constrained_gender_model <- sem(bpmint_constrained_gender_model, 
-                                        data = meddata, 
-                                        meanstructure = TRUE,
-                                        se = "robust.cluster",
-                                        group = "genderid",
-                                        cluster = "site")
-summary(bpmint_constrained_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmint_constrained_gender_model, boot.ci.type = "bca.simple")
-
-#### Unconstrained gender model by group
-bpmint_unconstrained_gender_model <- 
-  ' # direct effect
-        C_yr4_bpm_int~ c(c1,c2,c3)*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ c(a1,a2,a3)*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_bpm_int~ c(b1,b2,b3)*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab1 := a1*b1
-        ab2 := a2*b2
-        ab3 := a3*b3
-      # total effect
-        total1 := c1 + (a1*b1)
-        total2 := c2 + (a2*b2)
-        total3 := c3 + (a3*b3)
-'
-# ' # direct effect
-#         C_yr4_bpm_int~ c(c1,c2,c3)*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ c(a1,a2,a3)*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_bpm_int~ c(b1,b2,b3)*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#         ab3 := a3*b3
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-#         total3 := c3 + (a3*b3)
-# '
-# ' # direct effect
-#         C_log_yr4_bpm_int~ c(c1,c2,c3)*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ c(a1,a2,a3)*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_bpm_int~ c(b1,b2,b3)*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#         ab3 := a3*b3
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-#         total3 := c3 + (a3*b3)
-# '
-bpmint_unconstrained_gender_model <- sem(bpmint_unconstrained_gender_model, 
-                                          data = meddata, 
-                                          meanstructure = TRUE,
-                                          se = "robust.cluster",
-                                          group = "genderid",
-                                          cluster = "site")
-summary(bpmint_unconstrained_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmint_unconstrained_gender_model, boot.ci.type = "bca.simple")
-
-#### Does the unconstrained model fit better than the constrained model?
-anova(bpmint_constrained_gender_model,bpmint_unconstrained_gender_model)
-
-#### Does the constrained model fit better than the model without gender?
-anova(bpmint_model,bpmint_constrained_gender_model)
-
-#### Which gender groups are different? Use Z test to find out. 
-##### For (a) LES -> ER
+# are the conditional direct effects [c'] of X on Y significant different for
+# different groups? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.821 - 0.797)/(sqrt((0.250^2)+(0.185)^2)) = 0.07716882
+#     Z = (0.307 -0.523 )/(sqrt((0.115^2)+(0.111)^2)) = -1.351426
 # cis boy (beta1) vs gd (beta2):
-#     Z = (0.821 - 1.601)/(sqrt((0.250^2)+(0.662)^2)) = -1.102267
+#     Z = (0.307 -0.219 )/(sqrt((0.115^2)+(0.281)^2)) = 0.2898346
 # cis girl (beta1) vs gd (beta2):
-#     Z = (0.797 - 1.601)/(sqrt((0.185^2)+(0.662)^2)) = -1.169686
+#     Z = (0.523 -0.219 )/(sqrt((0.111^2)+(0.281)^2)) = 1.006192
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = 0.07716882, so pnorm(-abs(0.07716882))*2 = 0.9384892
-# cis boy vs gd: Z = -1.102267, so pnorm(-abs(-1.102267))*2 = 0.2703456
-# cis girl vs gd: Z = -1.169686, so pnorm(-abs(-1.169686))*2 = 0.2421274
+# cis boy vs cis girl: Z = -1.351426, so pnorm(-abs(-1.351426))*2 = 0.176559
+# cis boy vs gd: Z = 0.2898346, so pnorm(-abs(0.2898346))*2 = 0.7719428
+# cis girl vs gd: Z = 1.006192, so pnorm(-abs(1.006192))*2 = 0.3143232
 # Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.9384892,0.2703456,0.2421274),method="fdr")
+# p.adjust(c(0.176559,0.7719428,0.3143232),method="fdr")
+# So final p-values rounded to three places are:
+# cis boy vs cis girl: p = .471
+# cis boy vs gd: p = .772
+# cis girl vs gd: .471
+
+# are the conditional indirect effects [ab] of X through M on Y significantly 
+# different? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# cis boy (beta1) vs cis girl (beta2): 
+#     Z = (0.259 -0.293 )/(sqrt((0.045^2)+(0.053)^2)) = -0.4890188
+# cis boy (beta1) vs gd (beta2):
+#     Z = (0.259 -0.296 )/(sqrt((0.045^2)+(0.066)^2)) = -0.4631881
+# cis girl (beta1) vs gd (beta2):
+#     Z = (0.293 -0.296 )/(sqrt((0.053^2)+(0.066)^2)) = -0.03544159
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# cis boy vs cis girl: Z = -0.4890188, so pnorm(-abs(-0.4890188))*2 = 0.6248284
+# cis boy vs gd: Z = -0.4631881, so pnorm(-abs(-0.4631881))*2 = 0.6432295
+# cis girl vs gd: Z = -0.03544159, so pnorm(-abs(-0.03544159))*2 = 0.9717276
+# Finally, we need to fdr correct for multiple tests:
+# p.adjust(c(0.6248284,0.6432295,0.9717276),method="fdr")
+# So final p-values rounded to three places are:
+# cis boy vs cis girl: p = .965
+# cis boy vs gd: p = .965
+# cis girl vs gd: .972
+
+# are the conditional effects [b] of M on Y significantly 
+# different? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# cis boy (beta1) vs cis girl (beta2): 
+#     Z = (0.298  -0.337  )/(sqrt((0.013^2)+(0.015)^2)) = -1.964792
+# cis boy (beta1) vs gd (beta2):
+#     Z = (0.298  -0.340  )/(sqrt((0.013^2)+(0.037)^2)) = -1.070955
+# cis girl (beta1) vs gd (beta2):
+#     Z = (0.337  -0.340  )/(sqrt((0.015^2)+(0.037)^2)) = -0.07514102
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# cis boy vs cis girl: Z = -1.964792, so pnorm(-abs(-1.964792))*2 = 0.04943832
+# cis boy vs gd: Z = -1.070955, so pnorm(-abs(-1.070955))*2 = 0.2841897
+# cis girl vs gd: Z = -0.07514102, so pnorm(-abs(-0.07514102))*2 = 0.9401025
+# Finally, we need to fdr correct for multiple tests:
+# p.adjust(c(0.04943832,0.2841897,0.9401025),method="fdr")
+# So final p-values rounded to three places are:
+# cis boy vs cis girl: p = .148
+# cis boy vs gd: p = .426
+# cis girl vs gd: .940
+
+
+### Moderated mediation model (Hayes model 59) to test whether gender ####
+### moderates mediating effect of DERS on relationship between LES and BPM
+### internalizing 
+bpm_int_gender_model15 <- PROCESS(
+  analysis_data,
+  # nogd_analysis_data,
+  y = "C_yr4_bpm_int",
+  # y = "C_log_yr4_bpm_int",
+  x = "C_yr4_total_bad_le",
+  # x = "C_yr3_total_bad_le",
+  # x = "C_log_yr4_total_bad_le",
+  meds = c("C_yr4_ders_total"),
+  # meds = c("C_yr3_ders_total"),
+  # meds = c("C_log_yr4_ders_total"),
+  # mods = c("genderid"),
+  mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c(
+    # "C_yr3_age"
+    "C_yr4_age"
+    # "C_yr3_ders_total"
+    # "C_yr3_bpm_int"
+    # "C_yr3_total_bad_le"
+  ),
+  hlm.re.m = "site",
+  hlm.re.y = "site",
+  mod.path = c(
+    # "x-y",
+    # "x-m",
+    # "m-y"
+    "all"
+  ),
+  cov.path = c("both"),
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 4000,
+  seed = 1234,
+  center = FALSE,
+  std = FALSE,
+  digits = 5)
+
+# are the conditional direct effects [c'] of X on Y significant different for
+# different groups? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# cis boy (beta1) vs cis girl (beta2): 
+#     Z = (.47064-.73140)/(sqrt((.07059^2)+(.06808)^2)) = -2.658902
+# cis boy (beta1) vs gd (beta2):
+#     Z = (.47064-.86336)/(sqrt((.07059^2)+(.17177)^2)) = -2.114705
+# cis girl (beta1) vs gd (beta2):
+#     Z = (.73140-.86336)/(sqrt((.06808^2)+(.17177)^2)) = -0.7141866
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# cis boy vs cis girl: Z = -2.658902, so pnorm(-abs(-2.658902))*2 = 0.007839576
+# cis boy vs gd: Z = -2.114705, so pnorm(-abs(-2.114705))*2 = 0.0344551
+# cis girl vs gd: Z = -0.7141866, so pnorm(-abs(-0.7141866))*2 = 0.4751118
+# Finally, we need to fdr correct for multiple tests:
+# p.adjust(c(0.007839576,0.0344551,0.4751118),method="fdr")
+# So final p-values rounded to three places are:
+# cis boy vs cis girl: p = .025
+# cis boy vs gd: p = .053
+# cis girl vs gd: .475
+
+# are the conditional indirect effects [ab] of X through M on Y significantly 
+# different? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# cis boy (beta1) vs cis girl (beta2): 
+#     Z = (0.043-0.057)/(sqrt((0.010^2)+(0.014)^2)) = -0.8137335
+# cis boy (beta1) vs gd (beta2):
+#     Z = (0.043-0.058)/(sqrt((0.010^2)+(0.029)^2)) = -0.488986
+# cis girl (beta1) vs gd (beta2):
+#     Z = (0.057-0.058)/(sqrt((0.014^2)+(0.029)^2)) = -0.0310535
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# cis boy vs cis girl: Z = -0.8137335, so pnorm(-abs(-0.8137335))*2 = 0.4157976
+# cis boy vs gd: Z = -0.488986, so pnorm(-abs(-0.488986))*2 = 0.6248516
+# cis girl vs gd: Z = -0.0310535, so pnorm(-abs(-0.0310535))*2 = 0.9752269
+# Finally, we need to fdr correct for multiple tests:
+# p.adjust(c(0.4157976,0.6248516,0.9752269),method="fdr")
 # So final p-values rounded to three places are:
 # cis boy vs cis girl: p = .938
-# cis boy vs gd: p = .406
-# cis girl vs gd: .406
+# cis boy vs gd: p = .937
+# cis girl vs gd: .975
 
-##### For (b) ER -> BPM int
+# are the conditional effects [b] of M on Y significantly 
+# different? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.049 - 0.066)/(sqrt((0.010^2)+(0.010)^2)) = -1.202082
+#     Z = (0.049-0.066)/(sqrt((0.008^2)+(0.009)^2)) = -0.8137335
 # cis boy (beta1) vs gd (beta2):
-#     Z = (0.049 - 0.068)/(sqrt((0.010^2)+(0.029)^2)) = -0.6193823
+#     Z = (0.049-0.066)/(sqrt((0.008^2)+(0.023)^2)) = -0.488986
 # cis girl (beta1) vs gd (beta2):
-#     Z = (0.066 - 0.068)/(sqrt((0.010^2)+(0.029)^2)) = -0.06519814
+#     Z = (0.066-0.066)/(sqrt((0.009^2)+(0.023)^2)) = -0.0310535
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -1.202082, so pnorm(-abs(-1.202082))*2 = 0.2293318
-# cis boy vs gd: Z = -0.6193823, so pnorm(-abs(-0.6193823))*2 = 0.5356645
-# cis girl vs gd: Z = -0.06519814, so pnorm(-abs(-0.06519814))*2 = 0.9480162
+# cis boy vs cis girl: Z = -0.8137335, so pnorm(-abs(-0.8137335))*2 = 0.4157976
+# cis boy vs gd: Z = -0.488986, so pnorm(-abs(-0.488986))*2 = 0.6248516
+# cis girl vs gd: Z = -0.0310535, so pnorm(-abs(-0.0310535))*2 = 0.9752269
 # Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.2293318,0.5356645,0.9480162),method="fdr")
+# p.adjust(c(0.4157976,0.6248516,0.9752269),method="fdr")
 # So final p-values rounded to three places are:
-# cis boy vs cis girl: p = .688
-# cis boy vs gd: p = .803
-# cis girl vs gd: .948
+# cis boy vs cis girl: p = .938
+# cis boy vs gd: p = .937
+# cis girl vs gd: .975
 
-##### For direct (c') LES -> BPM int
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.471 - 0.730)/(sqrt((0.059^2)+(0.050)^2)) = -3.348982
-# cis boy (beta1) vs gd (beta2):
-#     Z = (0.471 - 0.864)/(sqrt((0.059^2)+(0.210)^2)) = -1.801672
-# cis girl (beta1) vs gd (beta2):
-#     Z = (0.730 - 0.864)/(sqrt((0.050^2)+(0.210)^2)) = -0.620743
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -3.348982, so pnorm(-abs(-3.348982))*2 = 0.0008110906
-# cis boy vs gd: Z = -1.801672, so pnorm(-abs(-1.801672))*2 = 0.07159703
-# cis girl vs gd: Z = -0.620743, so pnorm(-abs(-0.620743))*2 = 0.5347687
-# Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.0008110906,0.07159703,0.5347687),method="fdr")
-# So final p-values rounded to three places are:
-# cis boy vs cis girl: p = .002
-# cis boy vs gd: p = .107
-# cis girl vs gd: .535
 
-##### For indirect (ab) LES -ER-> BPM int
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.040 - 0.053)/(sqrt((0.015^2)+(0.016)^2)) = -0.592749
-# cis boy (beta1) vs gd (beta2):
-#     Z = (0.040 - 0.109)/(sqrt((0.015^2)+(0.072)^2)) = -0.9381896
-# cis girl (beta1) vs gd (beta2):
-#     Z = (0.053 - 0.109)/(sqrt((0.016^2)+(0.072)^2)) = -0.7592566
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -0.592749, so pnorm(-abs(-0.592749))*2 = 0.5533491
-# cis boy vs gd: Z = -0.9381896, so pnorm(-abs(-0.9381896))*2 = 0.348147
-# cis girl vs gd: Z = -0.7592566, so pnorm(-abs(-0.7592566))*2 = 0.4476991
-# Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.5533491,0.348147,0.4476991),method="fdr")
-# So final p-values rounded to three places are:
-# cis boy vs cis girl: p = .553
-# cis boy vs gd: p = .553
-# cis girl vs gd: .553
+### Moderated mediation model (Hayes model 59) to test whether gender ####
+### moderates mediating effect of DERS on relationship between LES and BPM
+### externalizing 
+bpm_ext_gender_model15 <- PROCESS(
+  analysis_data,
+  # nogd_analysis_data,
+  y = "C_yr4_bpm_ext",
+  # y = "C_log_yr4_bpm_ext",
+  x = "C_yr4_total_bad_le",
+  # x = "C_yr3_total_bad_le",
+  # x = "C_log_yr4_total_bad_le",
+  meds = c("C_yr4_ders_total"),
+  # meds = c("C_yr3_ders_total"),
+  # meds = c("C_log_yr4_ders_total"),
+  # mods = c("genderid"),
+  mods = c("genderid_refcisboy"),
+  # mods = c("genderid_refcisgirl"),
+  covs = c(
+    # "C_yr3_age"
+    "C_yr4_age"
+    # "C_yr3_ders_total"
+    # "C_yr3_bpm_ext"
+    # "C_yr3_total_bad_le"
+  ),
+  hlm.re.m = "site",
+  hlm.re.y = "site",
+  mod.path = c(
+    # "x-y",
+    # "x-m",
+    # "m-y"
+    "all"
+  ),
+  cov.path = c("both"),
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = FALSE,
+  std = FALSE,
+  digits = 5)
 
-#### Dummy-coded gender model (not by group)
-bpmint_dummy_gender_model <- 
-  ' # direct effect
-        C_yr4_bpm_int~ c*C_yr4_total_bad_le + gender_cisgirl + gender_gd + C_yr4_age + C_yr4_total_bad_le*gender_cisgirl + C_yr4_total_bad_le*gender_gd
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + gender_cisgirl + gender_gd + C_yr4_age + C_yr4_total_bad_le*gender_cisgirl + C_yr4_total_bad_le*gender_gd
-      # indirect effect
-        C_yr4_bpm_int~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-bpmint_dummy_gender_model <- sem(bpmint_dummy_gender_model, 
-                                  data = meddata, 
-                                  meanstructure = TRUE,
-                                  se = "robust.cluster",
-                                  # group = "genderid",
-                                  cluster = "site")
-summary(bpmint_dummy_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmint_dummy_gender_model, boot.ci.type = "bca.simple")
+### Moderated mediation model (Hayes model 59) to test whether sex ####
+### moderates mediating effect of DERS on relationship between LES and CBCL
+### internalizing 
+cbcl_int_sex_model15 <- PROCESS(
+  analysis_data,
+  y = "C_yr4_cbcl_int",
+  # y = "C_log_yr4_cbcl_int",
+  x = "C_yr4_total_bad_le",
+  # x = "C_yr3_total_bad_le",
+  # x = "C_log_yr4_total_bad_le",
+  meds = c("C_yr4_ders_total"),
+  # meds = c("C_yr3_ders_total"),
+  # meds = c("C_log_yr4_ders_total"),
+  mods = c("sex"),
+  covs = c(
+    # "C_yr3_age"
+    "C_yr4_age"
+    # "C_yr3_ders_total"
+    # "C_yr3_cbcl_int"
+    # "C_yr3_total_bad_le"
+  ),
+  hlm.re.m = "site",
+  hlm.re.y = "site",
+  mod.path = c(
+    # "x-y",
+    # "x-m",
+    # "m-y"
+    "all"
+  ),
+  cov.path = c("both"),
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = FALSE,
+  std = FALSE,
+  digits = 5)
 
-### Moderated mediation model for BPM externalizing based on gender ####
-#### Constrained gender model by group
-bpmext_constrained_gender_model <- 
-  ' # direct effect
-        C_yr4_bpm_ext~ c*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_bpm_ext~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-# ' # direct effect
-#         C_yr4_bpm_ext~ c*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_bpm_ext~ b*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-# ' # direct effect
-#         C_log_yr4_bpm_ext~ c*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_bpm_ext~ b*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-bpmext_constrained_gender_model <- sem(bpmext_constrained_gender_model, 
-                                        data = meddata, 
-                                        meanstructure = TRUE,
-                                        se = "robust.cluster",
-                                        group = "genderid",
-                                        cluster = "site")
-summary(bpmext_constrained_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmext_constrained_gender_model, boot.ci.type = "bca.simple")
-
-#### Unconstrained gender model by group
-bpmext_unconstrained_gender_model <- 
-  ' # direct effect
-        C_yr4_bpm_ext~ c(c1,c2,c3)*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ c(a1,a2,a3)*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_bpm_ext~ c(b1,b2,b3)*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab1 := a1*b1
-        ab2 := a2*b2
-        ab3 := a3*b3
-      # total effect
-        total1 := c1 + (a1*b1)
-        total2 := c2 + (a2*b2)
-        total3 := c3 + (a3*b3)
-'
-# ' # direct effect
-#         C_yr4_bpm_ext~ c(c1,c2,c3)*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ c(a1,a2,a3)*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_bpm_ext~ c(b1,b2,b3)*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#         ab3 := a3*b3
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-#         total3 := c3 + (a3*b3)
-# '
-# ' # direct effect
-#         C_log_yr4_bpm_ext~ c(c1,c2,c3)*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ c(a1,a2,a3)*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_bpm_ext~ c(b1,b2,b3)*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#         ab3 := a3*b3
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-#         total3 := c3 + (a3*b3)
-# '
-bpmext_unconstrained_gender_model <- sem(bpmext_unconstrained_gender_model, 
-                                          data = meddata, 
-                                          meanstructure = TRUE,
-                                          se = "robust.cluster",
-                                          group = "genderid",
-                                          cluster = "site")
-summary(bpmext_unconstrained_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmext_unconstrained_gender_model, boot.ci.type = "bca.simple")
-
-#### Does the unconstrained model fit better than the constrained model?
-anova(bpmext_constrained_gender_model,bpmext_unconstrained_gender_model)
-
-#### Does the constrained model fit better than the model without gender?
-anova(bpmext_model,bpmext_constrained_gender_model)
-
-#### Dummy-coded gender model (not by group)
-bpmext_dummy_gender_model <- 
-  ' # direct effect
-        C_yr4_bpm_ext~ c*C_yr4_total_bad_le + gender_cisgirl + gender_gd + C_yr4_age + C_yr4_total_bad_le*gender_cisgirl + C_yr4_total_bad_le*gender_gd
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + gender_cisgirl + gender_gd + C_yr4_age + C_yr4_total_bad_le*gender_cisgirl + C_yr4_total_bad_le*gender_gd
-      # indirect effect
-        C_yr4_bpm_ext~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-bpmext_dummy_gender_model <- sem(bpmext_dummy_gender_model, 
-                                  data = meddata, 
-                                  meanstructure = TRUE,
-                                  se = "robust.cluster",
-                                  # group = "genderid",
-                                  cluster = "site")
-summary(bpmext_dummy_gender_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmext_dummy_gender_model, boot.ci.type = "bca.simple")
-
-### Moderated mediation model for CBCL internalizing based on sex ####
-#### Constrained sex model by group
-cbclint_constrained_sex_model <- 
-  ' # direct effect
-        C_yr4_cbcl_int~ c*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_cbcl_int~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-# ' # direct effect
-#         C_yr4_cbcl_int~ c*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_cbcl_int~ b*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-# ' # direct effect
-#         C_log_yr4_cbcl_int~ c*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_cbcl_int~ b*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-cbclint_constrained_sex_model <- sem(cbclint_constrained_sex_model, 
-                                        data = sex_meddata, 
-                                        meanstructure = TRUE,
-                                        se = "robust.cluster",
-                                        group = "sex",
-                                        cluster = "site")
-summary(cbclint_constrained_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclint_constrained_sex_model, boot.ci.type = "bca.simple")
-
-#### Unconstrained gender model by group
-cbclint_unconstrained_sex_model <- 
-  ' # direct effect
-        C_yr4_cbcl_int~ c(c1,c2)*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ c(a1,a2)*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_cbcl_int~ c(b1,b2)*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab1 := a1*b1
-        ab2 := a2*b2
-      # total effect
-        total1 := c1 + (a1*b1)
-        total2 := c2 + (a2*b2)
-'
-# ' # direct effect
-#         C_yr4_cbcl_int~ c(c1,c2)*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ c(a1,a2)*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_cbcl_int~ c(b1,b2)*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-# '
-# ' # direct effect
-#         C_log_yr4_cbcl_int~ c(c1,c2)*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ c(a1,a2)*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_cbcl_int~ c(b1,b2)*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-# '
-cbclint_unconstrained_sex_model <- sem(cbclint_unconstrained_sex_model, 
-                                          data = sex_meddata, 
-                                          meanstructure = TRUE,
-                                          se = "robust.cluster",
-                                          group = "sex",
-                                          cluster = "site")
-summary(cbclint_unconstrained_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclint_unconstrained_sex_model, boot.ci.type = "bca.simple")
-
-#### Does the unconstrained model fit better than the constrained model?
-anova(cbclint_constrained_sex_model,cbclint_unconstrained_sex_model)
-
-#### Which sex groups are different? Use Z test to find out. 
-##### For (a) LES -> ER
+# are the conditional indirect effects [ab] of X through M on Y significantly 
+# different? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # male (beta1) vs female (beta2): 
-#     Z = (0.830 - 1.047)/(sqrt((0.253^2)+(0.201)^2)) = -0.671566
+#     Z = (.283-.332)/(sqrt((.046^2)+(0.056)^2)) = -0.6761355
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -0.671566, so pnorm(-abs(-0.671566))*2 = 0.50186
-# So final p-values rounded to three places are:
-# male vs female: p = .502
+# male vs female: Z = -0.6761355, so pnorm(-abs(-0.6761355))*2 = 0.4989546, or
+# 0.499 rounded to three places
 
-##### For (b) ER -> CBCL int
+# are the conditional direct effects [c'] of X on Y significantly 
+# different? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # male (beta1) vs female (beta2): 
-#     Z = (0.297 - 0.350)/(sqrt((0.015^2)+(0.019)^2)) = -2.18941
+#     Z = (0.275 -0.520)/(sqrt((0.115^2)+(0.104)^2)) = -1.580119
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -2.18941, so pnorm(-abs(-2.18941))*2 = 0.02856705
-# So final p-values rounded to three places are:
-# male vs female: p = .029
+# male vs female: Z = -1.580119, so pnorm(-abs(-1.580119))*2 = 0.1140796, or
+# 0.114 rounded to three places
 
-##### For direct (c') LES -> CBCL int
+# are the conditional effects [b] of M on Y significantly 
+# different? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # male (beta1) vs female (beta2): 
-#     Z = (0.276 - 0.515)/(sqrt((0.119^2)+(0.106)^2)) = -1.499708
+#     Z = (0.298  -0.350 )/(sqrt((0.012^2)+(0.014)^2)) = -2.820096
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -1.499708, so pnorm(-abs(-1.499708))*2 = 0.1336901
-# So final p-values rounded to three places are:
-# male vs female: p = .134
+# male vs female: Z = -2.820096, so pnorm(-abs(-2.820096))*2 = 0.004800928, or
+# 0.005 rounded to three places
 
-##### For indirect (ab) LES -ER-> CBCL int
+### Moderated mediation model (Hayes model 59) to test whether sex ####
+### moderates mediating effect of DERS on relationship between LES and CBCL
+### externalizing 
+cbcl_ext_sex_model15 <- PROCESS(
+  analysis_data,
+  y = "C_yr4_cbcl_ext",
+  # y = "C_log_yr4_cbcl_ext",
+  x = "C_yr4_total_bad_le",
+  # x = "C_yr3_total_bad_le",
+  # x = "C_log_yr4_total_bad_le",
+  meds = c("C_yr4_ders_total"),
+  # meds = c("C_yr3_ders_total"),
+  # meds = c("C_log_yr4_ders_total"),
+  # mods = c("sexid"),
+  mods = c("sex"),
+  # mods = c("sex"),
+  covs = c(
+    # "C_yr3_age"
+    "C_yr4_age"
+    # "C_yr3_ders_total"
+    # "C_yr3_cbcl_ext"
+    # "C_yr3_total_bad_le"
+  ),
+  hlm.re.m = "site",
+  hlm.re.y = "site",
+  mod.path = c(
+    # "x-y",
+    # "x-m",
+    # "m-y"
+    "all"
+  ),
+  cov.path = c("both"),
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = FALSE,
+  std = FALSE,
+  digits = 3)
+
+### Moderated mediation model (Hayes model 59) to test whether sex ####
+### moderates mediating effect of DERS on relationship between LES and BPM
+### internalizing 
+bpm_int_sex_model15 <- PROCESS(
+  analysis_data,
+  y = "C_yr4_bpm_int",
+  # y = "C_log_yr4_bpm_int",
+  x = "C_yr4_total_bad_le",
+  # x = "C_yr3_total_bad_le",
+  # x = "C_log_yr4_total_bad_le",
+  meds = c("C_yr4_ders_total"),
+  # meds = c("C_yr3_ders_total"),
+  # meds = c("C_log_yr4_ders_total"),
+  # mods = c("sexid"),
+  mods = c("sex"),
+  # mods = c("sex"),
+  covs = c(
+    # "C_yr3_age"
+    "C_yr4_age"
+    # "C_yr3_ders_total"
+    # "C_yr3_bpm_int"
+    # "C_yr3_total_bad_le"
+  ),
+  hlm.re.m = "site",
+  hlm.re.y = "site",
+  mod.path = c(
+    # "x-y",
+    # "x-m",
+    # "m-y"
+    "all"
+  ),
+  cov.path = c("both"),
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = FALSE,
+  std = FALSE,
+  digits = 3)
+
+# are the conditional indirect effects [ab] of X through M on Y significantly 
+# different? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # male (beta1) vs female (beta2): 
-#     Z = (0.247 - 0.367)/(sqrt((0.049^2)+(0.079)^2)) = -1.290845
+#     Z = (0.042 -0.086 )/(sqrt((0.013^2)+(0.021)^2)) = -1.781508
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -1.290845, so pnorm(-abs(-1.290845))*2 = 0.1967574
-# So final p-values rounded to three places are:
-# male vs female: p = .197
+# male vs female: Z = -1.781508, so pnorm(-abs(-1.781508))*2 = 0.0748295, or
+# 0.075 rounded to three places
 
-#### Dummy-coded sex model (not by group)
-cbclint_dummy_sex_model <- 
-  ' # direct effect
-        C_yr4_cbcl_int~ c*C_yr4_total_bad_le + sex_female + C_yr4_age + C_yr4_total_bad_le*sex_female
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + sex_female + C_yr4_age + C_yr4_total_bad_le*sex_female
-      # indirect effect
-        C_yr4_cbcl_int~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-cbclint_dummy_sex_model <- sem(cbclint_dummy_sex_model, 
-                                  data = sex_meddata, 
-                                  meanstructure = TRUE,
-                                  se = "robust.cluster",
-                                  # group = "genderid",
-                                  cluster = "site")
-summary(cbclint_dummy_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclint_dummy_sex_model, boot.ci.type = "bca.simple")
-
-### Moderated mediation model for CBCL externalizing based on sex ####
-#### Constrained sex model by group
-cbclext_constrained_sex_model <- 
-  ' # direct effect
-        C_yr4_cbcl_ext~ c*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_cbcl_ext~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-# ' # direct effect
-#         C_yr4_cbcl_ext~ c*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_cbcl_ext~ b*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-# ' # direct effect
-#         C_log_yr4_cbcl_ext~ c*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_cbcl_ext~ b*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-cbclext_constrained_sex_model <- sem(cbclext_constrained_sex_model, 
-                                     data = sex_meddata, 
-                                     meanstructure = TRUE,
-                                     se = "robust.cluster",
-                                     group = "sex",
-                                     cluster = "site")
-summary(cbclext_constrained_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclext_constrained_sex_model, boot.ci.type = "bca.simple")
-
-#### Unconstrained gender model by group
-cbclext_unconstrained_sex_model <- 
-  ' # direct effect
-        C_yr4_cbcl_ext~ c(c1,c2)*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ c(a1,a2)*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_cbcl_ext~ c(b1,b2)*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab1 := a1*b1
-        ab2 := a2*b2
-      # total effect
-        total1 := c1 + (a1*b1)
-        total2 := c2 + (a2*b2)
-'
-# ' # direct effect
-#         C_yr4_cbcl_ext~ c(c1,c2)*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ c(a1,a2)*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_cbcl_ext~ c(b1,b2)*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-# '
-# ' # direct effect
-#         C_log_yr4_cbcl_ext~ c(c1,c2)*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ c(a1,a2)*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_cbcl_ext~ c(b1,b2)*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-# '
-cbclext_unconstrained_sex_model <- sem(cbclext_unconstrained_sex_model, 
-                                       data = sex_meddata, 
-                                       meanstructure = TRUE,
-                                       se = "robust.cluster",
-                                       group = "sex",
-                                       cluster = "site")
-summary(cbclext_unconstrained_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclext_unconstrained_sex_model, boot.ci.type = "bca.simple")
-
-#### Does the unconstrained model fit better than the constrained model?
-anova(cbclext_constrained_sex_model,cbclext_unconstrained_sex_model)
-
-#### Dummy-coded sex model (not by group)
-cbclext_dummy_sex_model <- 
-  ' # direct effect
-        C_yr4_cbcl_ext~ c*C_yr4_total_bad_le + sex_female + C_yr4_age + C_yr4_total_bad_le*sex_female
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + sex_female + C_yr4_age + C_yr4_total_bad_le*sex_female
-      # indirect effect
-        C_yr4_cbcl_ext~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-cbclext_dummy_sex_model <- sem(cbclext_dummy_sex_model, 
-                               data = sex_meddata, 
-                               meanstructure = TRUE,
-                               se = "robust.cluster",
-                               # group = "genderid",
-                               cluster = "site")
-summary(cbclext_dummy_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(cbclext_dummy_sex_model, boot.ci.type = "bca.simple")
-
-### Moderated mediation model for BPM internalizing based on sex ####
-#### Constrained sex model by group
-bpmint_constrained_sex_model <- 
-  ' # direct effect
-        C_yr4_bpm_int~ c*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_bpm_int~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-# ' # direct effect
-#         C_yr4_bpm_int~ c*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_bpm_int~ b*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-# ' # direct effect
-#         C_log_yr4_bpm_int~ c*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_bpm_int~ b*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-bpmint_constrained_sex_model <- sem(bpmint_constrained_sex_model, 
-                                     data = sex_meddata, 
-                                     meanstructure = TRUE,
-                                     se = "robust.cluster",
-                                     group = "sex",
-                                     cluster = "site")
-summary(bpmint_constrained_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmint_constrained_sex_model, boot.ci.type = "bca.simple")
-
-#### Unconstrained gender model by group
-bpmint_unconstrained_sex_model <- 
-  ' # direct effect
-        C_yr4_bpm_int~ c(c1,c2)*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ c(a1,a2)*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_bpm_int~ c(b1,b2)*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab1 := a1*b1
-        ab2 := a2*b2
-      # total effect
-        total1 := c1 + (a1*b1)
-        total2 := c2 + (a2*b2)
-'
-# ' # direct effect
-#         C_yr4_bpm_int~ c(c1,c2)*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ c(a1,a2)*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_bpm_int~ c(b1,b2)*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-# '
-# ' # direct effect
-#         C_log_yr4_bpm_int~ c(c1,c2)*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ c(a1,a2)*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_bpm_int~ c(b1,b2)*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-# '
-bpmint_unconstrained_sex_model <- sem(bpmint_unconstrained_sex_model, 
-                                       data = sex_meddata, 
-                                       meanstructure = TRUE,
-                                       se = "robust.cluster",
-                                       group = "sex",
-                                       cluster = "site")
-summary(bpmint_unconstrained_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmint_unconstrained_sex_model, boot.ci.type = "bca.simple")
-
-#### Does the unconstrained model fit better than the constrained model?
-anova(bpmint_constrained_sex_model,bpmint_unconstrained_sex_model)
-
-#### Which sex groups are different? Use Z test to find out. 
-##### For (a) LES -> ER
+# are the conditional direct effects [c'] of X on Y significantly 
+# different? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # male (beta1) vs female (beta2): 
-#     Z = (0.830 - 1.047)/(sqrt((0.253^2)+(0.201)^2)) = -0.671566
+#     Z = (0.475 -0.802)/(sqrt((0.072^2)+(0.065)^2)) = -3.371134
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -0.671566, so pnorm(-abs(-0.671566))*2 = 0.50186
-# So final p-values rounded to three places are:
-# male vs female: p = .502
+# male vs female: Z = -3.371134, so pnorm(-abs(-3.371134))*2 = 0.0007485944, or
+# 0.001 rounded to three places
 
-##### For (b) ER -> BPM int
+# are the conditional effects [b] of M on Y significantly 
+# different? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # male (beta1) vs female (beta2): 
-#     Z = (0.051 - 0.082)/(sqrt((0.009^2)+(0.009)^2)) = -2.43559
+#     Z = (0.051  -0.083 )/(sqrt((0.008^2)+(0.009)^2)) = -2.657455
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -2.43559, so pnorm(-abs(-2.43559))*2 = 0.01486753
-# So final p-values rounded to three places are:
-# male vs female: p = .015
+# male vs female: Z = -2.657455, so pnorm(-abs(-2.657455))*2 = 0.00787331, or
+# 0.008 rounded to three places
 
-##### For direct (c') LES -> BPM int
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# male (beta1) vs female (beta2): 
-#     Z = (0.475 - 0.802)/(sqrt((0.060^2)+(0.062)^2)) = -3.790047
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z 0.0001506188
-# male vs female: Z = -3.790047, so pnorm(-abs(-3.790047))*2 = 0.1336901
-# So final p-values rounded to three places are:
-# male vs female: p < .001
+# if GD subjects are removed, do we still see relations between ER and BPM int?
+bpm_int_sex_model15 <- PROCESS(
+  nogd_analysis_data,
+  y = "C_yr4_bpm_int",
+  # y = "C_log_yr4_bpm_int",
+  x = "C_yr4_total_bad_le",
+  # x = "C_yr3_total_bad_le",
+  # x = "C_log_yr4_total_bad_le",
+  meds = c("C_yr4_ders_total"),
+  # meds = c("C_yr3_ders_total"),
+  # meds = c("C_log_yr4_ders_total"),
+  # mods = c("sexid"),
+  mods = c("sex"),
+  # mods = c("sex"),
+  covs = c(
+    # "C_yr3_age"
+    "C_yr4_age"
+    # "C_yr3_ders_total"
+    # "C_yr3_bpm_int"
+    # "C_yr3_total_bad_le"
+  ),
+  hlm.re.m = "site",
+  hlm.re.y = "site",
+  mod.path = c(
+    # "x-y",
+    # "x-m",
+    # "m-y"
+    "all"
+  ),
+  cov.path = c("both"),
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = FALSE,
+  std = FALSE,
+  digits = 3)
 
-##### For indirect (ab) LES -ER-> BPM int
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# male (beta1) vs female (beta2): 
-#     Z = (0.042 - 0.086)/(sqrt((0.015^2)+(0.021)^2)) = -1.704965
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -1.704965, so pnorm(-abs(-1.704965))*2 = 0.08820095
-# So final p-values rounded to three places are:
-# male vs female: p = .088
 
-#### Dummy-coded sex model (not by group)
-bpmint_dummy_sex_model <- 
-  ' # direct effect
-        C_yr4_bpm_int~ c*C_yr4_total_bad_le + sex_female + C_yr4_age + C_yr4_total_bad_le*sex_female
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + sex_female + C_yr4_age + C_yr4_total_bad_le*sex_female
-      # indirect effect
-        C_yr4_bpm_int~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-bpmint_dummy_sex_model <- sem(bpmint_dummy_sex_model, 
-                               data = sex_meddata, 
-                               meanstructure = TRUE,
-                               se = "robust.cluster",
-                               # group = "genderid",
-                               cluster = "site")
-summary(bpmint_dummy_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmint_dummy_sex_model, boot.ci.type = "bca.simple")
-
-### Moderated mediation model for BPM externalizing based on sex ####
-#### Constrained sex model by group
-bpmext_constrained_sex_model <- 
-  ' # direct effect
-        C_yr4_bpm_ext~ c*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_bpm_ext~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-# ' # direct effect
-#         C_yr4_bpm_ext~ c*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_bpm_ext~ b*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-# ' # direct effect
-#         C_log_yr4_bpm_ext~ c*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_bpm_ext~ b*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab := a*b
-#       # total effect
-#         total := c + (a*b)
-# '
-bpmext_constrained_sex_model <- sem(bpmext_constrained_sex_model, 
-                                     data = sex_meddata, 
-                                     meanstructure = TRUE,
-                                     se = "robust.cluster",
-                                     group = "sex",
-                                     cluster = "site")
-summary(bpmext_constrained_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmext_constrained_sex_model, boot.ci.type = "bca.simple")
-
-#### Unconstrained sex model by group
-bpmext_unconstrained_sex_model <- 
-  ' # direct effect
-        C_yr4_bpm_ext~ c(c1,c2)*C_yr4_total_bad_le + C_yr4_age
-      # mediator
-        C_yr4_ders_total ~ c(a1,a2)*C_yr4_total_bad_le  + C_yr4_age
-      # indirect effect
-        C_yr4_bpm_ext~ c(b1,b2)*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab1 := a1*b1
-        ab2 := a2*b2
-      # total effect
-        total1 := c1 + (a1*b1)
-        total2 := c2 + (a2*b2)
-'
-# ' # direct effect
-#         C_yr4_bpm_ext~ c(c1,c2)*C_yr3_total_bad_le + C_yr4_age
-#       # mediator
-#         C_yr3_ders_total ~ c(a1,a2)*C_yr3_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_yr4_bpm_ext~ c(b1,b2)*C_yr3_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-# '
-# ' # direct effect
-#         C_log_yr4_bpm_ext~ c(c1,c2)*C_log_yr4_total_bad_le + C_yr4_age
-#       # mediator
-#         C_log_yr4_ders_total ~ c(a1,a2)*C_log_yr4_total_bad_le  + C_yr4_age
-#       # indirect effect
-#         C_log_yr4_bpm_ext~ c(b1,b2)*C_log_yr4_ders_total
-#       # indirect effect (a*b)
-#         ab1 := a1*b1
-#         ab2 := a2*b2
-#       # total effect
-#         total1 := c1 + (a1*b1)
-#         total2 := c2 + (a2*b2)
-# '
-bpmext_unconstrained_sex_model <- sem(bpmext_unconstrained_sex_model, 
-                                       data = sex_meddata, 
-                                       meanstructure = TRUE,
-                                       se = "robust.cluster",
-                                       group = "sex",
-                                       cluster = "site")
-summary(bpmext_unconstrained_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmext_unconstrained_sex_model, boot.ci.type = "bca.simple")
-
-#### Does the unconstrained model fit better than the constrained model?
-anova(bpmext_constrained_sex_model,bpmext_unconstrained_sex_model)
-
-#### Dummy-coded gender model (not by group)
-bpmext_dummy_sex_model <- 
-  ' # direct effect
-        C_yr4_bpm_ext~ c*C_yr4_total_bad_le + sex_female + C_yr4_age + C_yr4_total_bad_le*sex_female
-      # mediator
-        C_yr4_ders_total ~ a*C_yr4_total_bad_le  + sex_female + C_yr4_age + C_yr4_total_bad_le*sex_female
-      # indirect effect
-        C_yr4_bpm_ext~ b*C_yr4_ders_total
-      # indirect effect (a*b)
-        ab := a*b
-      # total effect
-        total := c + (a*b)
-'
-bpmext_dummy_sex_model <- sem(bpmext_dummy_sex_model, 
-                               data = sex_meddata, 
-                               meanstructure = TRUE,
-                               se = "robust.cluster",
-                               # group = "genderid",
-                               cluster = "site")
-summary(bpmext_dummy_sex_model, fit.measures=T, 
-        standardized=F, ci=TRUE, rsquare=TRUE)
-parameterEstimates(bpmext_dummy_sex_model, boot.ci.type = "bca.simple")
+### Moderated mediation model (Hayes model 59) to test whether sex ####
+### moderates mediating effect of DERS on relationship between LES and BPM
+### externalizing 
+bpm_ext_sex_model15 <- PROCESS(
+  analysis_data,
+  y = "C_yr4_bpm_ext",
+  # y = "C_log_yr4_bpm_ext",
+  x = "C_yr4_total_bad_le",
+  # x = "C_yr3_total_bad_le",
+  # x = "C_log_yr4_total_bad_le",
+  meds = c("C_yr4_ders_total"),
+  # meds = c("C_yr3_ders_total"),
+  # meds = c("C_log_yr4_ders_total"),
+  # mods = c("sexid"),
+  mods = c("sex"),
+  # mods = c("sex"),
+  covs = c(
+    # "C_yr3_age"
+    "C_yr4_age"
+    # "C_yr3_ders_total"
+    # "C_yr3_bpm_ext"
+    # "C_yr3_total_bad_le"
+  ),
+  hlm.re.m = "site",
+  hlm.re.y = "site",
+  mod.path = c(
+    # "x-y",
+    # "x-m",
+    # "m-y"
+    "all"
+  ),
+  cov.path = c("both"),
+  # ci = c("boot", "bc.boot", "bca.boot", "mcmc"),
+  nsim = 1000,
+  seed = 1234,
+  center = FALSE,
+  std = FALSE,
+  digits = 3)
