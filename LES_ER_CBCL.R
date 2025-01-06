@@ -392,16 +392,6 @@ gender_change <-
   count()
 gender_change
 
-#### Determine how many subjects in each more detailed gender group ####
-analysis_data %>%
-  group_by(gender_details) %>%
-  count()
-
-#### Determine how many subjects in each combination of gender and sex group ####
-analysis_data %>%
-  group_by(genderid, sex) %>%
-  count()
-
 ### Combine year 4 and year 3 data to have option to use year 3 as x variable ####
 #### Make combined year 3 and year 4 data for analysis ####
 analysis_data <- yr4data %>%
@@ -446,7 +436,7 @@ analysis_data <- yr4data %>%
     C_log_yr4_bpm_int = C_log_bpm_int,
     C_log_yr4_bpm_ext = C_log_bpm_ext,
     C_yr4_age = C_age
-    ) %>%
+  ) %>%
   # add year 3 data
   left_join(select(yr3data, 
                    c(src_subject_id,
@@ -478,45 +468,45 @@ analysis_data <- yr4data %>%
             by="src_subject_id") %>%
   # name year 3 data to have year 3 specifier
   rename(
-        yr3_age = age,
-        yr3_total_bad_le = total_bad_le,
-        yr3_ders_total = ders_total,
-        yr3_cbcl_int = cbcl_int,
-        yr3_cbcl_ext = cbcl_ext,
-        yr3_bpm_int = bpm_int,
-        yr3_bpm_ext = bpm_ext,
-        log_yr3_total_bad_le = log_total_bad_le,
-        log_yr3_ders_total = log_ders_total,
-        log_yr3_cbcl_int = log_cbcl_int,
-        log_yr3_cbcl_ext = log_cbcl_ext,
-        log_yr3_bpm_int = log_bpm_int,
-        log_yr3_bpm_ext = log_bpm_ext,
-        Z_yr3_total_bad_le = Z_total_bad_le,
-         Z_yr3_ders_total = Z_ders_total,
-         Z_yr3_cbcl_int = Z_cbcl_int,
-         Z_yr3_cbcl_ext = Z_cbcl_ext,
-         Z_yr3_bpm_int = Z_bpm_int,
-         Z_yr3_bpm_ext = Z_bpm_ext,
-         Z_yr3_age = Z_age,
-        C_yr3_total_bad_le = C_total_bad_le,
-         C_yr3_ders_total = C_ders_total,
-         C_yr3_cbcl_int = C_cbcl_int,
-         C_yr3_cbcl_ext = C_cbcl_ext,
-         C_yr3_bpm_int = C_bpm_int,
-         C_yr3_bpm_ext = C_bpm_ext,
-         C_yr3_age = C_age,
-        C_log_yr3_total_bad_le = C_log_total_bad_le,
-        C_log_yr3_ders_total = C_log_ders_total,
-        C_log_yr3_cbcl_int = C_log_cbcl_int,
-        C_log_yr3_cbcl_ext = C_log_cbcl_ext,
-        C_log_yr3_bpm_int = C_log_bpm_int,
-        C_log_yr3_bpm_ext = C_log_bpm_ext,
-        ) %>%
-# remove subjects without LES or DERS in year 3 or without CBCL or BPM in year 4
-# before this step, n should be 4612, and after this step, n should be 3763
-    filter(!is.na(yr3_ders_total), !is.na(yr3_total_bad_le),
-           !is.na(yr4_cbcl_int), !is.na(yr4_cbcl_ext),
-           !is.na(yr4_bpm_int), !is.na(yr4_bpm_ext))
+    yr3_age = age,
+    yr3_total_bad_le = total_bad_le,
+    yr3_ders_total = ders_total,
+    yr3_cbcl_int = cbcl_int,
+    yr3_cbcl_ext = cbcl_ext,
+    yr3_bpm_int = bpm_int,
+    yr3_bpm_ext = bpm_ext,
+    log_yr3_total_bad_le = log_total_bad_le,
+    log_yr3_ders_total = log_ders_total,
+    log_yr3_cbcl_int = log_cbcl_int,
+    log_yr3_cbcl_ext = log_cbcl_ext,
+    log_yr3_bpm_int = log_bpm_int,
+    log_yr3_bpm_ext = log_bpm_ext,
+    Z_yr3_total_bad_le = Z_total_bad_le,
+    Z_yr3_ders_total = Z_ders_total,
+    Z_yr3_cbcl_int = Z_cbcl_int,
+    Z_yr3_cbcl_ext = Z_cbcl_ext,
+    Z_yr3_bpm_int = Z_bpm_int,
+    Z_yr3_bpm_ext = Z_bpm_ext,
+    Z_yr3_age = Z_age,
+    C_yr3_total_bad_le = C_total_bad_le,
+    C_yr3_ders_total = C_ders_total,
+    C_yr3_cbcl_int = C_cbcl_int,
+    C_yr3_cbcl_ext = C_cbcl_ext,
+    C_yr3_bpm_int = C_bpm_int,
+    C_yr3_bpm_ext = C_bpm_ext,
+    C_yr3_age = C_age,
+    C_log_yr3_total_bad_le = C_log_total_bad_le,
+    C_log_yr3_ders_total = C_log_ders_total,
+    C_log_yr3_cbcl_int = C_log_cbcl_int,
+    C_log_yr3_cbcl_ext = C_log_cbcl_ext,
+    C_log_yr3_bpm_int = C_log_bpm_int,
+    C_log_yr3_bpm_ext = C_log_bpm_ext,
+  ) %>%
+  # remove subjects without LES or DERS in year 3 or without CBCL or BPM in year 4
+  # before this step, n should be 4612, and after this step, n should be 3763
+  filter(!is.na(yr3_ders_total), !is.na(yr3_total_bad_le),
+         !is.na(yr4_cbcl_int), !is.na(yr4_cbcl_ext),
+         !is.na(yr4_bpm_int), !is.na(yr4_bpm_ext))
 
 
 #### See type of each column ####
@@ -524,6 +514,16 @@ str(analysis_data)
 
 #### See all unique values for each column ####
 map(analysis_data,unique)
+
+#### Determine how many subjects in each more detailed gender group ####
+analysis_data %>%
+  group_by(gender_details) %>%
+  count()
+
+#### Determine how many subjects in each combination of gender and sex group ####
+analysis_data %>%
+  group_by(genderid, sex) %>%
+  count()
 
 ## BASIC STATS ####
 
@@ -624,7 +624,7 @@ corrmat$p.adj
 
 ## PLOTS ####
 
-##### Bargraph of LES vs DERS by gender ####
+##### Graph of LES vs DERS by gender ####
 ggplot(analysis_data, 
        aes(x=yr3_total_bad_le,y=yr3_ders_total, fill=genderid)) +
   # aes(x=total_bad_le,y=cbcl_int)) +
@@ -650,17 +650,19 @@ ggplot(analysis_data,
                      limits = c(25,131)) +
   # breaks=seq(0,120,by=20),
   # limits=c(0,120)) +
-  # guides(
-  #   line = guide_legend(override.aes = list(size = 2)),
-  #   fill = guide_legend(override.aes = list(size = 2)) 
-  # ) +
-  theme_classic()
+  guides(
+    shape = guide_legend(override.aes = list(size = 3)),
+    line = guide_legend(override.aes = list(size = 2))
+  ) +
+  theme_classic() +
+  theme(legend.key.width = unit(0.5, "in"))
 # Save bar graph
+# ggsave("scatterplot_legend.tiff",width=9,height=6,unit="in",path="figures")
 # ggsave("les_vs_ders_bygender.tiff",width=14,height=6,unit="in",path="figures")
 # ggsave("les_vs_ders_bar_bygender.tiff",width=9,height=6,unit="in",path="figures")
 # ggsave("les_vs_ders_scatter_bygender.tiff",width=8.5,height=6,unit="in",path="figures")
 
-##### Bargraph of LES vs CBCL internalizing by gender ####
+##### Graph of LES vs CBCL internalizing by gender ####
 ggplot(analysis_data, 
        aes(x=yr3_total_bad_le,y=yr4_cbcl_int, fill=genderid)) +
        # aes(x=total_bad_le,y=cbcl_int)) +
@@ -696,7 +698,7 @@ ggplot(analysis_data,
 # ggsave("les_vs_cbclint_bar_bygender.tiff",width=9,height=6,unit="in",path="figures")
 # ggsave("les_vs_cbclint_scatter_bygender.tiff",width=8.5,height=6,unit="in",path="figures")
 
-##### Bargraph of LES vs CBCL externalizing by gender ####
+##### Graph of LES vs CBCL externalizing by gender ####
 ggplot(analysis_data, 
        aes(x=yr3_total_bad_le,y=yr4_cbcl_ext, fill=genderid)) +
   # aes(x=total_bad_le,y=cbcl_int)) +
@@ -732,7 +734,7 @@ ggplot(analysis_data,
 # ggsave("les_vs_cbclext_bar_bygender.tiff",width=9,height=6,unit="in",path="figures")
 # ggsave("les_vs_cbclext_scatter_bygender.tiff",width=8.5,height=6,unit="in",path="figures")
 
-##### Bargraph of LES vs BPM internalizing by gender ####
+##### Graph of LES vs BPM internalizing by gender ####
 ggplot(analysis_data, 
        aes(x=yr3_total_bad_le,y=yr4_bpm_int, fill=genderid)) +
   # aes(x=total_bad_le,y=bpm_int)) +
@@ -764,7 +766,7 @@ ggplot(analysis_data,
 # ggsave("les_vs_bpmint_bar_bygender.tiff",width=9,height=6,unit="in",path="figures")
 # ggsave("les_vs_bpmint_scatter_bygender.tiff",width=8.5,height=6,unit="in",path="figures")
 
-##### Bargraph of LES vs BPM externalizing by gender ####
+##### Graph of LES vs BPM externalizing by gender ####
 ggplot(analysis_data, 
        aes(x=yr3_total_bad_le,y=yr4_bpm_ext, fill=genderid)) +
   # aes(x=total_bad_le,y=bpm_int)) +
@@ -1265,7 +1267,7 @@ parameterEstimates(bpmext_model, boot.ci.type = "bca.simple")
 
 ## STEP FOUR: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION ####
 
-### Moderated mediation model (Hayes model 15) to test whether gender ####
+### Moderated mediation model (Hayes model 5) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### internalizing 
 cbcl_int_gender_model15 <- PROCESS(
@@ -1281,8 +1283,8 @@ cbcl_int_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
-    "m-y"
+    "x-y"
+    # "m-y"
     # "all"
   ),
   cov.path = c("both"),
@@ -1292,7 +1294,7 @@ cbcl_int_gender_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-### Moderated mediation model (Hayes model 15) to test whether gender ####
+### Moderated mediation model (Hayes model 5) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### externalizing 
 cbcl_ext_gender_model15 <- PROCESS(
@@ -1308,8 +1310,8 @@ cbcl_ext_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
-    "m-y"
+    "x-y"
+    # "m-y"
     # "all"
   ),
   cov.path = c("both"),
@@ -1319,7 +1321,7 @@ cbcl_ext_gender_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-### Moderated mediation model (Hayes model 15) to test whether gender ####
+### Moderated mediation model (Hayes model 5) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### internalizing 
 bpm_int_gender_model15 <- PROCESS(
@@ -1335,8 +1337,8 @@ bpm_int_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
-    "m-y"
+    "x-y"
+    # "m-y"
     # "all"
   ),
   cov.path = c("both"),
@@ -1351,146 +1353,50 @@ bpm_int_gender_model15 <- PROCESS(
 # different groups? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.19444 -0.59639 )/(sqrt((0.06742^2)+(0.06987)^2)) = -4.139796
+#     Z = (0.19426 -0.59491  )/(sqrt((0.06734^2)+(0.06968)^2)) = -4.134594
 # cis boy (beta1) vs gd (beta2):
-#     Z = (0.19444 -0.72997)/(sqrt((0.06742^2)+(0.17668)^2)) = -2.831896
+#     Z = (0.19426 -0.75219 )/(sqrt((0.06734^2)+(0.17386)^2)) = -2.992454
 # cis girl (beta1) vs gd (beta2):
-#     Z = (0.59639 -0.72997)/(sqrt((0.06987^2)+(0.17668)^2)) = -0.7030756
+#     Z = (0.59491  -0.75219 )/(sqrt((0.06968^2)+(0.17386)^2)) = -0.8397067
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -4.139796, so pnorm(-abs(-4.139796))*2 = 0.007837924
-# cis boy vs gd: Z = -2.831896, so pnorm(-abs(-2.831896))*2 = 0.03444077
-# cis girl vs gd: Z = -0.7030756, so pnorm(-abs(-0.7030756))*2 = 0.4750891
+# cis boy vs cis girl: Z = -4.134594, so pnorm(-abs(-4.134594))*2 = 0.00003555827
+# cis boy vs gd: Z = -2.992454, so pnorm(-abs(-2.992454))*2 = 0.002767444
+# cis girl vs gd: Z = -0.8397067, so pnorm(-abs(-0.8397067))*2 = 0.4010729
 # Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.00003476148,0.00462729,0.4820086),method="fdr")
+# p.adjust(c(0.00003555827,0.002767444,0.4010729),method="fdr")
 # So final p-values rounded to three places are:
 # cis boy vs cis girl: p < .001
-# cis boy vs gd: p = .007
-# cis girl vs gd: .482
-
-# for untransformed data:
-# are the indirect effects [ab] of X on Y via M significant different for
-# different groups? Use Z test to find out. 
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.03178   -0.03062   )/(sqrt((0.00920^2)+(0.00958)^2)) = 0.08733504
-# cis boy (beta1) vs gd (beta2):
-#     Z = (0.03178   -0.04321  )/(sqrt((0.00920^2)+(0.02450)^2)) = -0.4367529
-# cis girl (beta1) vs gd (beta2):
-#     Z = (0.03062   -0.04321  )/(sqrt((0.00958^2)+(0.02450)^2)) = -0.4785909
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = 0.08733504, so pnorm(-abs(0.08733504))*2 = 0.007837924
-# cis boy vs gd: Z = -0.4367529, so pnorm(-abs(-0.4367529))*2 = 0.03444077
-# cis girl vs gd: Z = -0.4785909, so pnorm(-abs(-0.4785909))*2 = 0.4750891
-# Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.9304052,0.6622906,0.6322297),method="fdr")
-# So final p-values rounded to three places are:
-# cis boy vs cis girl: p = .930
-# cis boy vs gd: p = .930
-# cis girl vs gd: .930
-
-# for untransformed data:
-# are the effects [b] of M on Y significant different for
-# different groups? Use Z test to find out. 
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.04281    -0.04124    )/(sqrt((0.00746^2)+(0.00867)^2)) = 0.1372656
-# cis boy (beta1) vs gd (beta2):
-#     Z = (0.04281    -0.05821   )/(sqrt((0.00746^2)+(0.02188)^2)) = -0.6661824
-# cis girl (beta1) vs gd (beta2):
-#     Z = (0.04124    -0.05821   )/(sqrt((0.00867^2)+(0.02188)^2)) = -0.7210491
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = 0.1372656, so pnorm(-abs(0.1372656))*2 = 0.8908209
-# cis boy vs gd: Z = -0.6661824, so pnorm(-abs(-0.6661824))*2 = 0.5052945
-# cis girl vs gd: Z = -0.7210491, so pnorm(-abs(-0.7210491))*2 = 0.4708793
-# Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.8908209,0.5052945,0.4708793),method="fdr")
-# So final p-values rounded to three places are:
-# cis boy vs cis girl: p = .891
-# cis boy vs gd: p = .758
-# cis girl vs gd: .758
+# cis boy vs gd: p = .004
+# cis girl vs gd: .401
 
 # for log transformed data:
 # are the conditional direct effects [c'] of X on Y significant different for
 # different groups? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.01070  -0.03186  )/(sqrt((0.00363^2)+(0.00388)^2)) = -3.982449
+#     Z = (0.01069   -0.03185  )/(sqrt((0.00363^2)+(0.00387)^2)) = -3.987927
 # cis boy (beta1) vs gd (beta2):
-#     Z = (0.01070  -0.03747 )/(sqrt((0.00363^2)+(0.01158)^2)) = -2.205903
+#     Z = (0.01069   -0.03845  )/(sqrt((0.00363^2)+(0.01145)^2)) = -2.311092
 # cis girl (beta1) vs gd (beta2):
-#     Z = (0.03186  -0.03747 )/(sqrt((0.00388^2)+(0.01158)^2)) = -0.4593567
+#     Z = (0.03185  -0.03845  )/(sqrt((0.00387^2)+(0.01145)^2)) = -0.5460714
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -3.982449, so pnorm(-abs(-3.982449))*2 = 0.00006820876
-# cis boy vs gd: Z = -2.205903, so pnorm(-abs(-2.205903))*2 = 0.02739079
-# cis girl vs gd: Z = -0.4593567, so pnorm(-abs(-0.4593567))*2 = 0.645978
+# cis boy vs cis girl: Z = -3.987927, so pnorm(-abs(-3.987927))*2 = 0.00006665317
+# cis boy vs gd: Z = -2.311092, so pnorm(-abs(-2.311092))*2 = 0.02082777
+# cis girl vs gd: Z = -0.5460714, so pnorm(-abs(-0.5460714))*2 = 0.5850169
 # Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.00006820876,0.02739079,0.645978),method="fdr")
+# p.adjust(c(0.00006665317,0.02082777,0.5850169),method="fdr")
 # So final p-values rounded to three places are:
 # cis boy vs cis girl: p < .001
-# cis boy vs gd: p = .041
-# cis girl vs gd: .646
+# cis boy vs gd: p = .031
+# cis girl vs gd: .585
 
-# for log transformed data:
-# are the indirect effects [ab] of X on Y via M significant different for
-# different groups? Use Z test to find out. 
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.00111    -0.00114    )/(sqrt((0.00042^2)+(0.00043)^2)) = -0.04990997
-# cis boy (beta1) vs gd (beta2):
-#     Z = (0.00111    -0.00145   )/(sqrt((0.00042^2)+(0.00091)^2)) = -0.3392376
-# cis girl (beta1) vs gd (beta2):
-#     Z = (0.00114    -0.00145   )/(sqrt((0.00043^2)+(0.00091)^2)) = -0.3080044
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -0.04990997, so pnorm(-abs(-0.04990997))*2 = 0.9601941
-# cis boy vs gd: Z = -0.3392376, so pnorm(-abs(-0.3392376))*2 = 0.7344307
-# cis girl vs gd: Z = -0.3080044, so pnorm(-abs(-0.3080044))*2 = 0.758079
-# Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.9601941,0.7344307,0.758079),method="fdr")
-# So final p-values rounded to three places are:
-# cis boy vs cis girl: p = .960
-# cis boy vs gd: p = .960
-# cis girl vs gd: .960
-
-# for log transformed data:
-# are the effects [b] of M on Y significant different for
-# different groups? Use Z test to find out. 
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.04444     -0.04565    )/(sqrt((0.00753^2)+(0.00851)^2)) = -0.1064846
-# cis boy (beta1) vs gd (beta2):
-#     Z = (0.04444     -0.05834    )/(sqrt((0.00753^2)+(0.02303)^2)) = -0.5736744
-# cis girl (beta1) vs gd (beta2):
-#     Z = (0.04565    -0.05834    )/(sqrt((0.00851^2)+(0.02303)^2)) = -0.516862
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -0.1064846, so pnorm(-abs(-0.1064846))*2 = 0.9151979
-# cis boy vs gd: Z = -0.5736744, so pnorm(-abs(-0.5736744))*2 = 0.5661882
-# cis girl vs gd: Z = -0.516862, so pnorm(-abs(-0.516862))*2 = 0.6052525
-# Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.9151979,0.5661882,0.6052525),method="fdr")
-# So final p-values rounded to three places are:
-# cis boy vs cis girl: p = .915
-# cis boy vs gd: p = .908
-# cis girl vs gd: .908
-
-### Moderated mediation model (Hayes model 15) to test whether gender ####
+### Moderated mediation model (Hayes model 5) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### externalizing 
 bpm_ext_gender_model15 <- PROCESS(
@@ -1506,8 +1412,8 @@ bpm_ext_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
-    "m-y"
+    "x-y"
+    # "m-y"
     # "all"
   ),
   cov.path = c("both"),
@@ -1517,7 +1423,7 @@ bpm_ext_gender_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-### Moderated mediation model (Hayes model 15) to test whether sex ####
+### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### internalizing 
 cbcl_int_sex_model15 <- PROCESS(
@@ -1533,8 +1439,8 @@ cbcl_int_sex_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
-    "m-y"
+    "x-y"
+    # "m-y"
     # "all"
   ),
   cov.path = c("both"),
@@ -1544,7 +1450,7 @@ cbcl_int_sex_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-### Moderated mediation model (Hayes model 15) to test whether sex ####
+### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### externalizing 
 cbcl_ext_sex_model15 <- PROCESS(
@@ -1560,8 +1466,8 @@ cbcl_ext_sex_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
-    "m-y"
+    "x-y"
+    # "m-y"
     # "all"
   ),
   cov.path = c("both"),
@@ -1571,7 +1477,7 @@ cbcl_ext_sex_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-### Moderated mediation model (Hayes model 15) to test whether sex ####
+### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### internalizing 
 bpm_int_sex_model15 <- PROCESS(
@@ -1587,8 +1493,8 @@ bpm_int_sex_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
-    "m-y"
+    "x-y"
+    # "m-y"
     # "all"
   ),
   cov.path = c("both"),
@@ -1598,85 +1504,7 @@ bpm_int_sex_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-# for untransformed data:
-# are the conditional direct effects [c'] of X on Y significantly 
-# different? Use Z test to find out. 
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# male (beta1) vs female (beta2): 
-#     Z = (0.20097  -0.68083 )/(sqrt((0.06889^2)+(0.06677)^2)) = -5.001781
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -5.001781, so pnorm(-abs(-5.001781))*2 = 5.68031e-07, or
-# < 0.001 rounded to three places
-
-# for untransformed data:
-# are the conditional indirect effects [ab] of X through M on Y significantly 
-# different? Use Z test to find out. 
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# male (beta1) vs female (beta2): 
-#     Z = (0.03300  -0.04107  )/(sqrt((0.00904^2)+(0.01133)^2)) = -0.556763
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -0.556763, so pnorm(-abs(-0.556763))*2 = 0.5776894, or
-# 0.578 rounded to three places
-
-# for untransformed data:
-# are the conditional effects [b] of M on Y significantly 
-# different? Use Z test to find out. 
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# male (beta1) vs female (beta2): 
-#     Z = (0.04309   -0.05363  )/(sqrt((0.00760^2)+(0.00826)^2)) = -0.939024
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -0.939024, so pnorm(-abs(-0.939024))*2 = 0.3477184, or
-# 0.348 rounded to three places
-
-# for log transformed data:
-# are the conditional direct effects [c'] of X on Y significantly 
-# different? Use Z test to find out. 
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# male (beta1) vs female (beta2): 
-#     Z = (0.01133   -0.03633 )/(sqrt((0.00370^2)+(0.00377)^2)) = -4.732769
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -4.732769, so pnorm(-abs(-4.732769))*2 = 0.000002214775, or
-# < 0.001 rounded to three places
-
-# for log transformed data:
-# are the conditional indirect effects [ab] of X through M on Y significantly 
-# different? Use Z test to find out. 
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# male (beta1) vs female (beta2): 
-#     Z = (0.00119   -0.00151   )/(sqrt((0.00042^2)+(0.00052)^2)) = -0.478733
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -0.478733, so pnorm(-abs(-0.478733))*2 = 0.6321286, or
-# 0.632 rounded to three places
-
-# for log transformed data:
-# are the conditional effects [b] of M on Y significantly 
-# different? Use Z test to find out. 
-# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
-# male (beta1) vs female (beta2): 
-#     Z = (0.04481    -0.05692  )/(sqrt((0.00767^2)+(0.00817)^2)) = -1.080657
-# to go from Z score to p-value, find probability of being outside absolute value
-# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
-# then multiply that by 2 because two-tailed test. Can use default settings of
-# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# male vs female: Z = -1.080657, so pnorm(-abs(-1.080657))*2 = 0.2798497, or
-# 0.280 rounded to three places
-
-### Moderated mediation model (Hayes model 15) to test whether sex ####
+### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### externalizing 
 bpm_ext_sex_model15 <- PROCESS(
@@ -1692,8 +1520,8 @@ bpm_ext_sex_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y",
-    "m-y"
+    "x-y"
+    # "m-y"
     # "all"
   ),
   cov.path = c("both"),
