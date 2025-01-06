@@ -2,18 +2,22 @@
 setwd("C:/Users/Kate Scheuer/OneDrive - UW/Desktop/Lab/aces_emotionreg_cbcl")
 
 ### Load libraries ####
-library(tidyverse)
-library(FSA)
-library(lme4)
-library(lmerTest)
-library(rsq)
-library(nortest)
-library(psych)
-library(lavaan)
-library(ggpattern)
-library(misty)
-library(bruceR)
+library(tidyverse) # for dplyr and associated functions
+# /!\ added FSA to run post-hoc Dunn tests after Kruskal-Wallis tests
+library(FSA) #for function Dunn tests ie dunnTest()
+library(lme4) #for linear regression
+library(lmerTest) #for linear regression p values
+# /!\ added rsq to get variance explained for mixed effect linear regression models
+library(rsq) #for variance explained for mixed effect linear regression models
+library(nortest) #for function Anderson-Darling tests ie ad.test
+library(psych) #for correlation matrices ie corr.test()
+library(lavaan) #for SEM
+library(misty) #for grand mean centering variables ie center()
+# /!\ added bruceR package for conditional process modeling used for moderated
+# /!\ mediation only (still using lavaan package for sem for basic mediation)
+library(bruceR) #for conditional process modeling
 
+# /!\ got sick of scientific notation when working with very small p values
 ### Prevent use of scientific notation ####
 options(scipen=999)
 
@@ -21,23 +25,29 @@ options(scipen=999)
 
 ### Read in raw data ####
 #### Gender data ####
-
+# /!\ switched from read.csv to read_csv, no need for "header = T"
 gish_y_gi <- read_csv("data/gish_y_gi.csv")
 
 #### DERS-P for emotion regulation ####
+# /!\ switched from read.csv to read_csv, no need for "header = T"
 mh_p_ders <- read_csv("data/mh_p_ders.csv")
 
 #### CBCL for parent-report psychopathology symptoms ####
+# /!\ switched from read.csv to read_csv, no need for "header = T"
 mh_p_cbcl <- read_csv("data/mh_p_cbcl.csv")
 
 #### BPM for youth-report psychopathology symptoms ####
+# /!\ added youth-report measure of internalizing and externalizing ie BPM-Y
+# /!\ in addition to using parent-report measure ie CBCL
 mh_y_bpm <- read_csv("data/mh_y_bpm.csv")
 
 #### Longitudinal tracking data ####
+# /!\ switched from read.csv to read_csv, no need for "header = T"
 abcd_y_lt <- read_csv("data/abcd_y_lt.csv")
 
 #### LES (youth-reported) ####
 #### LES for exposure to negative life events
+# /!\ switched from read.csv to read_csv, no need for "header = T"
 mh_y_le <- read_csv("data/mh_y_le.csv")
 
 ### Prepare gender data for analysis ####
@@ -54,6 +64,12 @@ genderdata <- gish_y_gi %>%
                 kbi_sex_assigned_at_birth==777 ~ "dont_know",
                 kbi_sex_assigned_at_birth==999 ~ "refuse"
                 )) %>%
+# /!\ instead of using one data frame for gender analysis and a separate one
+# /!\ for sex data (because some youth did provide gender but said "don't know"
+# /!\ or "refuse" for sex), decided to use one combined data frame but have one
+# /!\ column for responses including "don't know" and "refuse" ie "sex_details"
+# /!\ column created on line 61 above as well as another column called "sex"
+# /!\ with NAs for "don't know" and "refuse" created below
   # set "don't know" or "refuse" to be NA for sex
   mutate(sex = case_when(
     sex_details=="male" ~ "male",
@@ -61,13 +77,9 @@ genderdata <- gish_y_gi %>%
     sex_details=="dont_know" ~ NA_character_,
     sex_details=="refuse" ~ NA_character_
   )) %>%
-  # effect code sex
-  # mutate(sex_female = if_else(sex=="female",1,-1)) %>%
-  # dummy code sex
-  mutate(sex_female = case_when(
-                        sex=="female" ~ 1,
-                        sex=="male" ~ 0
-  )) %>%
+# /!\ set males to be reference level for sex to make interpretation easier
+  # make "male" reference level for sex
+  mutate(sex = relevel(as.factor(sex), ref="male")) %>%
   # convert numeric gender values to human-readable character strings
   mutate(gender = case_when(
                     kbi_gender==1 ~ "boy",
@@ -84,6 +96,8 @@ genderdata <- gish_y_gi %>%
                     kbi_y_trans_id==4 ~ "dont_understand",
                     kbi_y_trans_id==777 ~ "refuse"
                     )) %>%
+# /!\ added a column for more granular gender identity groups (trans boys, trans
+# /!\ girls, nonbinary youth) which are combined into "GD" group for main analysis
   # combine gender and trans identity information to make five gender groups
   mutate(gender_details = case_when(
                             kbi_gender==777 ~ "refuse",
@@ -100,6 +114,8 @@ genderdata <- gish_y_gi %>%
                             kbi_gender==3 & kbi_y_trans_id==2 ~ "nb", #"gd",
                             kbi_gender==3 & kbi_y_trans_id==3 ~ "nb" #"gd"
   )) %>%
+# /!\ combine trans boys, trans girls, and nonbinary youth into one "GD" group
+# /!\ due to small sample size
   # combine all not cis groups due to sample size to make one gender diverse group (gd)
   mutate(genderid = case_when(
                       gender_details=="trans_boy" ~ "gd",
@@ -108,40 +124,25 @@ genderdata <- gish_y_gi %>%
                       gender_details=="cis_boy" ~ "cis_boy",
                       gender_details=="cis_girl" ~ "cis_girl"
                       )) %>%
-  
-  # dummy coding table below to help conceptually convert from one column with
-  # three categories into two new, dummy-coded columns with cis BOY as reference
-  ### gender group ### gender_cisgirl ### gender_gd ###
-  ###    cis boy   ###      0         ###     0     ###
-  ###    cis girl  ###      1         ###     0     ###
-  ###     gd       ###      0         ###     1     ###
-  
-  # dummy coding table below to help conceptually convert from one column with
-  # three categories into two new, dummy-coded columns with cis GIRL as reference
-  ### gender group ### gender_cisboy ### gender_gd ###
-  ###    cis boy   ###      1         ###     0     ###
-  ###    cis girl  ###      0         ###     0     ###
-  ###     gd       ###      0         ###     1     ###
-
-  # code to execute dummy coding 
-  mutate(gender_cisgirl = if_else(genderid=="cis_girl",1,0)) %>%
-  mutate(gender_gd = if_else(genderid=="gd",1,0)) %>%
-  mutate(gender_cisboy = if_else(genderid=="cis_boy",1,0)) %>%
-
+# /!\ don't select columns that aren't actually used in analysis
   # keep only columns relevant to analysis
   select(src_subject_id,eventname,
-         sex,sex_details,sex_female,
-         gender,trans,gender_details,genderid,
-         gender_cisgirl,gender_gd,gender_cisboy
+         sex,sex_details,
+         genderid,gender_details
          ) %>%
   # remove subjects who refused to answer and/or did not understand gender
   # or trans questions. Before this step, n should be 15064. After this step,
   # n should be 14495.
   filter(genderid!="refuse",
          genderid!="dont_understand") %>%
-
+# /!\ make new column that is the same as genderid but is now a factor and is
+# /!\ named to clearly indicate cis boys are reference level
   # make genderid a factor (automatically uses cisboy as reference)
   mutate(genderid_refcisboy = as.factor(genderid)) %>%
+# /!\ make new column that is the same as genderid_refcisboy but uses cis girls
+# /!\ as reference level rather than cis boys. this will become relevant when
+# /!\ trying to get differences between all three gender groups in the basic
+# /!\ moderation analysis below (step two)
   # make another column that uses cis_girl as reference instead
   mutate(genderid_refcisgirl = relevel(genderid_refcisboy,"cis_girl"))
 
@@ -152,6 +153,8 @@ genderdata %>%
 
 ### Prepare CBCL data for analysis ####
 cbcldata <- mh_p_cbcl %>%
+# /!\ only using internalizing and externalizing subscales from CBCL (no longer 
+# /!\ also using total problems subscale per Lili's suggestion)
   # select only columns relevant to analysis
   select(src_subject_id,eventname,
          cbcl_scr_syn_internal_t,
@@ -166,6 +169,7 @@ cbcldata <- mh_p_cbcl %>%
   # add column with log-transformed CBCL externalizing values
   mutate(log_cbcl_ext = log(cbcl_ext)) 
 
+# /!\ Load BPM-Y ie youth-report data and prep for analysis
 ### Prepare BPM data for analysis ####
 bpmdata <- mh_y_bpm %>%
   # select only columns relevant to analysis
@@ -188,6 +192,7 @@ dersdata <- mh_p_ders %>%
   # remove subjects who refused to answer one or more items. Before this step,
   # n should be 14708. After this step, n should be 14225.
   filter(!if_any(everything(), ~ . == 777)) %>%
+# /!\ more explicitly spelled out reverse scoring scheme item below
   # add column to reverse score "my child pays attention to how he/she feels"
   mutate(rev_ders_attn_awareness_p = 
            case_when(ders_attn_awareness_p == 1 ~ 5,
@@ -195,6 +200,7 @@ dersdata <- mh_p_ders %>%
                      ders_attn_awareness_p == 3 ~ 3,
                      ders_attn_awareness_p == 4 ~ 2,
                      ders_attn_awareness_p == 5 ~ 1)) %>%
+# /!\ more explicitly spelled out reverse scoring scheme item below
   # add column to reverse score "my child is attentive to his/her feelings"
   mutate(rev_ders_feelings_attentive_p = 
            case_when(ders_feelings_attentive_p == 1 ~ 5,
@@ -202,6 +208,7 @@ dersdata <- mh_p_ders %>%
                      ders_feelings_attentive_p == 3 ~ 3,
                      ders_feelings_attentive_p == 4 ~ 2,
                      ders_feelings_attentive_p == 5 ~ 1)) %>%
+# /!\ more explicitly spelled out reverse scoring scheme item below
   # add column to reverse score "my child cares about what he/she is feeling"
   mutate(rev_ders_feelings_care_p = 
            case_when(ders_feelings_care_p == 1 ~ 5,
@@ -209,6 +216,7 @@ dersdata <- mh_p_ders %>%
                      ders_feelings_care_p == 3 ~ 3,
                      ders_feelings_care_p == 4 ~ 2,
                      ders_feelings_care_p == 5 ~ 1)) %>%
+# /!\ more explicitly spelled out reverse scoring scheme item below
   # add column to reverse score "when my child is upset, he/she acknowledges
   # his/her emotions"
   mutate(rev_ders_upset_ack_p = 
@@ -217,6 +225,7 @@ dersdata <- mh_p_ders %>%
                      ders_upset_ack_p == 3 ~ 3,
                      ders_upset_ack_p == 4 ~ 2,
                      ders_upset_ack_p == 5 ~ 1)) %>%
+# /!\ more explicitly spelled out reverse scoring scheme item below
   # add column to reverse score "my child is clear about his/her feelings"
   mutate(rev_ders_clear_feelings_p = 
            case_when(ders_clear_feelings_p == 1 ~ 5,
@@ -224,6 +233,7 @@ dersdata <- mh_p_ders %>%
                      ders_clear_feelings_p == 3 ~ 3,
                      ders_clear_feelings_p == 4 ~ 2,
                      ders_clear_feelings_p == 5 ~ 1)) %>%
+# /!\ more explicitly spelled out reverse scoring scheme item below
   # add column to reverse score "my child knows exactly how he/she is feeling"
   mutate(rev_ders_feelings_know_p = 
            case_when(ders_feelings_know_p == 1 ~ 5,
@@ -231,6 +241,7 @@ dersdata <- mh_p_ders %>%
                      ders_feelings_know_p == 3 ~ 3,
                      ders_feelings_know_p == 4 ~ 2,
                      ders_feelings_know_p == 5 ~ 1)) %>%
+# /!\ more explicitly spelled out reverse scoring scheme item below
   # add column to reverse score "when my child is upset, he/she feels like
   # he/she can remain in control of his/her behaviors"
     mutate(rev_ders_upset_behavior_control_p = 
@@ -239,6 +250,7 @@ dersdata <- mh_p_ders %>%
                        ders_upset_behavior_control_p == 3 ~ 3,
                        ders_upset_behavior_control_p == 4 ~ 2,
                        ders_upset_behavior_control_p == 5 ~ 1)) %>%
+# /!\ more explicitly spelled out reverse scoring scheme item below
   # add column to reverse score "when my child is upset, he/she knows that
   # he/she can find a way to eventually feel better"
     mutate(rev_ders_upset_better_p = 
@@ -269,8 +281,13 @@ dersdata <- mh_p_ders %>%
   select(src_subject_id,eventname,ders_total,log_ders_total)
 
 #### See all unique values for each column in DERS-P data ####
+# /!\ add visual checkpoint to see if there are NA or errors. this is probably
+# /!\ a good place for unit testing (I think?).
 # see all unique values (can visually check for NA or errors)
 map(dersdata,unique)
+# /!\ add one more visual checkpoint in case eye didn't catch an NA on the last
+# /!\ step. again probably a good place for unit testing - I should probably 
+# /!\ learn how to do that
 # explicitly check for any NA values
 which(is.na(dersdata))
 
@@ -315,6 +332,7 @@ ledata %>%
 
 
 ### Combine all data for analysis into one data frame ####
+# /!\ n for alldata should be 14495
 alldata <- genderdata %>%
   # add longitudinal tracking data based on subject ID and data collection year
   left_join(select(abcd_y_lt,
@@ -331,17 +349,11 @@ alldata <- genderdata %>%
   left_join(cbcldata,by=c("src_subject_id","eventname")) %>%
   # add BPM data based on subject ID and data collection year
   left_join(bpmdata,by=c("src_subject_id","eventname")) %>%
-  # Z-score continuous variables
-  mutate(across(
-    c(age, ders_total, total_bad_le, 
-      cbcl_int, cbcl_ext,
-      bpm_int, bpm_ext,
-      log_ders_total, log_total_bad_le, 
-      log_cbcl_int, log_cbcl_ext,
-      log_bpm_int, log_bpm_ext),
-    ~ as.numeric(scale(.)),
-    .names = "Z_{.col}"
-  )) %>%
+# /!\ Kate suggested leaving variables on original scale (not Z scoring) but
+# /!\ conditional process modeling command PROCESS() from bruceR package said
+# /!\ it was important for interpreting interactions ie moderation to have
+# /!\ variables centered, so I grand-mean centered continuous variables. Not
+# /!\ sure if this is the right move or not
   # Grand-mean center continuous variables
   mutate(across(
     c(age, ders_total, total_bad_le, 
@@ -354,9 +366,7 @@ alldata <- genderdata %>%
     .names = "C_{.col}"
   )) %>%
   # make genderid, sex, and site factors rather than characters
-  mutate(across(c(genderid, sex, site), as.factor)) %>%
-  # make males comparison level for sex
-  mutate(sex = relevel(sex, ref="male"))
+  mutate(across(c(genderid, sex, site), as.factor))
 
 ### Get general overview of all data ####
 #### Get raw number and percentage for each gender group and data collection year ####
@@ -366,13 +376,17 @@ alldata %>%
   mutate(percentage = n / sum(n) * 100)
 
 #### Create separate data frame for just data from year 4 follow-up visit ####
-# n should be 4612
+# /!\ n for yr4data should be 4612
 yr4data <- alldata %>% filter(eventname=="4_year_follow_up_y_arm_1")
 
 #### Create separate data frame for just data from year 3 follow-up visit ####
-# n should be 9883
+# /!\ n for yr3data should be 9883
 yr3data <- alldata %>% filter(eventname=="3_year_follow_up_y_arm_1")
 
+# /!\ per Kate's suggestion, figure out how many youth changed their gender from
+# /!\ year three to year four (as justification for using data from year four
+# /!\ follow-up visit rather than year three even though not all of year four
+# /!\ has been released yet)
 #### Determine how many subjects switched gender groups between years 3 and 4 ####
 gender_change <-
   # raw year 4 data
@@ -392,9 +406,21 @@ gender_change <-
   count()
 gender_change
 
+# /!\ Put everything into one streamlined data frame for all subsequent analysis
+# /!\ NOTE: main analysis now uses LES (ie negative life event) and DERS-P (ie 
+# /!\ emotion regulation difficulties) data from year three visits and uses age, 
+# /!\ gender, and CBCL (ie parent-report internalizing and externalizing) and 
+# /!\ BPM-Y (ie youth-report internalizing and externalizing) from year four 
+# /!\ visits to take advantage of longitudinal structure of ABCD data and to 
+# /!\ more robustly show mediation (which technically requires temporal separation)
 ### Combine year 4 and year 3 data to have option to use year 3 as x variable ####
 #### Make combined year 3 and year 4 data for analysis ####
 analysis_data <- yr4data %>%
+# /!\ starting with year four data, mark columns as coming from year four
+# /!\ because columns from year three will have the same names. There has to be
+# /!\ a more efficient way to do this, but I don't know what it is (and I'm kind
+# /!\ of afraid to tinker with a new function at this point, but maybe I just
+# /!\ need to get over that lol)
   # add year 4 specifier
   rename(
     yr4_age = age,
@@ -410,19 +436,6 @@ analysis_data <- yr4data %>%
     log_yr4_cbcl_ext = log_cbcl_ext,
     log_yr4_bpm_int = log_bpm_int,
     log_yr4_bpm_ext = log_bpm_ext,
-    Z_yr4_total_bad_le = Z_total_bad_le,
-    Z_yr4_ders_total = Z_ders_total,
-    Z_yr4_cbcl_int = Z_cbcl_int,
-    Z_yr4_cbcl_ext = Z_cbcl_ext,
-    Z_yr4_bpm_int = Z_bpm_int,
-    Z_yr4_bpm_ext = Z_bpm_ext,
-    Z_log_yr4_total_bad_le = Z_log_total_bad_le,
-    Z_log_yr4_ders_total = Z_log_ders_total,
-    Z_log_yr4_cbcl_int = Z_log_cbcl_int,
-    Z_log_yr4_cbcl_ext = Z_log_cbcl_ext,
-    Z_log_yr4_bpm_int = Z_log_bpm_int,
-    Z_log_yr4_bpm_ext = Z_log_bpm_ext,
-    Z_yr4_age = Z_age,
     C_yr4_total_bad_le = C_total_bad_le,
     C_yr4_ders_total = C_ders_total,
     C_yr4_cbcl_int = C_cbcl_int,
@@ -437,6 +450,8 @@ analysis_data <- yr4data %>%
     C_log_yr4_bpm_ext = C_log_bpm_ext,
     C_yr4_age = C_age
   ) %>%
+# /!\ add in year three data. as far as I know, data needs to be in this format
+# /!\ ie wide for linear regression commands and other analysis commands to work
   # add year 3 data
   left_join(select(yr3data, 
                    c(src_subject_id,
@@ -453,10 +468,6 @@ analysis_data <- yr4data %>%
                      log_cbcl_ext,
                      log_bpm_int,
                      log_bpm_ext,
-                     Z_age,
-                     Z_total_bad_le,Z_ders_total,
-                     Z_cbcl_int,Z_cbcl_ext,
-                     Z_bpm_int,Z_bpm_ext,
                      C_age,
                      C_total_bad_le,C_ders_total,
                      C_cbcl_int,C_cbcl_ext,
@@ -466,6 +477,7 @@ analysis_data <- yr4data %>%
                      C_log_bpm_int,C_log_bpm_ext
                    )),
             by="src_subject_id") %>%
+# /!\ make year three columns all include year three in name to be more clear
   # name year 3 data to have year 3 specifier
   rename(
     yr3_age = age,
@@ -481,13 +493,6 @@ analysis_data <- yr4data %>%
     log_yr3_cbcl_ext = log_cbcl_ext,
     log_yr3_bpm_int = log_bpm_int,
     log_yr3_bpm_ext = log_bpm_ext,
-    Z_yr3_total_bad_le = Z_total_bad_le,
-    Z_yr3_ders_total = Z_ders_total,
-    Z_yr3_cbcl_int = Z_cbcl_int,
-    Z_yr3_cbcl_ext = Z_cbcl_ext,
-    Z_yr3_bpm_int = Z_bpm_int,
-    Z_yr3_bpm_ext = Z_bpm_ext,
-    Z_yr3_age = Z_age,
     C_yr3_total_bad_le = C_total_bad_le,
     C_yr3_ders_total = C_ders_total,
     C_yr3_cbcl_int = C_cbcl_int,
@@ -502,24 +507,34 @@ analysis_data <- yr4data %>%
     C_log_yr3_bpm_int = C_log_bpm_int,
     C_log_yr3_bpm_ext = C_log_bpm_ext,
   ) %>%
+# /!\ only keep subjects with year three LES, year three DERS-P, year four BPM-Y,
+# /!\ and year four CBCL data. okay for variables to be missing in other years
+# /!\ eg okay if year *four* LES data is NA
   # remove subjects without LES or DERS in year 3 or without CBCL or BPM in year 4
-  # before this step, n should be 4612, and after this step, n should be 3763
+# /!\ before this step, n should be 4612, and after this step, n should be 3763
   filter(!is.na(yr3_ders_total), !is.na(yr3_total_bad_le),
          !is.na(yr4_cbcl_int), !is.na(yr4_cbcl_ext),
          !is.na(yr4_bpm_int), !is.na(yr4_bpm_ext))
 
-
 #### See type of each column ####
+# /!\ visual check to make sure type of each column is correct
 str(analysis_data)
 
 #### See all unique values for each column ####
+# /!\ visual check to make sure everything looks okay ie no NA in columns used
+# /!\ in analyses (okay for NA to be in some columns, see note on lines 510-511),
+# /!\ check for min/max and general reasonableness of values
 map(analysis_data,unique)
 
+# /!\ find number of subjects with more granular gender groups ie trans boy,
+# /!\ trans girl, nonbinary, cis boy, or cis girl
 #### Determine how many subjects in each more detailed gender group ####
 analysis_data %>%
   group_by(gender_details) %>%
   count()
 
+# /!\ find number of subjects in each gender group and sex group. note that 
+# /!\ most GD youth are assigned female at birth
 #### Determine how many subjects in each combination of gender and sex group ####
 analysis_data %>%
   group_by(genderid, sex) %>%
@@ -531,12 +546,20 @@ analysis_data %>%
 sumstats <- 
   analysis_data %>%
   group_by(genderid) %>%
+# /!\ next six lines are all options to comment in or out depending on what 
+# /!\ specific summary stats are needed eg need stats for broader gender groups
+# /!\ (cis boy, cis girl, GD) for one table, need stats for more granular gender
+# /!\ groups (trans boy, trans girl, nonbinary, cis boy, cis girl) for different
+# /!\ table, need stats for sex groups for another table, etc
   # group_by(gender_details) %>%
   # filter(!is.na(sex)) %>%
   # group_by(sex) %>%
   # to get number of people who answered don't know or refuse for sex
   # group_by(sex_details) %>%
   # count()
+# /!\ summarise works much nicer than "summary" function and gave me more
+# /!\ flexibility in what I wanted in output compared to "describe" function 
+# /!\ (but may I was just using describe wrong)
   summarise(
     n = n(),
     across(
@@ -545,13 +568,13 @@ sumstats <-
       list(
         mean = ~mean(.x, na.rm = TRUE),
         sd = ~sd(.x, na.rm = TRUE)
-        # min = ~min(.x, na.rm = TRUE),
-        # max = ~max(.x, na.rm = TRUE),
-        # median = ~median(.x, na.rm = TRUE)
       ),
       .names = "{.col}_{.fn}"
     )
   ) %>%
+# /!\ lines 575 to 586 are just so output on line 587 is in nice format to be
+# /!\ transferred to table in manuscript. there are R packages for making 
+# /!\ publication-ready tables which I should probably eventually learn to use
   # transpose so gender groups are columns and summary stats are rows
   t() %>% 
   # make data frame so values are not strings
@@ -620,192 +643,121 @@ print(corrmat,digits=3)
 # See fdr-adjusted p-value for each correlation test
 # note that list gives p values above diagonal, going across rows (ie not down
 # columns) 
-corrmat$p.adj
+# /!\ need to round now that we're not using scientific notation
+round(corrmat$p.adj,5)
 
 ## PLOTS ####
 
 ##### Graph of LES vs DERS by gender ####
+# /!\ make scatterplot of year three LES vs year three DERS-P, which is a little
+# /!\ weird because LES is technically count data and should be in a bar graph,
+# /!\ but Jen suggested I use a scatterplot with trend lines, and I agree with
+# /!\ her that it looks better
 ggplot(analysis_data, 
        aes(x=yr3_total_bad_le,y=yr3_ders_total, fill=genderid)) +
-  # aes(x=total_bad_le,y=cbcl_int)) +
   geom_point(aes(color=genderid, shape = genderid),size=2) +
-  # geom_bar(stat="summary",fun="mean",
-  #          position=position_dodge2(preserve = "single"),
-  #          color="black",width=.7,alpha=.9) +
+# /!\ add regression/trend lines for each gender group
   geom_smooth(aes(linetype=genderid),method="lm",color="black", se=FALSE) +
   scale_linetype_manual(values = c("cis_boy"="31",
                                    "cis_girl"="11",
                                    "gd"="solid")) +
   scale_shape_manual(values=c(21,22,23)) +
-  # scale_fill_grey(start=0.9,end=0) +
   scale_colour_grey(start=0.9,end=0) +
   scale_fill_manual(values=c("grey40","grey85","black")) +
-  # scale_color_manual(values=c("grey40","grey85","black")) +
-  # # scale_fill_grey(start=0.9,end=0) +
   scale_x_continuous(expand = c(0,0),
                      breaks = seq(0,16, by = 1),
                      limits=c(-.5,16.5)) +
   scale_y_continuous(expand = c(0,0),
                      breaks=seq(20,130,10),
                      limits = c(25,131)) +
-  # breaks=seq(0,120,by=20),
-  # limits=c(0,120)) +
   guides(
     shape = guide_legend(override.aes = list(size = 3)),
     line = guide_legend(override.aes = list(size = 2))
   ) +
   theme_classic() +
+# /!\ include line below only when saving graph to be used exclusively for
+# /!\ legend because the line below increases the width of the legend so it's
+# /!\ easier to see the different line patterns between groups
   theme(legend.key.width = unit(0.5, "in"))
-# Save bar graph
+# Save graph
+# /!\ to save one figure with legend to be cropped and used for all panels in
+# /!\ figures 1 and 2
 # ggsave("scatterplot_legend.tiff",width=9,height=6,unit="in",path="figures")
-# ggsave("les_vs_ders_bygender.tiff",width=14,height=6,unit="in",path="figures")
-# ggsave("les_vs_ders_bar_bygender.tiff",width=9,height=6,unit="in",path="figures")
+# /!\ comment out line 680 above which increases width of legend and save as 
+# /!\ normal for figure 2
 # ggsave("les_vs_ders_scatter_bygender.tiff",width=8.5,height=6,unit="in",path="figures")
 
-##### Graph of LES vs CBCL internalizing by gender ####
-ggplot(analysis_data, 
-       aes(x=yr3_total_bad_le,y=yr4_cbcl_int, fill=genderid)) +
-       # aes(x=total_bad_le,y=cbcl_int)) +
-  geom_point(aes(color=genderid, shape = genderid),size=2) +
-  # geom_bar(stat="summary",fun="mean",
-  #          position=position_dodge2(preserve = "single"),
-  #          color="black",width=.7,alpha=.9) +
-  geom_smooth(aes(linetype=genderid),method="lm",color="black", se=FALSE) +
-  scale_linetype_manual(values = c("cis_boy"="31",
-                                   "cis_girl"="11",
-                                   "gd"="solid")) +
-  scale_shape_manual(values=c(21,22,23)) +
-  # scale_fill_grey(start=0.9,end=0) +
-  scale_colour_grey(start=0.9,end=0) +
-  scale_fill_manual(values=c("grey40","grey85","black")) +
-  # scale_color_manual(values=c("grey40","grey85","black")) +
-  # # scale_fill_grey(start=0.9,end=0) +
-  scale_x_continuous(expand = c(0,0),
-                     breaks = seq(0,16, by = 1),
-                     limits=c(-.5,16.5)) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(30,90,by=10),
-                     limits=c(30,90)) +
-                     # breaks=seq(0,90,by=10),
-                     # limits=c(0,90)) +
-  guides(
-    line = guide_legend(override.aes = list(size = 2)),
-    fill = guide_legend(override.aes = list(size = 2)) 
-  ) +
-  theme_classic()
-# Save bar graph
-# ggsave("les_vs_cbclint_bygender.tiff",width=14,height=6,unit="in",path="figures")
-# ggsave("les_vs_cbclint_bar_bygender.tiff",width=9,height=6,unit="in",path="figures")
-# ggsave("les_vs_cbclint_scatter_bygender.tiff",width=8.5,height=6,unit="in",path="figures")
+# /!\ make scatterplot of year three LES vs year four CBCL scores based
+# /!\ on gender groups for figure 1
+##### Graphs of LES vs CBCL by gender ####
+outcome_list <- c("yr4_cbcl_int","yr4_cbcl_ext")
+cbcl_les_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  cbcl_les_plot <-
+    ggplot(aes(x=yr3_total_bad_le,y=.data[[outcome]],
+               fill = genderid
+    ),data=analysis_data) +
+    geom_point(aes(color=genderid, shape = genderid), size=2) +
+    geom_smooth(aes(linetype=genderid),method="lm",color="black", se=FALSE) +
+    scale_linetype_manual(values = c("cis_boy"="31",
+                                     "cis_girl"="11",
+                                     "gd"="solid")) +
+    scale_shape_manual(values=c(21,22,23)) +
+    scale_colour_grey(start=0.9,end=0) +
+    scale_fill_manual(values=c("grey40","grey85","black")) +
+    scale_x_continuous(expand = c(0,0),
+                       breaks = seq(0,16, by = 1),
+                       limits=c(-.5,16.5)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks=seq(30,90,by=10),
+                       limits=c(30,90)) +
+    theme_classic()
+  cbcl_les_plot_list[[outcome]] <- cbcl_les_plot
+  # Save plot
+  # ggsave(paste0("les_vs_",outcome,"_bygender.tiff"),
+  # width=8.5,height=6,units = "in",path="figures")
+}
 
-##### Graph of LES vs CBCL externalizing by gender ####
-ggplot(analysis_data, 
-       aes(x=yr3_total_bad_le,y=yr4_cbcl_ext, fill=genderid)) +
-  # aes(x=total_bad_le,y=cbcl_int)) +
-  geom_point(aes(color=genderid, shape = genderid), size=2) +
-  # geom_bar(stat="summary",fun="mean",
-  #          position=position_dodge2(preserve = "single"),
-  #          color="black",width=.9) +
-  geom_smooth(aes(linetype=genderid),method="lm",color="black", se=FALSE) +
-  scale_linetype_manual(values = c("cis_boy"="31",
-                                   "cis_girl"="11",
-                                   "gd"="solid")) +
-  scale_shape_manual(values=c(21,22,23)) +
-  # scale_fill_grey(start=0.9,end=0) +
-  scale_colour_grey(start=0.9,end=0) +
-  scale_fill_manual(values=c("grey40","grey85","black")) +
-  # scale_color_manual(values=c("grey40","grey85","black")) +
-  # # scale_fill_grey(start=0.9,end=0) +
-  scale_x_continuous(expand = c(0,0),
-                     breaks = seq(0,16, by = 1),
-                     limits=c(-.5,16.5)) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(30,90,by=10),
-                     limits=c(30,90)) +
-                        # breaks=seq(0,90,by=10),
-                        # limits=c(0,90)) +
-  guides(
-    shape = guide_legend(override.aes = list(size = 2)),
-    fill = guide_legend(override.aes = list(size = 2)) 
-  ) +
-  theme_classic()
-# Save bar graph
-# ggsave("les_vs_cbclext_bygender.tiff",width=14,height=6,unit="in",path="figures")
-# ggsave("les_vs_cbclext_bar_bygender.tiff",width=9,height=6,unit="in",path="figures")
-# ggsave("les_vs_cbclext_scatter_bygender.tiff",width=8.5,height=6,unit="in",path="figures")
+# /!\ make scatterplot of year three LES vs year four BPM-Y scores based
+# /!\ on gender groups for figure 1
+##### Graphs of LES vs CBCL by gender ####
+outcome_list <- c("yr4_bpm_int","yr4_bpm_ext")
+bpm_les_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  bpm_les_plot <-
+    ggplot(aes(x=yr3_total_bad_le,y=.data[[outcome]],
+               fill = genderid
+    ),data=analysis_data) +
+    geom_point(aes(color=genderid, shape = genderid),size=2) +
+    geom_smooth(aes(linetype=genderid),method="lm",color="black", se=FALSE) +
+    scale_linetype_manual(values = c("cis_boy"="31",
+                                     "cis_girl"="11",
+                                     "gd"="solid")) +
+    scale_shape_manual(values=c(21,22,23)) +
+    scale_colour_grey(start=0.9,end=0) +
+    scale_fill_manual(values=c("grey40","grey85","black")) +
+    scale_x_continuous(expand = c(0,0),
+                       breaks = seq(0,16, by = 1),
+                       limits=c(-.5,16.5)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks=seq(40,75,by=5),
+                       limits=c(49,76)) +
+    theme_classic()
+  bpm_les_plot_list[[outcome]] <- bpm_les_plot
+  # Save plot
+  # ggsave(paste0("les_vs_",outcome,"_bygender.tiff"),
+  # width=8.5,height=6,units = "in",path="figures")
+}
 
-##### Graph of LES vs BPM internalizing by gender ####
-ggplot(analysis_data, 
-       aes(x=yr3_total_bad_le,y=yr4_bpm_int, fill=genderid)) +
-  # aes(x=total_bad_le,y=bpm_int)) +
-  geom_point(aes(color=genderid, shape = genderid),size=2) +
-  # geom_bar(stat="summary",fun="mean",
-  #          position=position_dodge2(preserve = "single"),
-  #          color="black",width=.7,alpha=.9) +
-  geom_smooth(aes(linetype=genderid),method="lm",color="black", se=FALSE) +
-  scale_linetype_manual(values = c("cis_boy"="31",
-                                   "cis_girl"="11",
-                                   "gd"="solid")) +
-  scale_shape_manual(values=c(21,22,23)) +
-  # scale_fill_grey(start=0.9,end=0) +
-  scale_colour_grey(start=0.9,end=0) +
-  scale_fill_manual(values=c("grey40","grey85","black")) +
-  # scale_color_manual(values=c("grey40","grey85","black")) +
-  # # scale_fill_grey(start=0.9,end=0) +
-  scale_x_continuous(expand = c(0,0),
-                     breaks = seq(0,16, by = 1),
-                     limits=c(-.5,16.5)) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(40,75,by=5),
-                     limits=c(49,76)) +
-                     # breaks=seq(0,80,by=10),
-                     # limits=c(0,80)) +
-  theme_classic()
-# Save bar graph
-# ggsave("les_vs_bpmint_bygender.tiff",width=14,height=6,unit="in",path="figures")
-# ggsave("les_vs_bpmint_bar_bygender.tiff",width=9,height=6,unit="in",path="figures")
-# ggsave("les_vs_bpmint_scatter_bygender.tiff",width=8.5,height=6,unit="in",path="figures")
-
-##### Graph of LES vs BPM externalizing by gender ####
-ggplot(analysis_data, 
-       aes(x=yr3_total_bad_le,y=yr4_bpm_ext, fill=genderid)) +
-  # aes(x=total_bad_le,y=bpm_int)) +
-  geom_point(aes(color=genderid, shape = genderid), size=2) +
-  # geom_bar(stat="summary",fun="mean",
-  #          position=position_dodge2(preserve = "single"),
-  #          color="black",width=.7,alpha=.9) +
-  geom_smooth(aes(linetype=genderid),method="lm",color="black", se=FALSE) +
-  scale_linetype_manual(values = c("cis_boy"="31",
-                                   "cis_girl"="11",
-                                   "gd"="solid")) +
-  scale_shape_manual(values=c(21,22,23)) +
-  # scale_fill_grey(start=0.9,end=0) +
-  scale_colour_grey(start=0.9,end=0) +
-  scale_fill_manual(values=c("grey40","grey85","black")) +
-  # scale_color_manual(values=c("grey40","grey85","black")) +
-  # # scale_fill_grey(start=0.9,end=0) +
-  scale_x_continuous(expand = c(0,0),
-                     breaks = seq(0,16, by = 1),
-                     limits=c(-.5,16.5)) +
-  scale_y_continuous(expand = c(0,0),
-                     breaks=seq(40,75,by=5),
-                     limits=c(49,76)) +
-                        # breaks=seq(0,80,by=10),
-                        # limits=c(0,80)) +
-  theme_classic()
-# Save bar graph
-# ggsave("les_vs_bpmext_bygender.tiff",width=14,height=6,unit="in",path="figures")
-# ggsave("les_vs_bpmext_bar_bygender.tiff",width=9,height=6,unit="in",path="figures")
-# ggsave("les_vs_bpmext_scatter_bygender.tiff",width=8.5,height=6,unit="in",path="figures")
-
-##### Scatterplots of DERS vs CBCL by gender ####
+##### Graphs of DERS vs CBCL by gender ####
 outcome_list <- c("yr4_cbcl_int","yr4_cbcl_ext")
 cbcl_ders_plot_list <- list()
 for (outcome in outcome_list) {
   # Create plot
   cbcl_ders_plot <-
     ggplot(aes(x=yr3_ders_total,y=.data[[outcome]],
-                               # color=genderid,
                                linetype=genderid,
                                shape = genderid,
                                fill = genderid
@@ -813,18 +765,12 @@ for (outcome in outcome_list) {
     geom_point(alpha=.6, size = 2) +
     geom_smooth(method="lm",
                 se=FALSE,
-                # linewidth=1.75,
                 color="black") +
-    # geom_smooth(aes(color=genderid),method="lm",
-    #             se=FALSE,
-    #             linewidth=1) +    
-    # geom_hline(yintercept=70,linetype='dashed') +
     scale_linetype_manual(values = c("cis_boy"="31",
                                      "cis_girl"="11",
                                      "gd"="solid")) +
     scale_shape_manual(values=c(21,22,23)) +
     scale_fill_manual(values=c("grey40","grey85","black")) +
-    # scale_fill_grey(start=0.9,end=0) +
     scale_colour_grey(start=0.9,end=0) +
     scale_x_continuous(expand = c(0,0),
                        breaks=seq(20,130,10),
@@ -843,13 +789,12 @@ for (outcome in outcome_list) {
          # width=8.3,height=6,units = "in",path="figures")
 }
 
-##### Scatterplots of DERS vs BPM by gender ####
+##### Graphs of DERS vs BPM by gender ####
 outcome_list <- c("yr4_bpm_int","yr4_bpm_ext")
 bpm_ders_plot_list <- list()
 for (outcome in outcome_list) {
   # Create plot
   bpm_ders_plot <- ggplot(aes(x=yr3_ders_total,y=.data[[outcome]],
-                              # color=genderid,
                               linetype=genderid,
                               shape = genderid,
                               fill = genderid
@@ -857,25 +802,13 @@ for (outcome in outcome_list) {
     geom_point(alpha=.6, size=2) +
     geom_smooth(method="lm",
                 se=FALSE,
-                # linewidth=1.75,
                 color="black") +
-    # geom_smooth(aes(color=genderid),method="lm",
-    #             se=FALSE,
-    #             linewidth=1) +    
-    # geom_hline(yintercept=70,linetype='dashed') +
     scale_linetype_manual(values = c("cis_boy"="31",
                                      "cis_girl"="11",
                                      "gd"="solid")) +
     scale_shape_manual(values=c(21,22,23)) +
     scale_fill_manual(values=c("grey40","grey85","black")) +
-    # scale_fill_grey(start=0.9,end=0) +
     scale_colour_grey(start=0.9,end=0) +
-    # scale_x_continuous(expand = c(0,0),
-    #                    breaks=seq(25,150,25),
-    #                    limits = c(25,155)) +
-    # scale_y_continuous(expand = c(0,0),
-    #                    breaks=seq(20,90,10),
-    #                    limits = c(20,90)) +
     scale_x_continuous(expand = c(0,0),
                        breaks=seq(20,130,10),
                        limits = c(25,131)) +
@@ -899,34 +832,78 @@ for (outcome in outcome_list) {
 ### Kruskal-Wallis (non-parametric version of one-way ANOVA) and Dunn test ie ####
 ### pairwise Wilcoxon tests to determine whether variables differ based on 
 ### gender
-#### Age (year 4) 
+
+# /!\ for broad gender groups (ie genderid), p = 0.1441
+# /!\ for more granular gender groups (ie gender_details), p = 0.3413
+#### Age (year 4)
 kruskal.test(yr4_age ~ genderid, data = analysis_data)
 # kruskal.test(yr4_age ~ gender_details, data = analysis_data)
+
+# /!\ for broad gender groups (ie genderid), p = 0.000008609. cis girls and GD
+# /!\ are significantly different from cis boys, but no significant difference
+# /!\ between GD and cis girls
+# /!\ for more granular gender groups (ie gender_details), p = 0.00008648. only
+# /!\ significant differences are between nonbinary and cis boys and between
+# /!\ nonbinary and cis girls
 #### LES (year 3) 
 kruskal.test(yr3_total_bad_le ~ genderid, data = analysis_data)
 dunnTest(analysis_data$yr3_total_bad_le, analysis_data$genderid, method = "bh")
 # kruskal.test(yr3_total_bad_le ~ gender_details, data = analysis_data)
 # dunnTest(analysis_data$yr3_total_bad_le, analysis_data$gender_details, method = "bh")
+
+# /!\ for broad gender groups (ie genderid), p = 0.0000000000006128. all groups
+# /!\ are significantly different
+# /!\ for more granular gender groups (ie gender_details), p = 0.00000000001118. 
+# /!\ only significant differences are between cis boy and cis girl and between 
+# /!\ nonbinary and cis girl
 #### DERS (year 3) 
 kruskal.test(yr3_ders_total ~ genderid, data = analysis_data)
 dunnTest(analysis_data$yr3_ders_total, analysis_data$genderid, method = "bh")
 # kruskal.test(yr3_ders_total ~ gender_details, data = analysis_data)
 # dunnTest(analysis_data$yr3_ders_total, analysis_data$gender_details, method = "bh")
+
+# /!\ for broad gender groups (ie genderid), p = 0.000000000000001124. only 
+# /!\ significant differences are between GD and cis boys and between GD and
+# /!\ cis girls
+# /!\ for more granular gender groups (ie gender_details), p = 0.00000000000001058 
+# /!\ only significant differences are between nonbinary and cis boy, between
+# /!\ nonbinary and cis girl, between trans boy and cis boy, and between trans
+# /!\ boy and cis girl
 #### CBCL internalizing (year 4) 
 kruskal.test(yr4_cbcl_int ~ genderid, data = analysis_data)
 dunnTest(analysis_data$yr4_cbcl_int, analysis_data$genderid, method = "bh")
 # kruskal.test(yr4_cbcl_int ~ gender_details, data = analysis_data)
 # dunnTest(analysis_data$yr4_cbcl_int, analysis_data$gender_details, method = "bh")
+
+# /!\ for broad gender groups (ie genderid), p = 0.000000165. all groups 
+# /!\ significantly different
+# /!\ for more granular gender groups (ie gender_details), p = 0.0000003991 
+# /!\ only significant differences are between cis boys and cis girls, between
+# /!\ nonbinary and cis boy, betweenn nonbinary and cis girl, between trans boy 
+# /!\ and cis boy, and between trans boy and cis girl
 #### CBCL externalizing (year 4)
 kruskal.test(yr4_cbcl_ext ~ genderid, data = analysis_data)
 dunnTest(analysis_data$yr4_cbcl_ext, analysis_data$genderid, method = "bh")
 # kruskal.test(yr4_cbcl_ext ~ gender_details, data = analysis_data)
 # dunnTest(analysis_data$yr4_cbcl_ext, analysis_data$gender_details, method = "bh")
+
+# /!\ for broad gender groups (ie genderid), p < 0.00000000000000022. all groups 
+# /!\ significantly different
+# /!\ for more granular gender groups (ie gender_details), p < 0.00000000000000022 
+# /!\ all comparisons significant *except* between nonbinary and trans boys,
+# /!\ between trans girls and cis boys, and between trans girls and cis girls
 #### BPM internalizing (year 4) 
-kruskal.test(yr4_bpm_int ~ genderid, data = analysis_data)
-dunnTest(analysis_data$yr4_bpm_int, analysis_data$genderid, method = "bh")
+# kruskal.test(yr4_bpm_int ~ genderid, data = analysis_data)
+# dunnTest(analysis_data$yr4_bpm_int, analysis_data$genderid, method = "bh")
 # kruskal.test(yr4_bpm_int ~ gender_details, data = analysis_data)
 # dunnTest(analysis_data$yr4_bpm_int, analysis_data$gender_details, method = "bh")
+
+# /!\ for broad gender groups (ie genderid), p = 0.0000000002072 all groups 
+# /!\ significantly different
+# /!\ for more granular gender groups (ie gender_details), p = 0.000000004543 
+# /!\ only significant differences are between cis boys and cis girls, between
+# /!\ nonbinary and cis boy, betweenn nonbinary and cis girl, between trans boy 
+# /!\ and cis boy, and between trans boy and cis girl
 #### BPM externalizing (year 4)
 kruskal.test(yr4_bpm_ext ~ genderid, data = analysis_data)
 dunnTest(analysis_data$yr4_bpm_ext, analysis_data$genderid, method = "bh")
@@ -936,18 +913,32 @@ dunnTest(analysis_data$yr4_bpm_ext, analysis_data$genderid, method = "bh")
 
 ### Mann-Whitney U (non-parametric version of two-sample t-test) to determine ####
 ### whether variables differ based on sex
+
+# /!\ no difference based on sex, p = 0.1584
 #### Age (year 4) 
 wilcox.test(yr4_age ~ sex, data = analysis_data)
-#### LES (year 3) does differ significantly based on sex (p = 0.01768)
+
+# /!\ significant difference based on sex, p = 0.01035
+#### LES (year 3) 
 wilcox.test(yr3_total_bad_le ~ sex, data = analysis_data)
-#### DERS (year 3) does differ significantly based on sex (p = 5.757e-16)
+
+# /!\ significant difference based on sex, p = 0.000000005503
+#### DERS (year 3) 
 wilcox.test(yr3_ders_total ~ sex, data = analysis_data)
+
+# /!\ significant difference based on sex, p = 0.02859
 #### CBCL internalizing (year 4) 
 wilcox.test(yr4_cbcl_int ~ sex, data = analysis_data)
+
+# /!\ significant difference based on sex, p = 0.02453
 #### CBCL externalizing (year 4)
 wilcox.test(yr4_cbcl_ext ~ sex, data = analysis_data)
+
+# /!\ significant difference based on sex, p = 0.00000000004388
 #### BPM internalizing (year 4)
 wilcox.test(yr4_bpm_int ~ sex, data = analysis_data)
+
+# /!\ significant difference based on sex, p = 0.000005854
 #### BPM externalizing (year 4) 
 wilcox.test(yr4_bpm_ext ~ sex, data = analysis_data)
 
@@ -955,146 +946,251 @@ wilcox.test(yr4_bpm_ext ~ sex, data = analysis_data)
 ### on LES, using age as fixed effect covariate and site as random intercept
 #### DERS ~ LES + age + (1|site) ####
 ders_les_age_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
 # ders_les_age_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
                          data=analysis_data)
+# /!\ LES is significant, untransformed: p = 0.00000000115, log transformed:0.000000179 
 summary(ders_les_age_reg)
+# /!\ R^2 for the whole model = 0.01705187
 rsq(ders_les_age_reg,adj=TRUE)
 
 ### Mixed effect linear regression to determine whether CBCL or BPM differ ####
 ### based on LES and/or DERS, using age as fixed effect covariate and site as random 
 ### intercept
-#### CBCL internalizing ~ LES + age + (1|site) ####
+#### First check that all pairs of variables are related (with covariates of ####
+#### age and site) to determine whether mediation analysis is reasonable
+##### CBCL internalizing ~ LES + age + (1|site) ####
 cbcl_int_les_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
 # cbcl_int_les_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr3_total_bad_le + C_yr4_age + (1|site),
                            data=analysis_data)
+# /!\ LES is significant, untransformed: p = 0.000000000000103, log transformed: 0.0000000037  
 summary(cbcl_int_les_age_reg)
-#### CBCL externalizing ~ LES + age + (1|site) ####
+
+##### CBCL externalizing ~ LES + age + (1|site) ####
 cbcl_ext_les_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
 # cbcl_ext_les_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr3_total_bad_le + C_yr4_age + (1|site),
                            data=analysis_data)
+# /!\ LES is significant, untransformed: p < 0.0000000000000002, log transformed:0.000000000000158 
 summary(cbcl_ext_les_age_reg)
-#### BPM internalizing ~ LES + age + (1|site) ####
+
+##### BPM internalizing ~ LES + age + (1|site) ####
  bpm_int_les_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
- # bpm_int_les_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr3_total_bad_le + C_yr4_age + (1|site),
+ # /!\ all regressions are repeated with log transformed data for sensitivity analysis
+# bpm_int_les_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr3_total_bad_le + C_yr4_age + (1|site),
                              data=analysis_data)
+# /!\ LES is significant, untransformed: p<0.0000000000000002, log transformed:<0.0000000000000002 
 summary(bpm_int_les_age_reg)
-#### BPM externalizing ~ LES + age + (1|site) ####
+
+##### BPM externalizing ~ LES + age + (1|site) ####
  bpm_ext_les_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
- # bpm_ext_les_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr3_total_bad_le + C_yr4_age + (1|site),
+ # /!\ all regressions are repeated with log transformed data for sensitivity analysis
+# bpm_ext_les_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr3_total_bad_le + C_yr4_age + (1|site),
                              data=analysis_data)
+# /!\ LES is significant, untransformed:p=0.000000000000000793, log transformed:0.0000000000000436 
 summary(bpm_ext_les_age_reg)
-#### CBCL internalizing ~ DERS + age + (1|site) ####
+
+##### CBCL internalizing ~ DERS + age + (1|site) ####
  cbcl_int_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_ders_total + C_yr4_age + (1|site),
- # cbcl_int_ders_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr3_ders_total + C_yr4_age + (1|site),
+ # /!\ all regressions are repeated with log transformed data for sensitivity analysis
+# cbcl_int_ders_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr3_ders_total + C_yr4_age + (1|site),
                            data=analysis_data)
+# /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(cbcl_int_ders_age_reg)
-#### CBCL externalizing ~ DERS + age + (1|site) ####
+
+##### CBCL externalizing ~ DERS + age + (1|site) ####
  cbcl_ext_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_ders_total + C_yr4_age + (1|site),
- # cbcl_ext_ders_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr3_ders_total + C_yr4_age + (1|site),
+ # /!\ all regressions are repeated with log transformed data for sensitivity analysis
+# cbcl_ext_ders_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr3_ders_total + C_yr4_age + (1|site),
                              data=analysis_data)
+# /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(cbcl_ext_ders_age_reg)
-#### BPM internalizing ~ DERS + age + (1|site) ####
+
+##### BPM internalizing ~ DERS + age + (1|site) ####
 bpm_int_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_ders_total + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
 # bpm_int_ders_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr3_ders_total + C_yr4_age + (1|site),
                             data=analysis_data)
+# /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(bpm_int_ders_age_reg)
-#### BPM externalizing ~ DERS + age + (1|site) ####
+
+##### BPM externalizing ~ DERS + age + (1|site) ####
 bpm_ext_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_ders_total + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
 # bpm_ext_ders_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr3_ders_total + C_yr4_age + (1|site),
                             data=analysis_data)
+# /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(bpm_ext_ders_age_reg)
-#### CBCL internalizing ~ LES + DERS + age + (1|site) ####
+
+#### Second include both LES and DERS in same model of psychopathology #### 
+#### symptoms to get variance explained for full linear regression model which
+#### does not include sex or gender as a covariate
+##### CBCL internalizing ~ LES + DERS + age + (1|site) ####
 cbcl_int_les_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
 # cbcl_int_les_ders_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr3_total_bad_le + C_log_yr3_ders_total + C_yr4_age + (1|site),
                               data=analysis_data)
+# /!\ LES is significant, untransformed:p=0.00000000623, log transformed:<0.0000000000000002  
+# /!\ DERS is significant, untransformed:p=0.000000543, log transformed:<0.0000000000000002  
 summary(cbcl_int_les_ders_age_reg)
+# /!\ R^2 for the whole model, untransformed: 0.1605785, log transformed: 0.1559261
 rsq(cbcl_int_les_ders_age_reg, adj=TRUE)
-#### CBCL externalizing ~ LES + DERS + age + (1|site) ####
+
+##### CBCL externalizing ~ LES + DERS + age + (1|site) ####
 cbcl_ext_les_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
 # cbcl_ext_les_ders_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr3_total_bad_le + C_log_yr3_ders_total + C_yr4_age + (1|site),
                               data=analysis_data)
+# /!\ LES is significant, untransformed:p=0.00000000000345, log transformed:0.0000000000549  
+# /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(cbcl_ext_les_ders_age_reg)
+# /!\ R^2 for the whole model, untransformed: 0.2100816, log transformed: 0.2092168
 rsq(cbcl_ext_les_ders_age_reg, adj=TRUE)
-#### BPM internalizing ~ LES + DERS + age + (1|site) ####
+
+##### BPM internalizing ~ LES + DERS + age + (1|site) ####
 bpm_int_les_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
 # bpm_int_les_ders_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr3_total_bad_le + C_log_yr3_ders_total + C_yr4_age + (1|site),
                               data=analysis_data)
+# /!\ LES is significant, untransformed:p<0.0000000000000002, log transformed:0.0000000000549  
+# /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(bpm_int_les_ders_age_reg)
+# /!\ R^2 for the whole model, untransformed: 0.04997359, log transformed: 0.04729545
 rsq(bpm_int_les_ders_age_reg, adj=TRUE)
-#### BPM externalizing ~ LES + DERS + age + (1|site) ####
+
+##### BPM externalizing ~ LES + DERS + age + (1|site) ####
 bpm_ext_les_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
 # bpm_ext_les_ders_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr3_total_bad_le + C_log_yr3_ders_total + C_yr4_age + (1|site),
                               data=analysis_data)
+# /!\ LES is significant, untransformed:p=0.000000000000337, log transformed:0.00000000000122  
+# /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(bpm_ext_les_ders_age_reg)
+# /!\ R^2 for the whole model, untransformed: 0.04491494, log transformed: 0.04411428
 rsq(bpm_ext_les_ders_age_reg, adj=TRUE)
 
+# /!\ Lili suggested more cleanly defining and tested moderators (gender or
+# /!\ sex) vs mediators (DERS ie emotion regulation), so I added step 2 below
+# /!\ for testing moderation only (ignoring mediation), then step 3 for testing
+# /!\ mediation only (ignoring gender or sex), and finally step 4 for testing
+# /!\ moderated mediation
 ## STEP TWO: MODERATING EFFECTS OF GENDER OR SEX ####
 ### Mixed effect linear regression to determine whether gender moderates ####
 ### relationship between DERS and LES, use age as fixed effect covariate and
 ### site as random intercept
 #### DERS ~ LES*gender + age + (1|site) ####
 ders_les_gendercisboy_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
 # ders_les_gendercisboy_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr3_total_bad_le*genderid_refcisboy + C_yr4_age + (1|site),
                          data=analysis_data)
 summary(ders_les_gendercisboy_reg)
+# /!\ no significant interactions with gender ie gender is not a moderator
+# /!\ untransformed: p = 0.2639, log transformed: 0.3194919
 anova(ders_les_gendercisboy_reg)
+# /!\ R^2 for the whole model, untransformed: 0.02749043, log transformed: 0.02375143
 rsq(ders_les_gendercisboy_reg,adj=TRUE)
+
 ### Mixed effect linear regression to determine whether sex moderates ####
 ### relationship between DERS and LES, use age as fixed effect covariate and
 ### site as random intercept
 #### DERS ~ LES*sex + age + (1|site) ####
 ders_les_sex_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le*sex + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
 # ders_les_sex_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr4_total_bad_le*sex + C_yr4_age + (1|site),
                                   data=analysis_data)
+# /!\ no significant interactions with sex ie sex is not a moderator
+# /!\ untransformed: p = 0.308068, log transformed: 0.3771   
 summary(ders_les_sex_reg)
+# /!\ R^2 for the whole model, untransformed: 0.01709962, log transformed: 0.01618385
 rsq(ders_les_sex_reg, adj=TRUE)
+
 ### Mixed effect linear regression to determine whether gender moderates ####
 ### relationship between LES, DERS, and CBCL or BPM using age as fixed effect
 ### covariate and site as random intercept
 #### CBCL internalizing ~ LES*gender + DERS*gender + age + (1|site) ####
 cbcl_int_les_gendercisboy_reg <- 
   lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
-  # lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
+# lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
        C_yr4_age + (1|site),  
        data=analysis_data, REML=FALSE)
 summary(cbcl_int_les_gendercisboy_reg)
+# /!\ no significant interactions with gender ie gender is not a moderator
+# /!\ gender*LES: untransformed: p = 0.3461, log transformed: 0.317572
+# /!\ gender*DERS: untransformed: p = 0.5499, log transformed: 0.062323
 anova(cbcl_int_les_gendercisboy_reg)
+# /!\ R^2 for the whole model, untransformed: 0.1835091, log transformed: 0.250594
 rsq(cbcl_int_les_gendercisboy_reg,adj=TRUE)
+
 #### CBCL externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
 cbcl_ext_les_gendercisboy_reg <- 
    lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
-   # lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
+# lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
          C_yr4_age + (1|site),  
        data=analysis_data, REML=FALSE)
 summary(cbcl_ext_les_gendercisboy_reg)
+# /!\ no significant interactions with gender ie gender is not a moderator
+# /!\ gender*LES: untransformed: p = 0.757237, log transformed: 0.252544
+# /!\ gender*DERS: untransformed: p = 0.897570, log transformed: 0.280400
 anova(cbcl_ext_les_gendercisboy_reg)
+# /!\ R^2 for the whole model, untransformed: 0.2108153, log transformed: 0.2728057
 rsq(cbcl_ext_les_gendercisboy_reg,adj=TRUE)
+
 #### BPM internalizing ~ LES*gender + DERS*gender + age + (1|site) ####
+# /!\ using cis boys as the reference level to get comparisons between cis boys
+# /!\ and GD youth and comparisons between cis boys and cis girls
 bpm_int_les_gendercisboy_reg <- 
    lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
    # lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
          C_yr4_age + (1|site),  
        data=analysis_data, REML=FALSE)
+# /!\ gender*LES for cis boys vs cis girls: untransformed: p = 0.00003629377, log transformed: p = 0.00178
+# /!\ gender*LES for cis boys vs GD: untransformed: p = 0.00418, log transformed: p = 0.00264
 summary(bpm_int_les_gendercisboy_reg)
+# /!\ significant interactions with gender and LES ie gender is a moderator
+# /!\ gender*LES: untransformed: p = 0.00003262634572961, log transformed: 0.0004205
+# /!\ gender*DERS: untransformed: p = 0.72848, log transformed: 0.3864766    
 anova(bpm_int_les_gendercisboy_reg)
+# /!\ R^2 for the whole model, untransformed: 0.1101065, log transformed: 0.1413395
 rsq(bpm_int_les_gendercisboy_reg,adj=TRUE)
 
+# /!\ using cis girls as the reference level to get comparisons between cis girls
+# /!\ and GD youth
 bpm_int_les_gendercisgirl_reg <- 
   lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le*genderid_refcisgirl + C_yr3_ders_total*genderid_refcisgirl +
-         # lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le*genderid_refcisgirl + C_log_yr4_ders_total*genderid_refcisgirl +
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
+# lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le*genderid_refcisgirl + C_log_yr4_ders_total*genderid_refcisgirl +
          C_yr4_age + (1|site),  
        data=analysis_data, REML=FALSE)
+# /!\ gender*LES for cis girls vs cis boys: untransformed: p = 0.00003629, log transformed: p = 0.00178
+# /!\ gender*LES for cis girls vs GD: p = untransformed: p = 0.4611, log transformed: p = 0.10319 
 summary(bpm_int_les_gendercisgirl_reg)
+# /!\ significant interactions with gender and LES ie gender is a moderator
+# /!\ gender*LES: untransformed: p = 0.00003262628282413, log transformed: 0.0004205
+# /!\ gender*DERS: untransformed: p = 0.72848, log transformed: 0.3864766    
 anova(bpm_int_les_gendercisgirl_reg)
+# /!\ R^2 for the whole model, untransformed: 0.1101065, log transformed: 0.1413395
+# /!\ this should be the same as for model using cis boys as a reference above,
+# /!\ so this is basically just a double check the model is doing what I think
+# /!\ it is doing
 rsq(bpm_int_les_gendercisgirl_reg,adj=TRUE)
+
 #### BPM externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
 bpm_ext_les_gendercisboy_reg <- 
    lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
    # lmer(C_log_yr4_bpm_ext ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
          C_yr4_age + (1|site),  
        data=analysis_data, REML=FALSE)
 summary(bpm_ext_les_gendercisboy_reg)
+# /!\ no significant interactions with gender ie gender is not a moderator
+# /!\ gender*LES: untransformed: p = 0.4076, log transformed: 0.2025354
+# /!\ gender*DERS: untransformed: p = 0.7209, log transformed: 0.1149201
 anova(bpm_ext_les_gendercisboy_reg)
+# /!\ R^2 for the whole model, untransformed: 0.05588609, log transformed: 0.06968682
 rsq(bpm_ext_les_gendercisboy_reg,adj=TRUE)
 
 ### Mixed effect linear regression to determine whether sex moderates ####
@@ -1103,34 +1199,57 @@ rsq(bpm_ext_les_gendercisboy_reg,adj=TRUE)
 #### CBCL internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
 cbcl_int_les_sex_reg <- 
   lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
-  # lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
+# lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
        data=analysis_data, REML=FALSE)
+# /!\ significant interactions with sex ie sex is a moderator for DERS only if log transformed
+# /!\ sex*LES: untransformed: p = 0.0909, log transformed: 0.06171
+# /!\ sex*DERS: untransformed: p = 0.1210, log transformed: 0.02008
 summary(cbcl_int_les_sex_reg)
+# /!\ R^2 for the whole model, untransformed: 0.1699789, log transformed: 0.2441018
 rsq(cbcl_int_les_sex_reg,adj=TRUE)
+
 #### CBCL externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
 cbcl_ext_les_sex_reg <-
    lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
-   # lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
+# lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
        data=analysis_data, REML=FALSE)
+# /!\ no significant interactions with sex ie sex is not a moderator
+# /!\ sex*LES: untransformed: p = 0.74670, log transformed: 0.646747
+# /!\ sex*DERS: untransformed: p = 0.69204, log transformed: 0.837820
 summary(cbcl_ext_les_sex_reg)
+# /!\ R^2 for the whole model, untransformed: 0.2081902, log transformed: 0.2708238
 rsq(cbcl_ext_les_sex_reg,adj=TRUE)
+
 #### BPM internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
 bpm_int_les_sex_reg <- 
   lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
   # lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
        data=analysis_data, REML=FALSE)
+# /!\ significant interactions with sex ie sex is a moderator
+# /!\ sex*LES: untransformed: p = 0.00000057905792630, log transformed: 0.0000878141636095
+# /!\ sex*DERS: untransformed: p = 0.371233, log transformed: 0.0138
 summary(bpm_int_les_sex_reg)
+# /!\ R^2 for the whole model, untransformed: 0.07070543, log transformed: 0.1070619
 rsq(bpm_int_les_sex_reg,adj=TRUE)
+
 #### BPM externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
 bpm_ext_les_sex_reg <-
    lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
    # lmer(C_log_yr4_bpm_ext ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
        data=analysis_data, REML=FALSE)
+# /!\ no significant interactions with sex ie sex is not a moderator
+# /!\ sex*LES: untransformed: p = 0.226271, log transformed: 0.72048
+# /!\ sex*DERS: untransformed: p = 0.509245, log transformed: 0.41970
 summary(bpm_ext_les_sex_reg)
+# /!\ R^2 for the whole model, untransformed: 0.05011562, log transformed: 0.06330689
 rsq(bpm_ext_les_sex_reg,adj=TRUE)
 
+# /!\ this is for testing basic mediation only (ignoring gender or sex)
 ## STEP THREE: MEDIATING EFFECT OF ER ON CBCL OR BPM ~ LES #### 
-
 
 ### Simple mediation model for CBCL internalizing ####
 cbclint_model <-
@@ -1144,6 +1263,7 @@ cbclint_model <-
       ab := a*b
     # total effect
       total := c + (a*b)'
+# /!\ all models are repeated with log transformed data for sensitivity analysis
 # cbclint_model <-
 #   ' # direct effect
 #         C_log_yr4_cbcl_int~ c*C_log_yr3_total_bad_le + C_yr4_age
@@ -1163,6 +1283,11 @@ cbclint_model <- sem(cbclint_model,
                              cluster = "site")
 summary(cbclint_model, fit.measures=T, 
         standardized=F, ci=TRUE, rsquare=TRUE)
+# /!\ all paths significant suggesting partial mediation
+# /!\ path a: untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path b: p = untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path c' (direct): p = untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path ab (indirect): p = untransformed: p < 0.001, log transformed: p < 0.001
 parameterEstimates(cbclint_model, boot.ci.type = "bca.simple")
 
 ### Simple mediation model for CBCL externalizing ####
@@ -1177,6 +1302,7 @@ cbclext_model <-
       ab := a*b
     # total effect
       total := c + (a*b)'
+# /!\ all models are repeated with log transformed data for sensitivity analysis
 # cbclext_model <-
 #   ' # direct effect
 #         C_log_yr4_cbcl_ext~ c*C_log_yr4_total_bad_le + C_yr4_age
@@ -1196,6 +1322,11 @@ cbclext_model <- sem(cbclext_model,
                      cluster = "site")
 summary(cbclext_model, fit.measures=T, 
         standardized=F, ci=TRUE, rsquare=TRUE)
+# /!\ all paths significant suggesting partial mediation
+# /!\ path a: untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path b: p = untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path c' (direct): p = untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path ab (indirect): p = untransformed: p < 0.001, log transformed: p < 0.001
 parameterEstimates(cbclext_model, boot.ci.type = "bca.simple")
 
 ### Simple mediation model for bpm internalizing ####
@@ -1210,6 +1341,7 @@ bpmint_model <-
         ab := a*b
       # total effect
         total := c + (a*b)'
+# /!\ all models are repeated with log transformed data for sensitivity analysis
 # bpmint_model <-
 #   ' # direct effect
 #         C_log_yr4_bpm_int~ c*C_log_yr4_total_bad_le + C_yr4_age
@@ -1229,6 +1361,11 @@ bpmint_model <- sem(bpmint_model,
                      cluster = "site")
 summary(bpmint_model, fit.measures=T, 
         standardized=F, ci=TRUE, rsquare=TRUE)
+# /!\ all paths significant suggesting partial mediation
+# /!\ path a: untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path b: p = untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path c' (direct): p = untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path ab (indirect): p = untransformed: p < 0.001, log transformed: p < 0.001
 parameterEstimates(bpmint_model, boot.ci.type = "bca.simple")
 
 ### Simple mediation model for bpm externalizing ####
@@ -1243,6 +1380,7 @@ bpmext_model <-
         ab := a*b
       # total effect
         total := c + (a*b)'
+# /!\ all models are repeated with log transformed data for sensitivity analysis
 # bpmext_model <-
 #   ' # direct effect
 #         C_log_yr4_bpm_ext~ c*C_log_yr4_total_bad_le + C_yr4_age
@@ -1262,19 +1400,39 @@ bpmext_model <- sem(bpmext_model,
                      cluster = "site")
 summary(bpmext_model, fit.measures=T, 
         standardized=F, ci=TRUE, rsquare=TRUE)
+# /!\ all paths significant suggesting partial mediation
+# /!\ path a: untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path b: p = untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path c' (direct): p = untransformed: p < 0.001, log transformed: p < 0.001
+# /!\ path ab (indirect): p = untransformed: p < 0.001, log transformed: p < 0.001
 parameterEstimates(bpmext_model, boot.ci.type = "bca.simple")
 
 
+# /!\ basic moderation analyses suggested that gender and sex only moderate
+# /!\ relations between LES and psychopathology [with the exception of log
+# /!\ transformed interactions between sex and DERS for internalizing symptoms
+# /!\ only...not sure what to do with that. honestly I don't think it changes
+# /!\ the story of the paper but idk] so moderated mediation models only looked
+# /!\ at effects of sex or gender on relations between LES and psychopathology
+# /!\ (ie used Hayes' process model 5). trying to figure out how to get a p-value
+# /!\ or actual statistical test to compare gender groups was kind of a nightmare - 
+# /!\ I could have done it with SEM but the explanation got really complicated
+# /!\ really fast, so I did some digging and based this setup of first SEM then
+# /!\ process modeling on a paper that was published a few years ago in JAACAP
+# /!\ and used ABCD data.
 ## STEP FOUR: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION ####
 
 ### Moderated mediation model (Hayes model 5) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### internalizing 
+# /!\ no significant LES*gender interaction
+# /!\ untransformed: p = .286, log transformed: p = .406
 cbcl_int_gender_model15 <- PROCESS(
   analysis_data,
   y = "C_yr4_cbcl_int",
   x = "C_yr3_total_bad_le",
   meds = c("C_yr3_ders_total"),
+# /!\ all models are repeated with log transformed data for sensitivity analysis
   # y = "C_log_yr4_cbcl_int",
   # x = "C_log_yr3_total_bad_le",
   # meds = c("C_log_yr3_ders_total"),
@@ -1297,11 +1455,14 @@ cbcl_int_gender_model15 <- PROCESS(
 ### Moderated mediation model (Hayes model 5) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### externalizing 
+# /!\ no significant LES*gender interaction
+# /!\ untransformed: p = .757, log transformed: p = .945
 cbcl_ext_gender_model15 <- PROCESS(
   analysis_data,
   y = "C_yr4_cbcl_ext",
   x = "C_yr3_total_bad_le",
   meds = c("C_yr3_ders_total"),
+# /!\ all models are repeated with log transformed data for sensitivity analysis
   # y = "C_log_yr4_cbcl_ext",
   # x = "C_log_yr3_total_bad_le",
   # meds = c("C_log_yr3_ders_total"),
@@ -1324,11 +1485,14 @@ cbcl_ext_gender_model15 <- PROCESS(
 ### Moderated mediation model (Hayes model 5) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### internalizing 
+# /!\ significant LES*gender interaction
+# /!\ untransformed: p <.001, log transformed: p <.001
 bpm_int_gender_model15 <- PROCESS(
   analysis_data,
   y = "C_yr4_bpm_int",
   x = "C_yr3_total_bad_le",
   meds = c("C_yr3_ders_total"),
+# /!\ all models are repeated with log transformed data for sensitivity analysis
   # y = "C_log_yr4_bpm_int",
   # x = "C_log_yr3_total_bad_le",
   # meds = c("C_log_yr3_ders_total"),
@@ -1399,11 +1563,14 @@ bpm_int_gender_model15 <- PROCESS(
 ### Moderated mediation model (Hayes model 5) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### externalizing 
+# /!\ no significant LES*gender interaction
+# /!\ untransformed: p = .409, log transformed: p = .088
 bpm_ext_gender_model15 <- PROCESS(
   analysis_data,
   y = "C_yr4_bpm_ext",
   x = "C_yr3_total_bad_le",
   meds = c("C_yr3_ders_total"),
+# /!\ all models are repeated with log transformed data for sensitivity analysis
   # y = "C_log_yr4_bpm_ext",
   # x = "C_log_yr3_total_bad_le",
   # meds = c("C_log_yr3_ders_total"),
@@ -1426,14 +1593,17 @@ bpm_ext_gender_model15 <- PROCESS(
 ### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### internalizing 
+# /!\ no significant LES*sex interaction
+# /!\ untransformed: p = .071, log transformed: p = .126
 cbcl_int_sex_model15 <- PROCESS(
   analysis_data,
-  y = "C_yr4_cbcl_int",
-  x = "C_yr3_total_bad_le",
-  meds = c("C_yr3_ders_total"),
-  # y = "C_log_yr4_cbcl_int",
-  # x = "C_log_yr3_total_bad_le",
-  # meds = c("C_log_yr3_ders_total"),
+  # y = "C_yr4_cbcl_int",
+  # x = "C_yr3_total_bad_le",
+  # meds = c("C_yr3_ders_total"),
+# /!\ all models are repeated with log transformed data for sensitivity analysis
+  y = "C_log_yr4_cbcl_int",
+  x = "C_log_yr3_total_bad_le",
+  meds = c("C_log_yr3_ders_total"),
   mods = c("sex"),
   covs = c("C_yr4_age"),
   hlm.re.m = "site",
@@ -1453,11 +1623,14 @@ cbcl_int_sex_model15 <- PROCESS(
 ### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### externalizing 
+# /!\ no significant LES*sex interaction
+# /!\ untransformed: p = .740, log transformed: p = .878
 cbcl_ext_sex_model15 <- PROCESS(
   analysis_data,
   y = "C_yr4_cbcl_ext",
   x = "C_yr3_total_bad_le",
   meds = c("C_yr3_ders_total"),
+# /!\ all models are repeated with log transformed data for sensitivity analysis
   # y = "C_log_yr4_cbcl_ext",
   # x = "C_log_yr3_total_bad_le",
   # meds = c("C_log_yr3_ders_total"),
@@ -1480,11 +1653,14 @@ cbcl_ext_sex_model15 <- PROCESS(
 ### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### internalizing 
+# /!\ significant LES*sex interaction
+# /!\ untransformed: p <.001, log transformed: p <.001
 bpm_int_sex_model15 <- PROCESS(
   analysis_data,
   y = "C_yr4_bpm_int",
   x = "C_yr3_total_bad_le",
   meds = c("C_yr3_ders_total"),
+# /!\ all models are repeated with log transformed data for sensitivity analysis
   # y = "C_log_yr4_bpm_int",
   # x = "C_log_yr3_total_bad_le",
   # meds = c("C_log_yr3_ders_total"),
@@ -1507,11 +1683,14 @@ bpm_int_sex_model15 <- PROCESS(
 ### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### externalizing 
+# /!\ significant LES*sex interaction for log transformed only
+# /!\ untransformed: p = .227, log transformed: p = .043
 bpm_ext_sex_model15 <- PROCESS(
   analysis_data,
   y = "C_yr4_bpm_ext",
   x = "C_yr3_total_bad_le",
   meds = c("C_yr3_ders_total"),
+# /!\ all models are repeated with log transformed data for sensitivity analysis
   # y = "C_log_yr4_bpm_ext",
   # x = "C_log_yr3_total_bad_le",
   # meds = c("C_log_yr3_ders_total"),
