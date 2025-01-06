@@ -362,8 +362,11 @@ alldata <- genderdata %>%
       log_ders_total, log_total_bad_le, 
       log_cbcl_int, log_cbcl_ext,
       log_bpm_int, log_bpm_ext),
-    ~ as.numeric(misty::center(.,type = c("CGM"))),
-    .names = "C_{.col}"
+    # Z-score continuous variables
+    ~ as.numeric(scale(.,center=TRUE,scale=TRUE)),
+    # Grand-mean center continuous variables
+    # ~ as.numeric(misty::center(.,type = c("CGM"))),
+    .names = "Z_{.col}"
   )) %>%
   # make genderid, sex, and site factors rather than characters
   mutate(across(c(genderid, sex, site), as.factor))
@@ -436,19 +439,19 @@ analysis_data <- yr4data %>%
     log_yr4_cbcl_ext = log_cbcl_ext,
     log_yr4_bpm_int = log_bpm_int,
     log_yr4_bpm_ext = log_bpm_ext,
-    C_yr4_total_bad_le = C_total_bad_le,
-    C_yr4_ders_total = C_ders_total,
-    C_yr4_cbcl_int = C_cbcl_int,
-    C_yr4_cbcl_ext = C_cbcl_ext,
-    C_yr4_bpm_int = C_bpm_int,
-    C_yr4_bpm_ext = C_bpm_ext,
-    C_log_yr4_total_bad_le = C_log_total_bad_le,
-    C_log_yr4_ders_total = C_log_ders_total,
-    C_log_yr4_cbcl_int = C_log_cbcl_int,
-    C_log_yr4_cbcl_ext = C_log_cbcl_ext,
-    C_log_yr4_bpm_int = C_log_bpm_int,
-    C_log_yr4_bpm_ext = C_log_bpm_ext,
-    C_yr4_age = C_age
+    Z_yr4_total_bad_le = Z_total_bad_le,
+    Z_yr4_ders_total = Z_ders_total,
+    Z_yr4_cbcl_int = Z_cbcl_int,
+    Z_yr4_cbcl_ext = Z_cbcl_ext,
+    Z_yr4_bpm_int = Z_bpm_int,
+    Z_yr4_bpm_ext = Z_bpm_ext,
+    Z_log_yr4_total_bad_le = Z_log_total_bad_le,
+    Z_log_yr4_ders_total = Z_log_ders_total,
+    Z_log_yr4_cbcl_int = Z_log_cbcl_int,
+    Z_log_yr4_cbcl_ext = Z_log_cbcl_ext,
+    Z_log_yr4_bpm_int = Z_log_bpm_int,
+    Z_log_yr4_bpm_ext = Z_log_bpm_ext,
+    Z_yr4_age = Z_age
   ) %>%
 # /!\ add in year three data. as far as I know, data needs to be in this format
 # /!\ ie wide for linear regression commands and other analysis commands to work
@@ -468,13 +471,13 @@ analysis_data <- yr4data %>%
                      log_cbcl_ext,
                      log_bpm_int,
                      log_bpm_ext,
-                     C_age,
-                     C_total_bad_le,C_ders_total,
-                     C_cbcl_int,C_cbcl_ext,
-                     C_bpm_int,C_bpm_ext,
-                     C_log_total_bad_le,C_log_ders_total,
-                     C_log_cbcl_int,C_log_cbcl_ext,
-                     C_log_bpm_int,C_log_bpm_ext
+                     Z_age,
+                     Z_total_bad_le,Z_ders_total,
+                     Z_cbcl_int,Z_cbcl_ext,
+                     Z_bpm_int,Z_bpm_ext,
+                     Z_log_total_bad_le,Z_log_ders_total,
+                     Z_log_cbcl_int,Z_log_cbcl_ext,
+                     Z_log_bpm_int,Z_log_bpm_ext
                    )),
             by="src_subject_id") %>%
 # /!\ make year three columns all include year three in name to be more clear
@@ -493,19 +496,19 @@ analysis_data <- yr4data %>%
     log_yr3_cbcl_ext = log_cbcl_ext,
     log_yr3_bpm_int = log_bpm_int,
     log_yr3_bpm_ext = log_bpm_ext,
-    C_yr3_total_bad_le = C_total_bad_le,
-    C_yr3_ders_total = C_ders_total,
-    C_yr3_cbcl_int = C_cbcl_int,
-    C_yr3_cbcl_ext = C_cbcl_ext,
-    C_yr3_bpm_int = C_bpm_int,
-    C_yr3_bpm_ext = C_bpm_ext,
-    C_yr3_age = C_age,
-    C_log_yr3_total_bad_le = C_log_total_bad_le,
-    C_log_yr3_ders_total = C_log_ders_total,
-    C_log_yr3_cbcl_int = C_log_cbcl_int,
-    C_log_yr3_cbcl_ext = C_log_cbcl_ext,
-    C_log_yr3_bpm_int = C_log_bpm_int,
-    C_log_yr3_bpm_ext = C_log_bpm_ext,
+    Z_yr3_total_bad_le = Z_total_bad_le,
+    Z_yr3_ders_total = Z_ders_total,
+    Z_yr3_cbcl_int = Z_cbcl_int,
+    Z_yr3_cbcl_ext = Z_cbcl_ext,
+    Z_yr3_bpm_int = Z_bpm_int,
+    Z_yr3_bpm_ext = Z_bpm_ext,
+    Z_yr3_age = Z_age,
+    Z_log_yr3_total_bad_le = Z_log_total_bad_le,
+    Z_log_yr3_ders_total = Z_log_ders_total,
+    Z_log_yr3_cbcl_int = Z_log_cbcl_int,
+    Z_log_yr3_cbcl_ext = Z_log_cbcl_ext,
+    Z_log_yr3_bpm_int = Z_log_bpm_int,
+    Z_log_yr3_bpm_ext = Z_log_bpm_ext,
   ) %>%
 # /!\ only keep subjects with year three LES, year three DERS-P, year four BPM-Y,
 # /!\ and year four CBCL data. okay for variables to be missing in other years
@@ -945,13 +948,13 @@ wilcox.test(yr4_bpm_ext ~ sex, data = analysis_data)
 ### Mixed effect linear regression to determine whether DERS differs based ####
 ### on LES, using age as fixed effect covariate and site as random intercept
 #### DERS ~ LES + age + (1|site) ####
-ders_les_age_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+ders_les_age_reg <- lmer(Z_yr4_ders_total ~ Z_yr3_total_bad_le + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# ders_les_age_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr4_total_bad_le + C_yr4_age + (1|site),
+# ders_les_age_reg <- lmer(Z_log_yr4_ders_total ~ Z_log_yr4_total_bad_le + Z_yr4_age + (1|site),
                          data=analysis_data)
 # /!\ LES is significant, untransformed: p = 0.00000000115, log transformed:0.000000179 
 summary(ders_les_age_reg)
-# /!\ R^2 for the whole model = 0.01705187
+# /!\ R^2 for the whole model: untransformed: 0.01705187, log transformed: 0.01563332
 rsq(ders_les_age_reg,adj=TRUE)
 
 ### Mixed effect linear regression to determine whether CBCL or BPM differ ####
@@ -960,65 +963,65 @@ rsq(ders_les_age_reg,adj=TRUE)
 #### First check that all pairs of variables are related (with covariates of ####
 #### age and site) to determine whether mediation analysis is reasonable
 ##### CBCL internalizing ~ LES + age + (1|site) ####
-cbcl_int_les_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+cbcl_int_les_age_reg <- lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# cbcl_int_les_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr3_total_bad_le + C_yr4_age + (1|site),
+# cbcl_int_les_age_reg <- lmer(Z_log_yr4_cbcl_int ~ Z_log_yr3_total_bad_le + Z_yr4_age + (1|site),
                            data=analysis_data)
 # /!\ LES is significant, untransformed: p = 0.000000000000103, log transformed: 0.0000000037  
 summary(cbcl_int_les_age_reg)
 
 ##### CBCL externalizing ~ LES + age + (1|site) ####
-cbcl_ext_les_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+cbcl_ext_les_age_reg <- lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# cbcl_ext_les_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr3_total_bad_le + C_yr4_age + (1|site),
+# cbcl_ext_les_age_reg <- lmer(Z_log_yr4_cbcl_ext ~ Z_log_yr3_total_bad_le + Z_yr4_age + (1|site),
                            data=analysis_data)
 # /!\ LES is significant, untransformed: p < 0.0000000000000002, log transformed:0.000000000000158 
 summary(cbcl_ext_les_age_reg)
 
 ##### BPM internalizing ~ LES + age + (1|site) ####
- bpm_int_les_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+ bpm_int_les_age_reg <- lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le + Z_yr4_age + (1|site),
  # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# bpm_int_les_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr3_total_bad_le + C_yr4_age + (1|site),
+# bpm_int_les_age_reg <- lmer(Z_log_yr4_bpm_int ~ Z_log_yr3_total_bad_le + Z_yr4_age + (1|site),
                              data=analysis_data)
 # /!\ LES is significant, untransformed: p<0.0000000000000002, log transformed:<0.0000000000000002 
 summary(bpm_int_les_age_reg)
 
 ##### BPM externalizing ~ LES + age + (1|site) ####
- bpm_ext_les_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le + C_yr4_age + (1|site),
+ bpm_ext_les_age_reg <- lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le + Z_yr4_age + (1|site),
  # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# bpm_ext_les_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr3_total_bad_le + C_yr4_age + (1|site),
+# bpm_ext_les_age_reg <- lmer(Z_log_yr4_bpm_ext ~ Z_log_yr3_total_bad_le + Z_yr4_age + (1|site),
                              data=analysis_data)
 # /!\ LES is significant, untransformed:p=0.000000000000000793, log transformed:0.0000000000000436 
 summary(bpm_ext_les_age_reg)
 
 ##### CBCL internalizing ~ DERS + age + (1|site) ####
- cbcl_int_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_ders_total + C_yr4_age + (1|site),
+ cbcl_int_ders_age_reg <- lmer(Z_yr4_cbcl_int ~ Z_yr3_ders_total + Z_yr4_age + (1|site),
  # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# cbcl_int_ders_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr3_ders_total + C_yr4_age + (1|site),
+# cbcl_int_ders_age_reg <- lmer(Z_log_yr4_cbcl_int ~ Z_log_yr3_ders_total + Z_yr4_age + (1|site),
                            data=analysis_data)
 # /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(cbcl_int_ders_age_reg)
 
 ##### CBCL externalizing ~ DERS + age + (1|site) ####
- cbcl_ext_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_ders_total + C_yr4_age + (1|site),
+ cbcl_ext_ders_age_reg <- lmer(Z_yr4_cbcl_ext ~ Z_yr3_ders_total + Z_yr4_age + (1|site),
  # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# cbcl_ext_ders_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr3_ders_total + C_yr4_age + (1|site),
+# cbcl_ext_ders_age_reg <- lmer(Z_log_yr4_cbcl_ext ~ Z_log_yr3_ders_total + Z_yr4_age + (1|site),
                              data=analysis_data)
 # /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(cbcl_ext_ders_age_reg)
 
 ##### BPM internalizing ~ DERS + age + (1|site) ####
-bpm_int_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_ders_total + C_yr4_age + (1|site),
+bpm_int_ders_age_reg <- lmer(Z_yr4_bpm_int ~ Z_yr3_ders_total + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# bpm_int_ders_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr3_ders_total + C_yr4_age + (1|site),
+# bpm_int_ders_age_reg <- lmer(Z_log_yr4_bpm_int ~ Z_log_yr3_ders_total + Z_yr4_age + (1|site),
                             data=analysis_data)
 # /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(bpm_int_ders_age_reg)
 
 ##### BPM externalizing ~ DERS + age + (1|site) ####
-bpm_ext_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_ders_total + C_yr4_age + (1|site),
+bpm_ext_ders_age_reg <- lmer(Z_yr4_bpm_ext ~ Z_yr3_ders_total + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# bpm_ext_ders_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr3_ders_total + C_yr4_age + (1|site),
+# bpm_ext_ders_age_reg <- lmer(Z_log_yr4_bpm_ext ~ Z_log_yr3_ders_total + Z_yr4_age + (1|site),
                             data=analysis_data)
 # /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(bpm_ext_ders_age_reg)
@@ -1027,20 +1030,20 @@ summary(bpm_ext_ders_age_reg)
 #### symptoms to get variance explained for full linear regression model which
 #### does not include sex or gender as a covariate
 ##### CBCL internalizing ~ LES + DERS + age + (1|site) ####
-cbcl_int_les_ders_age_reg <- lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+cbcl_int_les_ders_age_reg <- lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le + Z_yr3_ders_total + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# cbcl_int_les_ders_age_reg <- lmer(C_log_yr4_cbcl_int ~ C_log_yr3_total_bad_le + C_log_yr3_ders_total + C_yr4_age + (1|site),
+# cbcl_int_les_ders_age_reg <- lmer(Z_log_yr4_cbcl_int ~ Z_log_yr3_total_bad_le + Z_log_yr3_ders_total + Z_yr4_age + (1|site),
                               data=analysis_data)
-# /!\ LES is significant, untransformed:p=0.00000000623, log transformed:<0.0000000000000002  
-# /!\ DERS is significant, untransformed:p=0.000000543, log transformed:<0.0000000000000002  
+# /!\ LES is significant, untransformed:p=0.00000000623, log transformed: 0.000000543
+# /!\ DERS is significant, untransformed:p=<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(cbcl_int_les_ders_age_reg)
 # /!\ R^2 for the whole model, untransformed: 0.1605785, log transformed: 0.1559261
 rsq(cbcl_int_les_ders_age_reg, adj=TRUE)
 
 ##### CBCL externalizing ~ LES + DERS + age + (1|site) ####
-cbcl_ext_les_ders_age_reg <- lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+cbcl_ext_les_ders_age_reg <- lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le + Z_yr3_ders_total + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# cbcl_ext_les_ders_age_reg <- lmer(C_log_yr4_cbcl_ext ~ C_log_yr3_total_bad_le + C_log_yr3_ders_total + C_yr4_age + (1|site),
+# cbcl_ext_les_ders_age_reg <- lmer(Z_log_yr4_cbcl_ext ~ Z_log_yr3_total_bad_le + Z_log_yr3_ders_total + Z_yr4_age + (1|site),
                               data=analysis_data)
 # /!\ LES is significant, untransformed:p=0.00000000000345, log transformed:0.0000000000549  
 # /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
@@ -1049,20 +1052,20 @@ summary(cbcl_ext_les_ders_age_reg)
 rsq(cbcl_ext_les_ders_age_reg, adj=TRUE)
 
 ##### BPM internalizing ~ LES + DERS + age + (1|site) ####
-bpm_int_les_ders_age_reg <- lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+bpm_int_les_ders_age_reg <- lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le + Z_yr3_ders_total + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# bpm_int_les_ders_age_reg <- lmer(C_log_yr4_bpm_int ~ C_log_yr3_total_bad_le + C_log_yr3_ders_total + C_yr4_age + (1|site),
+# bpm_int_les_ders_age_reg <- lmer(Z_log_yr4_bpm_int ~ Z_log_yr3_total_bad_le + Z_log_yr3_ders_total + Z_yr4_age + (1|site),
                               data=analysis_data)
-# /!\ LES is significant, untransformed:p<0.0000000000000002, log transformed:0.0000000000549  
-# /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
+# /!\ LES is significant, untransformed:p<0.0000000000000002, log transformed:<0.0000000000000002  
+# /!\ DERS is significant, untransformed:0.00000000000000343, log transformed:<0.0000000000000002  
 summary(bpm_int_les_ders_age_reg)
 # /!\ R^2 for the whole model, untransformed: 0.04997359, log transformed: 0.04729545
 rsq(bpm_int_les_ders_age_reg, adj=TRUE)
 
 ##### BPM externalizing ~ LES + DERS + age + (1|site) ####
-bpm_ext_les_ders_age_reg <- lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le + C_yr3_ders_total + C_yr4_age + (1|site),
+bpm_ext_les_ders_age_reg <- lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le + Z_yr3_ders_total + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# bpm_ext_les_ders_age_reg <- lmer(C_log_yr4_bpm_ext ~ C_log_yr3_total_bad_le + C_log_yr3_ders_total + C_yr4_age + (1|site),
+# bpm_ext_les_ders_age_reg <- lmer(Z_log_yr4_bpm_ext ~ Z_log_yr3_total_bad_le + Z_log_yr3_ders_total + Z_yr4_age + (1|site),
                               data=analysis_data)
 # /!\ LES is significant, untransformed:p=0.000000000000337, log transformed:0.00000000000122  
 # /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
@@ -1080,9 +1083,9 @@ rsq(bpm_ext_les_ders_age_reg, adj=TRUE)
 ### relationship between DERS and LES, use age as fixed effect covariate and
 ### site as random intercept
 #### DERS ~ LES*gender + age + (1|site) ####
-ders_les_gendercisboy_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr4_age + (1|site),
+ders_les_gendercisboy_reg <- lmer(Z_yr4_ders_total ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# ders_les_gendercisboy_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr3_total_bad_le*genderid_refcisboy + C_yr4_age + (1|site),
+# ders_les_gendercisboy_reg <- lmer(Z_log_yr4_ders_total ~ Z_log_yr3_total_bad_le*genderid_refcisboy + Z_yr4_age + (1|site),
                          data=analysis_data)
 summary(ders_les_gendercisboy_reg)
 # /!\ no significant interactions with gender ie gender is not a moderator
@@ -1095,9 +1098,9 @@ rsq(ders_les_gendercisboy_reg,adj=TRUE)
 ### relationship between DERS and LES, use age as fixed effect covariate and
 ### site as random intercept
 #### DERS ~ LES*sex + age + (1|site) ####
-ders_les_sex_reg <- lmer(C_yr4_ders_total ~ C_yr3_total_bad_le*sex + C_yr4_age + (1|site),
+ders_les_sex_reg <- lmer(Z_yr4_ders_total ~ Z_yr3_total_bad_le*sex + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# ders_les_sex_reg <- lmer(C_log_yr4_ders_total ~ C_log_yr4_total_bad_le*sex + C_yr4_age + (1|site),
+# ders_les_sex_reg <- lmer(Z_log_yr4_ders_total ~ Z_log_yr4_total_bad_le*sex + Z_yr4_age + (1|site),
                                   data=analysis_data)
 # /!\ no significant interactions with sex ie sex is not a moderator
 # /!\ untransformed: p = 0.308068, log transformed: 0.3771   
@@ -1110,10 +1113,10 @@ rsq(ders_les_sex_reg, adj=TRUE)
 ### covariate and site as random intercept
 #### CBCL internalizing ~ LES*gender + DERS*gender + age + (1|site) ####
 cbcl_int_les_gendercisboy_reg <- 
-  lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
+  lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
-       C_yr4_age + (1|site),  
+# lmer(Z_log_yr4_cbcl_int ~ Z_log_yr4_total_bad_le*genderid_refcisboy + Z_log_yr4_ders_total*genderid_refcisboy +
+       Z_yr4_age + (1|site),  
        data=analysis_data, REML=FALSE)
 summary(cbcl_int_les_gendercisboy_reg)
 # /!\ no significant interactions with gender ie gender is not a moderator
@@ -1125,10 +1128,10 @@ rsq(cbcl_int_les_gendercisboy_reg,adj=TRUE)
 
 #### CBCL externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
 cbcl_ext_les_gendercisboy_reg <- 
-   lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
+   lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
-         C_yr4_age + (1|site),  
+# lmer(Z_log_yr4_cbcl_ext ~ Z_log_yr4_total_bad_le*genderid_refcisboy + Z_log_yr4_ders_total*genderid_refcisboy +
+         Z_yr4_age + (1|site),  
        data=analysis_data, REML=FALSE)
 summary(cbcl_ext_les_gendercisboy_reg)
 # /!\ no significant interactions with gender ie gender is not a moderator
@@ -1142,10 +1145,10 @@ rsq(cbcl_ext_les_gendercisboy_reg,adj=TRUE)
 # /!\ using cis boys as the reference level to get comparisons between cis boys
 # /!\ and GD youth and comparisons between cis boys and cis girls
 bpm_int_les_gendercisboy_reg <- 
-   lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
+   lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-   # lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
-         C_yr4_age + (1|site),  
+   # lmer(Z_log_yr4_bpm_int ~ Z_log_yr4_total_bad_le*genderid_refcisboy + Z_log_yr4_ders_total*genderid_refcisboy +
+         Z_yr4_age + (1|site),  
        data=analysis_data, REML=FALSE)
 # /!\ gender*LES for cis boys vs cis girls: untransformed: p = 0.00003629377, log transformed: p = 0.00178
 # /!\ gender*LES for cis boys vs GD: untransformed: p = 0.00418, log transformed: p = 0.00264
@@ -1160,10 +1163,10 @@ rsq(bpm_int_les_gendercisboy_reg,adj=TRUE)
 # /!\ using cis girls as the reference level to get comparisons between cis girls
 # /!\ and GD youth
 bpm_int_les_gendercisgirl_reg <- 
-  lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le*genderid_refcisgirl + C_yr3_ders_total*genderid_refcisgirl +
+  lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le*genderid_refcisgirl + Z_yr3_ders_total*genderid_refcisgirl +
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le*genderid_refcisgirl + C_log_yr4_ders_total*genderid_refcisgirl +
-         C_yr4_age + (1|site),  
+# lmer(Z_log_yr4_bpm_int ~ Z_log_yr4_total_bad_le*genderid_refcisgirl + Z_log_yr4_ders_total*genderid_refcisgirl +
+         Z_yr4_age + (1|site),  
        data=analysis_data, REML=FALSE)
 # /!\ gender*LES for cis girls vs cis boys: untransformed: p = 0.00003629, log transformed: p = 0.00178
 # /!\ gender*LES for cis girls vs GD: p = untransformed: p = 0.4611, log transformed: p = 0.10319 
@@ -1180,10 +1183,10 @@ rsq(bpm_int_les_gendercisgirl_reg,adj=TRUE)
 
 #### BPM externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
 bpm_ext_les_gendercisboy_reg <- 
-   lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le*genderid_refcisboy + C_yr3_ders_total*genderid_refcisboy +
+   lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-   # lmer(C_log_yr4_bpm_ext ~ C_log_yr4_total_bad_le*genderid_refcisboy + C_log_yr4_ders_total*genderid_refcisboy +
-         C_yr4_age + (1|site),  
+   # lmer(Z_log_yr4_bpm_ext ~ Z_log_yr4_total_bad_le*genderid_refcisboy + Z_log_yr4_ders_total*genderid_refcisboy +
+         Z_yr4_age + (1|site),  
        data=analysis_data, REML=FALSE)
 summary(bpm_ext_les_gendercisboy_reg)
 # /!\ no significant interactions with gender ie gender is not a moderator
@@ -1198,9 +1201,9 @@ rsq(bpm_ext_les_gendercisboy_reg,adj=TRUE)
 ### covariate and site as random intercept
 #### CBCL internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
 cbcl_int_les_sex_reg <- 
-  lmer(C_yr4_cbcl_int ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
+  lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# lmer(C_log_yr4_cbcl_int ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
+# lmer(Z_log_yr4_cbcl_int ~ Z_log_yr4_total_bad_le*sex + Z_log_yr4_ders_total*sex + Z_yr4_age + (1|site),
        data=analysis_data, REML=FALSE)
 # /!\ significant interactions with sex ie sex is a moderator for DERS only if log transformed
 # /!\ sex*LES: untransformed: p = 0.0909, log transformed: 0.06171
@@ -1211,9 +1214,9 @@ rsq(cbcl_int_les_sex_reg,adj=TRUE)
 
 #### CBCL externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
 cbcl_ext_les_sex_reg <-
-   lmer(C_yr4_cbcl_ext ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
+   lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# lmer(C_log_yr4_cbcl_ext ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
+# lmer(Z_log_yr4_cbcl_ext ~ Z_log_yr4_total_bad_le*sex + Z_log_yr4_ders_total*sex + Z_yr4_age + (1|site),
        data=analysis_data, REML=FALSE)
 # /!\ no significant interactions with sex ie sex is not a moderator
 # /!\ sex*LES: untransformed: p = 0.74670, log transformed: 0.646747
@@ -1224,9 +1227,9 @@ rsq(cbcl_ext_les_sex_reg,adj=TRUE)
 
 #### BPM internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
 bpm_int_les_sex_reg <- 
-  lmer(C_yr4_bpm_int ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
+  lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-  # lmer(C_log_yr4_bpm_int ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
+  # lmer(Z_log_yr4_bpm_int ~ Z_log_yr4_total_bad_le*sex + Z_log_yr4_ders_total*sex + Z_yr4_age + (1|site),
        data=analysis_data, REML=FALSE)
 # /!\ significant interactions with sex ie sex is a moderator
 # /!\ sex*LES: untransformed: p = 0.00000057905792630, log transformed: 0.0000878141636095
@@ -1237,9 +1240,9 @@ rsq(bpm_int_les_sex_reg,adj=TRUE)
 
 #### BPM externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
 bpm_ext_les_sex_reg <-
-   lmer(C_yr4_bpm_ext ~ C_yr3_total_bad_le*sex + C_yr3_ders_total*sex + C_yr4_age + (1|site),
+   lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + Z_yr4_age + (1|site),
 # /!\ all regressions are repeated with log transformed data for sensitivity analysis
-   # lmer(C_log_yr4_bpm_ext ~ C_log_yr4_total_bad_le*sex + C_log_yr4_ders_total*sex + C_yr4_age + (1|site),
+   # lmer(Z_log_yr4_bpm_ext ~ Z_log_yr4_total_bad_le*sex + Z_log_yr4_ders_total*sex + Z_yr4_age + (1|site),
        data=analysis_data, REML=FALSE)
 # /!\ no significant interactions with sex ie sex is not a moderator
 # /!\ sex*LES: untransformed: p = 0.226271, log transformed: 0.72048
@@ -1254,11 +1257,11 @@ rsq(bpm_ext_les_sex_reg,adj=TRUE)
 ### Simple mediation model for CBCL internalizing ####
 cbclint_model <-
 ' # direct effect
-      C_yr4_cbcl_int~ c*C_yr3_total_bad_le + C_yr4_age
+      Z_yr4_cbcl_int~ c*Z_yr3_total_bad_le + Z_yr4_age
     # mediator
-      C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
+      Z_yr3_ders_total ~ a*Z_yr3_total_bad_le  + Z_yr4_age
     # indirect effect
-      C_yr4_cbcl_int~ b*C_yr3_ders_total
+      Z_yr4_cbcl_int~ b*Z_yr3_ders_total
     # indirect effect (a*b)
       ab := a*b
     # total effect
@@ -1266,11 +1269,11 @@ cbclint_model <-
 # /!\ all models are repeated with log transformed data for sensitivity analysis
 # cbclint_model <-
 #   ' # direct effect
-#         C_log_yr4_cbcl_int~ c*C_log_yr3_total_bad_le + C_yr4_age
+#         Z_log_yr4_cbcl_int~ c*Z_log_yr3_total_bad_le + Z_yr4_age
 #       # mediator
-#         C_log_yr3_ders_total ~ a*C_log_yr3_total_bad_le  + C_yr4_age
+#         Z_log_yr3_ders_total ~ a*Z_log_yr3_total_bad_le  + Z_yr4_age
 #       # indirect effect
-#         C_log_yr4_cbcl_int~ b*C_log_yr3_ders_total
+#         Z_log_yr4_cbcl_int~ b*Z_log_yr3_ders_total
 #       # indirect effect (a*b)
 #         ab := a*b
 #       # total effect
@@ -1293,11 +1296,11 @@ parameterEstimates(cbclint_model, boot.ci.type = "bca.simple")
 ### Simple mediation model for CBCL externalizing ####
 cbclext_model <-
 ' # direct effect
-      C_yr4_cbcl_ext~ c*C_yr3_total_bad_le + C_yr4_age
+      Z_yr4_cbcl_ext~ c*Z_yr3_total_bad_le + Z_yr4_age
     # mediator
-      C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
+      Z_yr3_ders_total ~ a*Z_yr3_total_bad_le  + Z_yr4_age
     # indirect effect
-      C_yr4_cbcl_ext~ b*C_yr3_ders_total
+      Z_yr4_cbcl_ext~ b*Z_yr3_ders_total
     # indirect effect (a*b)
       ab := a*b
     # total effect
@@ -1305,11 +1308,11 @@ cbclext_model <-
 # /!\ all models are repeated with log transformed data for sensitivity analysis
 # cbclext_model <-
 #   ' # direct effect
-#         C_log_yr4_cbcl_ext~ c*C_log_yr4_total_bad_le + C_yr4_age
+#         Z_log_yr4_cbcl_ext~ c*Z_log_yr4_total_bad_le + Z_yr4_age
 #       # mediator
-#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
+#         Z_log_yr4_ders_total ~ a*Z_log_yr4_total_bad_le  + Z_yr4_age
 #       # indirect effect
-#         C_log_yr4_cbcl_ext~ b*C_log_yr4_ders_total
+#         Z_log_yr4_cbcl_ext~ b*Z_log_yr4_ders_total
 #       # indirect effect (a*b)
 #         ab := a*b
 #       # total effect
@@ -1332,11 +1335,11 @@ parameterEstimates(cbclext_model, boot.ci.type = "bca.simple")
 ### Simple mediation model for bpm internalizing ####
 bpmint_model <-
   ' # direct effect
-        C_yr4_bpm_int~ c*C_yr3_total_bad_le + C_yr4_age
+        Z_yr4_bpm_int~ c*Z_yr3_total_bad_le + Z_yr4_age
       # mediator
-        C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
+        Z_yr3_ders_total ~ a*Z_yr3_total_bad_le  + Z_yr4_age
       # indirect effect
-        C_yr4_bpm_int~ b*C_yr3_ders_total
+        Z_yr4_bpm_int~ b*Z_yr3_ders_total
       # indirect effect (a*b)
         ab := a*b
       # total effect
@@ -1344,22 +1347,22 @@ bpmint_model <-
 # /!\ all models are repeated with log transformed data for sensitivity analysis
 # bpmint_model <-
 #   ' # direct effect
-#         C_log_yr4_bpm_int~ c*C_log_yr4_total_bad_le + C_yr4_age
+#         Z_log_yr4_bpm_int~ c*Z_log_yr4_total_bad_le + Z_yr4_age
 #       # mediator
-#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
+#         Z_log_yr4_ders_total ~ a*Z_log_yr4_total_bad_le  + Z_yr4_age
 #       # indirect effect
-#         C_log_yr4_bpm_int~ b*C_log_yr4_ders_total
+#         Z_log_yr4_bpm_int~ b*Z_log_yr4_ders_total
 #       # indirect effect (a*b)
 #         ab := a*b
 #       # total effect
 #         total := c + (a*b)'
-bpmint_model <- sem(bpmint_model, 
-                     data = analysis_data, 
+bpmint_model <- sem(bpmint_model,
+                     data = analysis_data,
                      meanstructure = TRUE,
                      se = "robust.cluster",
                      # group = "genderid",
                      cluster = "site")
-summary(bpmint_model, fit.measures=T, 
+summary(bpmint_model, fit.measures=T,
         standardized=F, ci=TRUE, rsquare=TRUE)
 # /!\ all paths significant suggesting partial mediation
 # /!\ path a: untransformed: p < 0.001, log transformed: p < 0.001
@@ -1371,11 +1374,11 @@ parameterEstimates(bpmint_model, boot.ci.type = "bca.simple")
 ### Simple mediation model for bpm externalizing ####
 bpmext_model <-
   ' # direct effect
-        C_yr4_bpm_ext~ c*C_yr3_total_bad_le + C_yr4_age
+        Z_yr4_bpm_ext~ c*Z_yr3_total_bad_le + Z_yr4_age
       # mediator
-        C_yr3_ders_total ~ a*C_yr3_total_bad_le  + C_yr4_age
+        Z_yr3_ders_total ~ a*Z_yr3_total_bad_le  + Z_yr4_age
       # indirect effect
-        C_yr4_bpm_ext~ b*C_yr3_ders_total
+        Z_yr4_bpm_ext~ b*Z_yr3_ders_total
       # indirect effect (a*b)
         ab := a*b
       # total effect
@@ -1383,11 +1386,11 @@ bpmext_model <-
 # /!\ all models are repeated with log transformed data for sensitivity analysis
 # bpmext_model <-
 #   ' # direct effect
-#         C_log_yr4_bpm_ext~ c*C_log_yr4_total_bad_le + C_yr4_age
+#         Z_log_yr4_bpm_ext~ c*Z_log_yr4_total_bad_le + Z_yr4_age
 #       # mediator
-#         C_log_yr4_ders_total ~ a*C_log_yr4_total_bad_le  + C_yr4_age
+#         Z_log_yr4_ders_total ~ a*Z_log_yr4_total_bad_le  + Z_yr4_age
 #       # indirect effect
-#         C_log_yr4_bpm_ext~ b*C_log_yr4_ders_total
+#         Z_log_yr4_bpm_ext~ b*Z_log_yr4_ders_total
 #       # indirect effect (a*b)
 #         ab := a*b
 #       # total effect
@@ -1429,15 +1432,15 @@ parameterEstimates(bpmext_model, boot.ci.type = "bca.simple")
 # /!\ untransformed: p = .286, log transformed: p = .406
 cbcl_int_gender_model15 <- PROCESS(
   analysis_data,
-  y = "C_yr4_cbcl_int",
-  x = "C_yr3_total_bad_le",
-  meds = c("C_yr3_ders_total"),
+  y = "Z_yr4_cbcl_int",
+  x = "Z_yr3_total_bad_le",
+  meds = c("Z_yr3_ders_total"),
 # /!\ all models are repeated with log transformed data for sensitivity analysis
-  # y = "C_log_yr4_cbcl_int",
-  # x = "C_log_yr3_total_bad_le",
-  # meds = c("C_log_yr3_ders_total"),
+  # y = "Z_log_yr4_cbcl_int",
+  # x = "Z_log_yr3_total_bad_le",
+  # meds = c("Z_log_yr3_ders_total"),
   mods = c("genderid_refcisboy"),
-  covs = c("C_yr4_age"),
+  covs = c("Z_yr4_age"),
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
@@ -1459,15 +1462,15 @@ cbcl_int_gender_model15 <- PROCESS(
 # /!\ untransformed: p = .757, log transformed: p = .945
 cbcl_ext_gender_model15 <- PROCESS(
   analysis_data,
-  y = "C_yr4_cbcl_ext",
-  x = "C_yr3_total_bad_le",
-  meds = c("C_yr3_ders_total"),
+  y = "Z_yr4_cbcl_ext",
+  x = "Z_yr3_total_bad_le",
+  meds = c("Z_yr3_ders_total"),
 # /!\ all models are repeated with log transformed data for sensitivity analysis
-  # y = "C_log_yr4_cbcl_ext",
-  # x = "C_log_yr3_total_bad_le",
-  # meds = c("C_log_yr3_ders_total"),
+  # y = "Z_log_yr4_cbcl_ext",
+  # x = "Z_log_yr3_total_bad_le",
+  # meds = c("Z_log_yr3_ders_total"),
   mods = c("genderid_refcisboy"),
-  covs = c("C_yr4_age"),
+  covs = c("Z_yr4_age"),
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
@@ -1489,15 +1492,15 @@ cbcl_ext_gender_model15 <- PROCESS(
 # /!\ untransformed: p <.001, log transformed: p <.001
 bpm_int_gender_model15 <- PROCESS(
   analysis_data,
-  y = "C_yr4_bpm_int",
-  x = "C_yr3_total_bad_le",
-  meds = c("C_yr3_ders_total"),
+  y = "Z_yr4_bpm_int",
+  x = "Z_yr3_total_bad_le",
+  meds = c("Z_yr3_ders_total"),
 # /!\ all models are repeated with log transformed data for sensitivity analysis
-  # y = "C_log_yr4_bpm_int",
-  # x = "C_log_yr3_total_bad_le",
-  # meds = c("C_log_yr3_ders_total"),
+  # y = "Z_log_yr4_bpm_int",
+  # x = "Z_log_yr3_total_bad_le",
+  # meds = c("Z_log_yr3_ders_total"),
   mods = c("genderid_refcisboy"),
-  covs = c("C_yr4_age"),
+  covs = c("Z_yr4_age"),
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
@@ -1567,15 +1570,15 @@ bpm_int_gender_model15 <- PROCESS(
 # /!\ untransformed: p = .409, log transformed: p = .088
 bpm_ext_gender_model15 <- PROCESS(
   analysis_data,
-  y = "C_yr4_bpm_ext",
-  x = "C_yr3_total_bad_le",
-  meds = c("C_yr3_ders_total"),
+  y = "Z_yr4_bpm_ext",
+  x = "Z_yr3_total_bad_le",
+  meds = c("Z_yr3_ders_total"),
 # /!\ all models are repeated with log transformed data for sensitivity analysis
-  # y = "C_log_yr4_bpm_ext",
-  # x = "C_log_yr3_total_bad_le",
-  # meds = c("C_log_yr3_ders_total"),
+  # y = "Z_log_yr4_bpm_ext",
+  # x = "Z_log_yr3_total_bad_le",
+  # meds = c("Z_log_yr3_ders_total"),
   mods = c("genderid_refcisboy"),
-  covs = c("C_yr4_age"),
+  covs = c("Z_yr4_age"),
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
@@ -1597,15 +1600,15 @@ bpm_ext_gender_model15 <- PROCESS(
 # /!\ untransformed: p = .071, log transformed: p = .126
 cbcl_int_sex_model15 <- PROCESS(
   analysis_data,
-  # y = "C_yr4_cbcl_int",
-  # x = "C_yr3_total_bad_le",
-  # meds = c("C_yr3_ders_total"),
+  # y = "Z_yr4_cbcl_int",
+  # x = "Z_yr3_total_bad_le",
+  # meds = c("Z_yr3_ders_total"),
 # /!\ all models are repeated with log transformed data for sensitivity analysis
-  y = "C_log_yr4_cbcl_int",
-  x = "C_log_yr3_total_bad_le",
-  meds = c("C_log_yr3_ders_total"),
+  y = "Z_log_yr4_cbcl_int",
+  x = "Z_log_yr3_total_bad_le",
+  meds = c("Z_log_yr3_ders_total"),
   mods = c("sex"),
-  covs = c("C_yr4_age"),
+  covs = c("Z_yr4_age"),
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
@@ -1627,15 +1630,15 @@ cbcl_int_sex_model15 <- PROCESS(
 # /!\ untransformed: p = .740, log transformed: p = .878
 cbcl_ext_sex_model15 <- PROCESS(
   analysis_data,
-  y = "C_yr4_cbcl_ext",
-  x = "C_yr3_total_bad_le",
-  meds = c("C_yr3_ders_total"),
+  y = "Z_yr4_cbcl_ext",
+  x = "Z_yr3_total_bad_le",
+  meds = c("Z_yr3_ders_total"),
 # /!\ all models are repeated with log transformed data for sensitivity analysis
-  # y = "C_log_yr4_cbcl_ext",
-  # x = "C_log_yr3_total_bad_le",
-  # meds = c("C_log_yr3_ders_total"),
+  # y = "Z_log_yr4_cbcl_ext",
+  # x = "Z_log_yr3_total_bad_le",
+  # meds = c("Z_log_yr3_ders_total"),
   mods = c("sex"),
-  covs = c("C_yr4_age"),
+  covs = c("Z_yr4_age"),
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
@@ -1657,15 +1660,15 @@ cbcl_ext_sex_model15 <- PROCESS(
 # /!\ untransformed: p <.001, log transformed: p <.001
 bpm_int_sex_model15 <- PROCESS(
   analysis_data,
-  y = "C_yr4_bpm_int",
-  x = "C_yr3_total_bad_le",
-  meds = c("C_yr3_ders_total"),
+  y = "Z_yr4_bpm_int",
+  x = "Z_yr3_total_bad_le",
+  meds = c("Z_yr3_ders_total"),
 # /!\ all models are repeated with log transformed data for sensitivity analysis
-  # y = "C_log_yr4_bpm_int",
-  # x = "C_log_yr3_total_bad_le",
-  # meds = c("C_log_yr3_ders_total"),
+  # y = "Z_log_yr4_bpm_int",
+  # x = "Z_log_yr3_total_bad_le",
+  # meds = c("Z_log_yr3_ders_total"),
   mods = c("sex"),
-  covs = c("C_yr4_age"),
+  covs = c("Z_yr4_age"),
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
@@ -1687,15 +1690,15 @@ bpm_int_sex_model15 <- PROCESS(
 # /!\ untransformed: p = .227, log transformed: p = .043
 bpm_ext_sex_model15 <- PROCESS(
   analysis_data,
-  y = "C_yr4_bpm_ext",
-  x = "C_yr3_total_bad_le",
-  meds = c("C_yr3_ders_total"),
+  y = "Z_yr4_bpm_ext",
+  x = "Z_yr3_total_bad_le",
+  meds = c("Z_yr3_ders_total"),
 # /!\ all models are repeated with log transformed data for sensitivity analysis
-  # y = "C_log_yr4_bpm_ext",
-  # x = "C_log_yr3_total_bad_le",
-  # meds = c("C_log_yr3_ders_total"),
+  # y = "Z_log_yr4_bpm_ext",
+  # x = "Z_log_yr3_total_bad_le",
+  # meds = c("Z_log_yr3_ders_total"),
   mods = c("sex"),
-  covs = c("C_yr4_age"),
+  covs = c("Z_yr4_age"),
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
