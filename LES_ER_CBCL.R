@@ -5,14 +5,10 @@ setwd("C:/Users/Kate Scheuer/OneDrive - UW/Desktop/Lab/aces_emotionreg_cbcl")
 library(tidyverse) # for dplyr and associated functions
 # /!\ added FSA to run post-hoc Dunn tests after Kruskal-Wallis tests
 library(FSA) #for function Dunn tests ie dunnTest()
-library(lme4) #for linear regression
-library(lmerTest) #for linear regression p values
 # /!\ added rsq to get variance explained for mixed effect linear regression models
-library(rsq) #for variance explained for mixed effect linear regression models
 library(nortest) #for function Anderson-Darling tests ie ad.test
 library(psych) #for correlation matrices ie corr.test()
 library(lavaan) #for SEM
-library(misty) #for grand mean centering variables ie center()
 # /!\ added bruceR package for conditional process modeling used for moderated
 # /!\ mediation only (still using lavaan package for sem for basic mediation)
 library(bruceR) #for conditional process modeling
@@ -954,8 +950,6 @@ ders_les_age_reg <- lmer(Z_yr4_ders_total ~ Z_yr3_total_bad_le + Z_yr4_age + (1|
                          data=analysis_data)
 # /!\ LES is significant, untransformed: p = 0.00000000115, log transformed:0.000000179 
 summary(ders_les_age_reg)
-# /!\ R^2 for the whole model: untransformed: 0.01705187, log transformed: 0.01563332
-rsq(ders_les_age_reg,adj=TRUE)
 
 ### Mixed effect linear regression to determine whether CBCL or BPM differ ####
 ### based on LES and/or DERS, using age as fixed effect covariate and site as random 
@@ -1037,8 +1031,6 @@ cbcl_int_les_ders_age_reg <- lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le + Z_yr3_de
 # /!\ LES is significant, untransformed:p=0.00000000623, log transformed: 0.000000543
 # /!\ DERS is significant, untransformed:p=<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(cbcl_int_les_ders_age_reg)
-# /!\ R^2 for the whole model, untransformed: 0.1605785, log transformed: 0.1559261
-rsq(cbcl_int_les_ders_age_reg, adj=TRUE)
 
 ##### CBCL externalizing ~ LES + DERS + age + (1|site) ####
 cbcl_ext_les_ders_age_reg <- lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le + Z_yr3_ders_total + Z_yr4_age + (1|site),
@@ -1048,8 +1040,6 @@ cbcl_ext_les_ders_age_reg <- lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le + Z_yr3_de
 # /!\ LES is significant, untransformed:p=0.00000000000345, log transformed:0.0000000000549  
 # /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(cbcl_ext_les_ders_age_reg)
-# /!\ R^2 for the whole model, untransformed: 0.2100816, log transformed: 0.2092168
-rsq(cbcl_ext_les_ders_age_reg, adj=TRUE)
 
 ##### BPM internalizing ~ LES + DERS + age + (1|site) ####
 bpm_int_les_ders_age_reg <- lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le + Z_yr3_ders_total + Z_yr4_age + (1|site),
@@ -1059,8 +1049,6 @@ bpm_int_les_ders_age_reg <- lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le + Z_yr3_ders
 # /!\ LES is significant, untransformed:p<0.0000000000000002, log transformed:<0.0000000000000002  
 # /!\ DERS is significant, untransformed:0.00000000000000343, log transformed:<0.0000000000000002  
 summary(bpm_int_les_ders_age_reg)
-# /!\ R^2 for the whole model, untransformed: 0.04997359, log transformed: 0.04729545
-rsq(bpm_int_les_ders_age_reg, adj=TRUE)
 
 ##### BPM externalizing ~ LES + DERS + age + (1|site) ####
 bpm_ext_les_ders_age_reg <- lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le + Z_yr3_ders_total + Z_yr4_age + (1|site),
@@ -1070,189 +1058,13 @@ bpm_ext_les_ders_age_reg <- lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le + Z_yr3_ders
 # /!\ LES is significant, untransformed:p=0.000000000000337, log transformed:0.00000000000122  
 # /!\ DERS is significant, untransformed:<0.0000000000000002, log transformed:<0.0000000000000002  
 summary(bpm_ext_les_ders_age_reg)
-# /!\ R^2 for the whole model, untransformed: 0.04491494, log transformed: 0.04411428
-rsq(bpm_ext_les_ders_age_reg, adj=TRUE)
 
 # /!\ Lili suggested more cleanly defining and tested moderators (gender or
 # /!\ sex) vs mediators (DERS ie emotion regulation), so I added step 2 below
 # /!\ for testing moderation only (ignoring mediation), then step 3 for testing
 # /!\ mediation only (ignoring gender or sex), and finally step 4 for testing
 # /!\ moderated mediation
-## STEP TWO: MODERATING EFFECTS OF GENDER OR SEX ####
-### Mixed effect linear regression to determine whether gender moderates ####
-### relationship between DERS and LES, use age as fixed effect covariate and
-### site as random intercept
-#### DERS ~ LES*gender + age + (1|site) ####
-ders_les_gendercisboy_reg <- lmer(Z_yr4_ders_total ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr4_age + (1|site),
-# /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# ders_les_gendercisboy_reg <- lmer(Z_log_yr4_ders_total ~ Z_log_yr3_total_bad_le*genderid_refcisboy + Z_yr4_age + (1|site),
-                         data=analysis_data)
-summary(ders_les_gendercisboy_reg)
-# /!\ no significant interactions with gender ie gender is not a moderator
-# /!\ untransformed: p = 0.2639, log transformed: 0.3194919
-anova(ders_les_gendercisboy_reg)
-# /!\ R^2 for the whole model, untransformed: 0.02749043, log transformed: 0.02375143
-rsq(ders_les_gendercisboy_reg,adj=TRUE)
-
-### Mixed effect linear regression to determine whether sex moderates ####
-### relationship between DERS and LES, use age as fixed effect covariate and
-### site as random intercept
-#### DERS ~ LES*sex + age + (1|site) ####
-ders_les_sex_reg <- lmer(Z_yr4_ders_total ~ Z_yr3_total_bad_le*sex + Z_yr4_age + (1|site),
-# /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# ders_les_sex_reg <- lmer(Z_log_yr4_ders_total ~ Z_log_yr4_total_bad_le*sex + Z_yr4_age + (1|site),
-                                  data=analysis_data)
-# /!\ no significant interactions with sex ie sex is not a moderator
-# /!\ untransformed: p = 0.308068, log transformed: 0.3771   
-summary(ders_les_sex_reg)
-# /!\ R^2 for the whole model, untransformed: 0.01709962, log transformed: 0.01618385
-rsq(ders_les_sex_reg, adj=TRUE)
-
-### Mixed effect linear regression to determine whether gender moderates ####
-### relationship between LES, DERS, and CBCL or BPM using age as fixed effect
-### covariate and site as random intercept
-#### CBCL internalizing ~ LES*gender + DERS*gender + age + (1|site) ####
-cbcl_int_les_gendercisboy_reg <- 
-  lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
-# /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# lmer(Z_log_yr4_cbcl_int ~ Z_log_yr4_total_bad_le*genderid_refcisboy + Z_log_yr4_ders_total*genderid_refcisboy +
-       Z_yr4_age + (1|site),  
-       data=analysis_data, REML=FALSE)
-summary(cbcl_int_les_gendercisboy_reg)
-# /!\ no significant interactions with gender ie gender is not a moderator
-# /!\ gender*LES: untransformed: p = 0.3461, log transformed: 0.317572
-# /!\ gender*DERS: untransformed: p = 0.5499, log transformed: 0.062323
-anova(cbcl_int_les_gendercisboy_reg)
-# /!\ R^2 for the whole model, untransformed: 0.1835091, log transformed: 0.250594
-rsq(cbcl_int_les_gendercisboy_reg,adj=TRUE)
-
-#### CBCL externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
-cbcl_ext_les_gendercisboy_reg <- 
-   lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
-# /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# lmer(Z_log_yr4_cbcl_ext ~ Z_log_yr4_total_bad_le*genderid_refcisboy + Z_log_yr4_ders_total*genderid_refcisboy +
-         Z_yr4_age + (1|site),  
-       data=analysis_data, REML=FALSE)
-summary(cbcl_ext_les_gendercisboy_reg)
-# /!\ no significant interactions with gender ie gender is not a moderator
-# /!\ gender*LES: untransformed: p = 0.757237, log transformed: 0.252544
-# /!\ gender*DERS: untransformed: p = 0.897570, log transformed: 0.280400
-anova(cbcl_ext_les_gendercisboy_reg)
-# /!\ R^2 for the whole model, untransformed: 0.2108153, log transformed: 0.2728057
-rsq(cbcl_ext_les_gendercisboy_reg,adj=TRUE)
-
-#### BPM internalizing ~ LES*gender + DERS*gender + age + (1|site) ####
-# /!\ using cis boys as the reference level to get comparisons between cis boys
-# /!\ and GD youth and comparisons between cis boys and cis girls
-bpm_int_les_gendercisboy_reg <- 
-   lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
-# /!\ all regressions are repeated with log transformed data for sensitivity analysis
-   # lmer(Z_log_yr4_bpm_int ~ Z_log_yr4_total_bad_le*genderid_refcisboy + Z_log_yr4_ders_total*genderid_refcisboy +
-         Z_yr4_age + (1|site),  
-       data=analysis_data, REML=FALSE)
-# /!\ gender*LES for cis boys vs cis girls: untransformed: p = 0.00003629377, log transformed: p = 0.00178
-# /!\ gender*LES for cis boys vs GD: untransformed: p = 0.00418, log transformed: p = 0.00264
-summary(bpm_int_les_gendercisboy_reg)
-# /!\ significant interactions with gender and LES ie gender is a moderator
-# /!\ gender*LES: untransformed: p = 0.00003262634572961, log transformed: 0.0004205
-# /!\ gender*DERS: untransformed: p = 0.72848, log transformed: 0.3864766    
-anova(bpm_int_les_gendercisboy_reg)
-# /!\ R^2 for the whole model, untransformed: 0.1101065, log transformed: 0.1413395
-rsq(bpm_int_les_gendercisboy_reg,adj=TRUE)
-
-# /!\ using cis girls as the reference level to get comparisons between cis girls
-# /!\ and GD youth
-bpm_int_les_gendercisgirl_reg <- 
-  lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le*genderid_refcisgirl + Z_yr3_ders_total*genderid_refcisgirl +
-# /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# lmer(Z_log_yr4_bpm_int ~ Z_log_yr4_total_bad_le*genderid_refcisgirl + Z_log_yr4_ders_total*genderid_refcisgirl +
-         Z_yr4_age + (1|site),  
-       data=analysis_data, REML=FALSE)
-# /!\ gender*LES for cis girls vs cis boys: untransformed: p = 0.00003629, log transformed: p = 0.00178
-# /!\ gender*LES for cis girls vs GD: p = untransformed: p = 0.4611, log transformed: p = 0.10319 
-summary(bpm_int_les_gendercisgirl_reg)
-# /!\ significant interactions with gender and LES ie gender is a moderator
-# /!\ gender*LES: untransformed: p = 0.00003262628282413, log transformed: 0.0004205
-# /!\ gender*DERS: untransformed: p = 0.72848, log transformed: 0.3864766    
-anova(bpm_int_les_gendercisgirl_reg)
-# /!\ R^2 for the whole model, untransformed: 0.1101065, log transformed: 0.1413395
-# /!\ this should be the same as for model using cis boys as a reference above,
-# /!\ so this is basically just a double check the model is doing what I think
-# /!\ it is doing
-rsq(bpm_int_les_gendercisgirl_reg,adj=TRUE)
-
-#### BPM externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
-bpm_ext_les_gendercisboy_reg <- 
-   lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
-# /!\ all regressions are repeated with log transformed data for sensitivity analysis
-   # lmer(Z_log_yr4_bpm_ext ~ Z_log_yr4_total_bad_le*genderid_refcisboy + Z_log_yr4_ders_total*genderid_refcisboy +
-         Z_yr4_age + (1|site),  
-       data=analysis_data, REML=FALSE)
-summary(bpm_ext_les_gendercisboy_reg)
-# /!\ no significant interactions with gender ie gender is not a moderator
-# /!\ gender*LES: untransformed: p = 0.4076, log transformed: 0.2025354
-# /!\ gender*DERS: untransformed: p = 0.7209, log transformed: 0.1149201
-anova(bpm_ext_les_gendercisboy_reg)
-# /!\ R^2 for the whole model, untransformed: 0.05588609, log transformed: 0.06968682
-rsq(bpm_ext_les_gendercisboy_reg,adj=TRUE)
-
-### Mixed effect linear regression to determine whether sex moderates ####
-### relationship between LES, DERS, and CBCL or BPM using age as fixed effect
-### covariate and site as random intercept
-#### CBCL internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
-cbcl_int_les_sex_reg <- 
-  lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + Z_yr4_age + (1|site),
-# /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# lmer(Z_log_yr4_cbcl_int ~ Z_log_yr4_total_bad_le*sex + Z_log_yr4_ders_total*sex + Z_yr4_age + (1|site),
-       data=analysis_data, REML=FALSE)
-# /!\ significant interactions with sex ie sex is a moderator for DERS only if log transformed
-# /!\ sex*LES: untransformed: p = 0.0909, log transformed: 0.06171
-# /!\ sex*DERS: untransformed: p = 0.1210, log transformed: 0.02008
-summary(cbcl_int_les_sex_reg)
-# /!\ R^2 for the whole model, untransformed: 0.1699789, log transformed: 0.2441018
-rsq(cbcl_int_les_sex_reg,adj=TRUE)
-
-#### CBCL externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
-cbcl_ext_les_sex_reg <-
-   lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + Z_yr4_age + (1|site),
-# /!\ all regressions are repeated with log transformed data for sensitivity analysis
-# lmer(Z_log_yr4_cbcl_ext ~ Z_log_yr4_total_bad_le*sex + Z_log_yr4_ders_total*sex + Z_yr4_age + (1|site),
-       data=analysis_data, REML=FALSE)
-# /!\ no significant interactions with sex ie sex is not a moderator
-# /!\ sex*LES: untransformed: p = 0.74670, log transformed: 0.646747
-# /!\ sex*DERS: untransformed: p = 0.69204, log transformed: 0.837820
-summary(cbcl_ext_les_sex_reg)
-# /!\ R^2 for the whole model, untransformed: 0.2081902, log transformed: 0.2708238
-rsq(cbcl_ext_les_sex_reg,adj=TRUE)
-
-#### BPM internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
-bpm_int_les_sex_reg <- 
-  lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + Z_yr4_age + (1|site),
-# /!\ all regressions are repeated with log transformed data for sensitivity analysis
-  # lmer(Z_log_yr4_bpm_int ~ Z_log_yr4_total_bad_le*sex + Z_log_yr4_ders_total*sex + Z_yr4_age + (1|site),
-       data=analysis_data, REML=FALSE)
-# /!\ significant interactions with sex ie sex is a moderator
-# /!\ sex*LES: untransformed: p = 0.00000057905792630, log transformed: 0.0000878141636095
-# /!\ sex*DERS: untransformed: p = 0.371233, log transformed: 0.0138
-summary(bpm_int_les_sex_reg)
-# /!\ R^2 for the whole model, untransformed: 0.07070543, log transformed: 0.1070619
-rsq(bpm_int_les_sex_reg,adj=TRUE)
-
-#### BPM externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
-bpm_ext_les_sex_reg <-
-   lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + Z_yr4_age + (1|site),
-# /!\ all regressions are repeated with log transformed data for sensitivity analysis
-   # lmer(Z_log_yr4_bpm_ext ~ Z_log_yr4_total_bad_le*sex + Z_log_yr4_ders_total*sex + Z_yr4_age + (1|site),
-       data=analysis_data, REML=FALSE)
-# /!\ no significant interactions with sex ie sex is not a moderator
-# /!\ sex*LES: untransformed: p = 0.226271, log transformed: 0.72048
-# /!\ sex*DERS: untransformed: p = 0.509245, log transformed: 0.41970
-summary(bpm_ext_les_sex_reg)
-# /!\ R^2 for the whole model, untransformed: 0.05011562, log transformed: 0.06330689
-rsq(bpm_ext_les_sex_reg,adj=TRUE)
-
-# /!\ this is for testing basic mediation only (ignoring gender or sex)
-## STEP THREE: MEDIATING EFFECT OF ER ON CBCL OR BPM ~ LES #### 
+## STEP TWO: MEDIATING EFFECT OF ER ON CBCL OR BPM ~ LES #### 
 
 ### Simple mediation model for CBCL internalizing ####
 cbclint_model <-
@@ -1332,7 +1144,7 @@ summary(cbclext_model, fit.measures=T,
 # /!\ path ab (indirect): p = untransformed: p < 0.001, log transformed: p < 0.001
 parameterEstimates(cbclext_model, boot.ci.type = "bca.simple")
 
-### Simple mediation model for bpm internalizing ####
+### Simple mediation model for BPM internalizing ####
 bpmint_model <-
   ' # direct effect
         Z_yr4_bpm_int~ c*Z_yr3_total_bad_le + Z_yr4_age
@@ -1371,7 +1183,7 @@ summary(bpmint_model, fit.measures=T,
 # /!\ path ab (indirect): p = untransformed: p < 0.001, log transformed: p < 0.001
 parameterEstimates(bpmint_model, boot.ci.type = "bca.simple")
 
-### Simple mediation model for bpm externalizing ####
+### Simple mediation model for BPM externalizing ####
 bpmext_model <-
   ' # direct effect
         Z_yr4_bpm_ext~ c*Z_yr3_total_bad_le + Z_yr4_age
@@ -1411,25 +1223,20 @@ summary(bpmext_model, fit.measures=T,
 parameterEstimates(bpmext_model, boot.ci.type = "bca.simple")
 
 
-# /!\ basic moderation analyses suggested that gender and sex only moderate
-# /!\ relations between LES and psychopathology [with the exception of log
-# /!\ transformed interactions between sex and DERS for internalizing symptoms
-# /!\ only...not sure what to do with that. honestly I don't think it changes
-# /!\ the story of the paper but idk] so moderated mediation models only looked
-# /!\ at effects of sex or gender on relations between LES and psychopathology
-# /!\ (ie used Hayes' process model 5). trying to figure out how to get a p-value
-# /!\ or actual statistical test to compare gender groups was kind of a nightmare - 
+# /!\ trying to figure out how to get a p-value or actual statistical test to 
+# /!\ compare gender groups was kind of a nightmare - 
 # /!\ I could have done it with SEM but the explanation got really complicated
 # /!\ really fast, so I did some digging and based this setup of first SEM then
 # /!\ process modeling on a paper that was published a few years ago in JAACAP
 # /!\ and used ABCD data.
-## STEP FOUR: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION ####
+## STEP THREE: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION ####
 
-### Moderated mediation model (Hayes model 5) to test whether gender ####
+### Moderated mediation model (Hayes model 59) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### internalizing 
-# /!\ no significant LES*gender interaction
-# /!\ untransformed: p = .286, log transformed: p = .406
+# /!\ overall interactions: untransformed: p = .467, log transformed: .700 
+# /!\ LES*gender: untransformed: p = .350, log transformed: p = .437
+# /!\ DERS*gender: untransformed: p = .586, log transformed: p = .822
 cbcl_int_gender_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_cbcl_int",
@@ -1444,9 +1251,9 @@ cbcl_int_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y"
+    # "x-y"
     # "m-y"
-    # "all"
+    "all"
   ),
   cov.path = c("both"),
   nsim = 1000,
@@ -1455,11 +1262,12 @@ cbcl_int_gender_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-### Moderated mediation model (Hayes model 5) to test whether gender ####
+### Moderated mediation model (Hayes model 59) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### externalizing 
-# /!\ no significant LES*gender interaction
-# /!\ untransformed: p = .757, log transformed: p = .945
+# /!\ overall interactions: untransformed: p = .946, log transformed: .975 
+# /!\ LES*gender: untransformed: p = .740, log transformed: p = .961
+# /!\ DERS*gender: untransformed: p = .910, log transformed: p = .833
 cbcl_ext_gender_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_cbcl_ext",
@@ -1474,9 +1282,9 @@ cbcl_ext_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y"
+    # "x-y"
     # "m-y"
-    # "all"
+    "all"
   ),
   cov.path = c("both"),
   nsim = 1000,
@@ -1485,11 +1293,12 @@ cbcl_ext_gender_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-### Moderated mediation model (Hayes model 5) to test whether gender ####
+### Moderated mediation model (Hayes model 59) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### internalizing 
-# /!\ significant LES*gender interaction
-# /!\ untransformed: p <.001, log transformed: p <.001
+# /!\ overall interactions: untransformed: p <.001, log transformed: <.001 
+# /!\ LES*gender: untransformed: p <.001, log transformed: p = <.001
+# /!\ DERS*gender: untransformed: p = .770, log transformed: p = .848
 bpm_int_gender_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_int",
@@ -1504,9 +1313,9 @@ bpm_int_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y"
+    # "x-y"
     # "m-y"
-    # "all"
+    "all"
   ),
   cov.path = c("both"),
   nsim = 1000,
@@ -1520,54 +1329,103 @@ bpm_int_gender_model15 <- PROCESS(
 # different groups? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.19426 -0.59491  )/(sqrt((0.06734^2)+(0.06968)^2)) = -4.134594
+#     Z = (0.06840  -0.20980   )/(sqrt((0.02372^2)+(0.02458)^2)) = -4.139505
 # cis boy (beta1) vs gd (beta2):
-#     Z = (0.19426 -0.75219 )/(sqrt((0.06734^2)+(0.17386)^2)) = -2.992454
+#     Z = (0.06840  -0.25678  )/(sqrt((0.02372^2)+(0.06215)^2)) = -2.831818
 # cis girl (beta1) vs gd (beta2):
-#     Z = (0.59491  -0.75219 )/(sqrt((0.06968^2)+(0.17386)^2)) = -0.8397067
+#     Z = (0.20980   -0.25678  )/(sqrt((0.02458^2)+(0.06215)^2)) = -0.7029344
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -4.134594, so pnorm(-abs(-4.134594))*2 = 0.00003555827
-# cis boy vs gd: Z = -2.992454, so pnorm(-abs(-2.992454))*2 = 0.002767444
-# cis girl vs gd: Z = -0.8397067, so pnorm(-abs(-0.8397067))*2 = 0.4010729
+# cis boy vs cis girl: Z = -4.139505, so pnorm(-abs(-4.139505))*2 = 0.0000348056
+# cis boy vs gd: Z = -2.831818, so pnorm(-abs(-2.831818))*2 = 0.004628418
+# cis girl vs gd: Z = -0.7029344, so pnorm(-abs(-0.7029344))*2 = 0.4820966
 # Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.00003555827,0.002767444,0.4010729),method="fdr")
+# p.adjust(c(0.0000348056,0.004628418,0.4820966),method="fdr")
 # So final p-values rounded to three places are:
 # cis boy vs cis girl: p < .001
-# cis boy vs gd: p = .004
-# cis girl vs gd: .401
+# cis boy vs gd: p = .007
+# cis girl vs gd: .482
+
+# for untransformed data:
+# are the conditional indirect effects [ab] of X on Y via M significant different for
+# different groups? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# cis boy (beta1) vs cis girl (beta2): 
+#     Z = (0.00933   -0.01097   )/(sqrt((0.00408^2)+(0.00403)^2)) = -0.2859761
+# cis boy (beta1) vs gd (beta2):
+#     Z = (0.00933   -0.03023   )/(sqrt((0.00408^2)+(0.02138)^2)) = -0.9602212
+# cis girl (beta1) vs gd (beta2):
+#     Z = (0.01097   -0.03023   )/(sqrt((0.00403^2)+(0.02138)^2)) = -0.8852527
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# cis boy vs cis girl: Z = -0.2859761, so pnorm(-abs(-0.2859761))*2 = 0.7748964
+# cis boy vs gd: Z = -0.9602212, so pnorm(-abs(-0.9602212))*2 = 0.3369439
+# cis girl vs gd: Z = -0.8852527, so pnorm(-abs(-0.8852527))*2 = 0.3760204
+# Finally, we need to fdr correct for multiple tests:
+# p.adjust(c(0.7748964,0.3369439,0.3760204),method="fdr")
+# So final p-values rounded to three places are:
+# cis boy vs cis girl: p = .775
+# cis boy vs gd: p = .564
+# cis girl vs gd: .564
 
 # for log transformed data:
 # are the conditional direct effects [c'] of X on Y significant different for
 # different groups? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.01069   -0.03185  )/(sqrt((0.00363^2)+(0.00387)^2)) = -3.987927
+#     Z = (0.06707    -0.19967   )/(sqrt((0.02273^2)+(0.02429 )^2)) = -3.985997
 # cis boy (beta1) vs gd (beta2):
-#     Z = (0.01069   -0.03845  )/(sqrt((0.00363^2)+(0.01145)^2)) = -2.311092
+#     Z = (0.06707    -0.23480  )/(sqrt((0.02273^2)+(0.07259)^2)) = -2.205073
 # cis girl (beta1) vs gd (beta2):
-#     Z = (0.03185  -0.03845  )/(sqrt((0.00387^2)+(0.01145)^2)) = -0.5460714
+#     Z = (0.19967   -0.23480  )/(sqrt((0.02429 ^2)+(0.07259)^2)) = -0.4589389
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -3.987927, so pnorm(-abs(-3.987927))*2 = 0.00006665317
-# cis boy vs gd: Z = -2.311092, so pnorm(-abs(-2.311092))*2 = 0.02082777
-# cis girl vs gd: Z = -0.5460714, so pnorm(-abs(-0.5460714))*2 = 0.5850169
+# cis boy vs cis girl: Z = -3.985997, so pnorm(-abs(-3.985997))*2 = 0.00006719736
+# cis boy vs gd: Z = -2.205073, so pnorm(-abs(-2.205073))*2 = 0.02744897
+# cis girl vs gd: Z = -0.4589389, so pnorm(-abs(-0.4589389))*2 = 0.646278
 # Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.00006665317,0.02082777,0.5850169),method="fdr")
+# p.adjust(c(0.00006719736,0.02744897,0.646278),method="fdr")
 # So final p-values rounded to three places are:
 # cis boy vs cis girl: p < .001
-# cis boy vs gd: p = .031
-# cis girl vs gd: .585
+# cis boy vs gd: p = .041
+# cis girl vs gd: .646
 
-### Moderated mediation model (Hayes model 5) to test whether gender ####
+# for log transformed data:
+# are the conditional indirect effects [ab] of X on Y via M significant different for
+# different groups? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# cis boy (beta1) vs cis girl (beta2): 
+#     Z = (0.00345    -0.00946    )/(sqrt((0.00330^2)+(0.00381)^2)) = -1.192355
+# cis boy (beta1) vs gd (beta2):
+#     Z = (0.00345    -0.02850    )/(sqrt((0.00330^2)+(0.02103)^2)) = -1.176756
+# cis girl (beta1) vs gd (beta2):
+#     Z = (0.00946    -0.02850    )/(sqrt((0.00381^2)+(0.02103)^2)) = -0.890871
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# cis boy vs cis girl: Z = -1.192355, so pnorm(-abs(-1.192355))*2 = 0.2331221
+# cis boy vs gd: Z = -1.176756, so pnorm(-abs(-1.176756))*2 = 0.2392929
+# cis girl vs gd: Z = -0.890871, so pnorm(-abs(-0.890871))*2 = 0.3729984
+# Finally, we need to fdr correct for multiple tests:
+# p.adjust(c(0.2331221,0.2392929,0.3729984),method="fdr")
+# So final p-values rounded to three places are:
+# cis boy vs cis girl: p = .359
+# cis boy vs gd: p = .359
+# cis girl vs gd: .373
+
+### Moderated mediation model (Hayes model 59) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### externalizing 
-# /!\ no significant LES*gender interaction
-# /!\ untransformed: p = .409, log transformed: p = .088
+# /!\ overall interactions: untransformed: p = .670, log transformed: .244 
+# /!\ LES*gender: untransformed: p = .434, log transformed: p = .099
+# /!\ DERS*gender: untransformed: p = .751, log transformed: p = .748
 bpm_ext_gender_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_ext",
@@ -1582,9 +1440,9 @@ bpm_ext_gender_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y"
+    # "x-y"
     # "m-y"
-    # "all"
+    "all"
   ),
   cov.path = c("both"),
   nsim = 1000,
@@ -1593,28 +1451,29 @@ bpm_ext_gender_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-### Moderated mediation model (Hayes model 5) to test whether sex ####
+### Moderated mediation model (Hayes model 59) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### internalizing 
-# /!\ no significant LES*sex interaction
-# /!\ untransformed: p = .071, log transformed: p = .126
+# /!\ overall interactions: untransformed: p = .061, log transformed: .169 
+# /!\ LES*sex: untransformed: p = .096, log transformed: p = .144
+# /!\ DERS*sex: untransformed: p = .128, log transformed: p = .270
 cbcl_int_sex_model15 <- PROCESS(
   analysis_data,
-  # y = "Z_yr4_cbcl_int",
-  # x = "Z_yr3_total_bad_le",
-  # meds = c("Z_yr3_ders_total"),
+  y = "Z_yr4_cbcl_int",
+  x = "Z_yr3_total_bad_le",
+  meds = c("Z_yr3_ders_total"),
 # /!\ all models are repeated with log transformed data for sensitivity analysis
-  y = "Z_log_yr4_cbcl_int",
-  x = "Z_log_yr3_total_bad_le",
-  meds = c("Z_log_yr3_ders_total"),
+  # y = "Z_log_yr4_cbcl_int",
+  # x = "Z_log_yr3_total_bad_le",
+  # meds = c("Z_log_yr3_ders_total"),
   mods = c("sex"),
   covs = c("Z_yr4_age"),
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y"
+    # "x-y"
     # "m-y"
-    # "all"
+    "all"
   ),
   cov.path = c("both"),
   nsim = 1000,
@@ -1623,11 +1482,25 @@ cbcl_int_sex_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-### Moderated mediation model (Hayes model 5) to test whether sex ####
+# for log transformed data:
+# are the conditional indirect effects [ab] of X on Y via M significant different for
+# different groups? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# male (beta1) vs female (beta2): 
+#     Z = (0.00776      -0.03787       )/(sqrt((0.00907^2)+(0.00960)^2)) = -2.279851
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# male vs female: Z = -2.279851, so pnorm(-abs(-2.279851))*2 = 0.02261653
+# So final p-values rounded to three places for male vs female is p = .023
+
+### Moderated mediation model (Hayes model 59) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### externalizing 
-# /!\ no significant LES*sex interaction
-# /!\ untransformed: p = .740, log transformed: p = .878
+# /!\ overall interactions: untransformed: p = .896, log transformed: .974 
+# /!\ LES*sex: untransformed: p = .719, log transformed: p = .886
+# /!\ DERS*sex: untransformed: p = .739, log transformed: p = .865
 cbcl_ext_sex_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_cbcl_ext",
@@ -1642,9 +1515,9 @@ cbcl_ext_sex_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y"
+    # "x-y"
     # "m-y"
-    # "all"
+    "all"
   ),
   cov.path = c("both"),
   nsim = 1000,
@@ -1653,11 +1526,25 @@ cbcl_ext_sex_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-### Moderated mediation model (Hayes model 5) to test whether sex ####
+# for log transformed data:
+# are the conditional indirect effects [ab] of X on Y via M significant different for
+# different groups? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# male (beta1) vs female (beta2): 
+#     Z = (0.00873      -0.03959        )/(sqrt((0.01024^2)+(0.00996)^2)) = -2.160319
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# male vs female: Z = -2.160319, so pnorm(-abs(-2.160319))*2 = 0.03074798
+# So final p-values rounded to three places for male vs female is p = .031
+
+### Moderated mediation model (Hayes model 59) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### internalizing 
-# /!\ significant LES*sex interaction
-# /!\ untransformed: p <.001, log transformed: p <.001
+# /!\ overall interactions: untransformed: p <.001, log transformed: <.001 
+# /!\ LES*sex: untransformed: p <.001, log transformed: p <.001
+# /!\ DERS*sex: untransformed: p = .348, log transformed: p = .280
 bpm_int_sex_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_int",
@@ -1672,9 +1559,9 @@ bpm_int_sex_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y"
+    # "x-y"
     # "m-y"
-    # "all"
+    "all"
   ),
   cov.path = c("both"),
   nsim = 1000,
@@ -1683,11 +1570,64 @@ bpm_int_sex_model15 <- PROCESS(
   std = FALSE,
   digits = 5)
 
-### Moderated mediation model (Hayes model 5) to test whether sex ####
+# for untransformed data:
+# are the conditional direct effects [c'] of X on Y significant different for
+# different groups? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# male (beta1) vs female (beta2): 
+#     Z = (0.07070   -0.23950    )/(sqrt((0.02423^2)+(0.02349)^2)) = -5.001898
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# male vs female: Z = -5.001898, so pnorm(-abs(-5.001898))*2 = 0.0000005676863
+# So final p-values rounded to three places for male vs female is p < .001
+
+# for untransformed data:
+# are the conditional indirect effects [ab] of X on Y via M significant different for
+# different groups? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# male (beta1) vs female (beta2): 
+#     Z = (0.00874    -0.01777     )/(sqrt((0.00395^2)+(0.00494)^2)) = -1.42766
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# male vs female: Z = -1.42766, so pnorm(-abs(-1.42766))*2 = 0.1533897
+# So final p-values rounded to three places for male vs female is p = .153
+
+# for log transformed data:
+# are the conditional direct effects [c'] of X on Y significant different for
+# different groups? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# male (beta1) vs female (beta2): 
+#     Z = (0.07099    -0.22767     )/(sqrt((0.02322^2)+(0.02366)^2)) = -4.726306
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# male vs female: Z = -4.726306, so pnorm(-abs(-4.726306))*2 = 0.00000228641
+# So final p-values rounded to three places for male vs female is p < .001
+
+# for log transformed data:
+# are the conditional indirect effects [ab] of X on Y via M significant different for
+# different groups? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# male (beta1) vs female (beta2): 
+#     Z = (0.00274     -0.01558      )/(sqrt((0.00331^2)+(0.00459)^2)) = -2.268955
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# male vs female: Z = -2.268955, so pnorm(-abs(-2.268955))*2 = 0.02327106
+# So final p-values rounded to three places for male vs female is p = .023
+
+### Moderated mediation model (Hayes model 59) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### externalizing 
-# /!\ significant LES*sex interaction for log transformed only
-# /!\ untransformed: p = .227, log transformed: p = .043
+# /!\ overall interactions: untransformed: p = .397, log transformed: .102 
+# /!\ LES*sex: untransformed: p = .252, log transformed: p = .048
+# /!\ DERS*sex: untransformed: p = .532, log transformed: p = .493
 bpm_ext_sex_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_ext",
@@ -1702,9 +1642,9 @@ bpm_ext_sex_model15 <- PROCESS(
   hlm.re.m = "site",
   hlm.re.y = "site",
   mod.path = c(
-    "x-y"
+    # "x-y"
     # "m-y"
-    # "all"
+    "all"
   ),
   cov.path = c("both"),
   nsim = 1000,
@@ -1712,3 +1652,16 @@ bpm_ext_sex_model15 <- PROCESS(
   center = FALSE,
   std = FALSE,
   digits = 5)
+
+# for log transformed data:
+# are the conditional indirect effects [ab] of X on Y via M significant different for
+# different groups? Use Z test to find out. 
+# Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
+# male (beta1) vs female (beta2): 
+#     Z = (0.02074      -0.09292       )/(sqrt((0.02304^2)+(0.02338)^2)) = -2.198949
+# to go from Z score to p-value, find probability of being outside absolute value
+# of Z score (because don't know if beta1 is smaller or larger than beta2) and 
+# then multiply that by 2 because two-tailed test. Can use default settings of
+# mean = 0 and sd = 1 in pnorm function because that is true of Z scores
+# male vs female: Z = -2.198949, so pnorm(-abs(-2.198949))*2 = 0.02788155
+# So final p-values rounded to three places for male vs female is p = .028
