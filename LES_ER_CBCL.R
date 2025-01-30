@@ -1228,7 +1228,7 @@ rsq(cbcl_ext_les_sex_reg,adj=TRUE)
 #### BPM internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
 bpm_int_les_sex_reg <- 
   lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + Z_yr4_age + (1|site),
-       # /!\ all regressions are repeated with log transformed data for sensitivity analysis
+# /!\ all regressions are repeated with log transformed data for sensitivity analysis
        # lmer(Z_log_yr4_bpm_int ~ Z_log_yr4_total_bad_le*sex + Z_log_yr4_ders_total*sex + Z_yr4_age + (1|site),
        data=analysis_data, REML=FALSE)
 # /!\ significant interactions with sex ie sex is a moderator
