@@ -85,7 +85,7 @@ genderdata <- gish_y_gi %>%
     kbi_gender==1 ~ "boy",
     kbi_gender==2 ~ "girl",
     kbi_gender==3 ~ "nb",
-    kbi_gender==4 ~ "dont_understand",
+    kbi_gender==999 ~ "dont_understand",
     kbi_gender==777 ~ "refuse"
   )) %>%
   # convert numeric values for trans identity to human-readable character strings
@@ -102,7 +102,7 @@ genderdata <- gish_y_gi %>%
   mutate(gender_details = case_when(
     kbi_gender==777 ~ "refuse",
     kbi_y_trans_id==777 ~ "refuse",
-    kbi_gender==4 ~ "dont_understand",
+    kbi_gender==999 ~ "dont_understand",
     kbi_y_trans_id==4 ~ "dont_understand",
     kbi_gender==1 & kbi_y_trans_id==1 ~ "trans_boy", #"gd",
     kbi_gender==1 & kbi_y_trans_id==2 ~ "trans_boy", #"gd",
