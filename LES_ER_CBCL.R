@@ -27,9 +27,11 @@ mh_p_ders <- read_csv("data/mh_p_ders.csv")
 
 #### CBCL for parent-report psychopathology symptoms ####
 # Note: warning will flag 226 problems total from rows 9941, 14373, 14660, 
-# 16373, 17952, 21439, 23991, 28582, 31278, 36700, 38672, 40583, 42272, 46007
-# and 19 total columns all ending in _m indicating they pertain to missing
-# values, so it is okay to ignore this warning
+# 16373, 17952, 21439, 23991, 28582, 31278, 36700, 38672, 40583, 42272, and 
+# 46007 and from 20 total columns all ending in _m indicating they pertain to 
+# missing values, so it is okay to ignore this warning
+# unique(problems(mh_p_cbcl)$row)
+# colnames(mh_p_cbcl[,unique(problems(mh_p_cbcl)$col)])
 mh_p_cbcl <- read_csv("data/mh_p_cbcl.csv")
 
 #### BPM for youth-report psychopathology symptoms ####
@@ -38,6 +40,8 @@ mh_y_bpm <- read_csv("data/mh_y_bpm.csv")
 #### Longitudinal tracking data ####
 # Note: warning will flag row 79003 and column 5 ie rel_birth_id which contains
 # NA, so it is okay to ignore this warning
+# problems(abcd_y_lt)
+# abcd_y_lt[problems(abcd_y_lt)$row,problems(abcd_y_lt)$col]
 abcd_y_lt <- read_csv("data/abcd_y_lt.csv")
 
 #### LES (youth-reported) ####
@@ -45,6 +49,8 @@ abcd_y_lt <- read_csv("data/abcd_y_lt.csv")
 # Note: warning will flag 76 problems total from 47 unique rows and columns 109
 # and 110 ie ple_homeless_fu_y and ple_homeless_fu2_y, neither of which is 
 # relevant for this analysis, so it is okay to ignore this warning
+# unique(problems(mh_y_le)$row)
+# colnames(mh_y_le[,unique(problems(mh_y_le)$col)])
 mh_y_le <- read_csv("data/mh_y_le.csv")
 
 ### Prepare gender data for analysis ####
@@ -598,7 +604,7 @@ round(corrmat$p.adj,5)
 
 ## PLOTS ####
 
-##### Graph of LES vs DERS by gender for figure 2####
+##### Graph of LES vs DERS by gender ####
 ggplot(analysis_data, 
        aes(x=yr3_total_bad_le,y=yr3_ders_total, fill=genderid)) +
   geom_point(aes(color=genderid, shape = genderid),size=2) +
@@ -624,7 +630,32 @@ ggplot(analysis_data,
 # Save graph
 # ggsave("les_vs_ders_scatter_bygender.tiff",width=8.5,height=6,unit="in",path="figures")
 
-##### Graphs of LES vs CBCL by gender for figure 1B and 1D ####
+##### Graph of LES vs DERS by sex ####
+ggplot(analysis_data, 
+       aes(x=yr3_total_bad_le,y=yr3_ders_total, fill=sex)) +
+  geom_point(aes(color=sex, shape = sex),size=2) +
+  geom_smooth(aes(linetype=sex),method="lm",color="black", se=FALSE) +
+  scale_linetype_manual(values = c("male"="31",
+                                   "female"="11")) +
+  scale_shape_manual(values=c(21,22)) +
+  scale_colour_grey(start=0.9,end=0) +
+  scale_fill_manual(values=c("grey40","grey85")) +
+  scale_x_continuous(expand = c(0,0),
+                     breaks = seq(0,16, by = 1),
+                     limits=c(-.5,16.5)) +
+  scale_y_continuous(expand = c(0,0),
+                     breaks=seq(20,130,10),
+                     limits = c(25,131)) +
+  guides(
+    shape = guide_legend(override.aes = list(size = 3)),
+    line = guide_legend(override.aes = list(size = 2))
+  ) +
+  theme_classic() +
+  theme(legend.key.width = unit(0.5, "in"))
+# Save graph
+# ggsave("les_vs_ders_scatter_bysex.tiff",width=8.5,height=6,unit="in",path="figures")
+
+##### Graphs of LES vs CBCL by gender ####
 outcome_list <- c("yr4_cbcl_int","yr4_cbcl_ext")
 cbcl_les_plot_list <- list()
 for (outcome in outcome_list) {
@@ -654,7 +685,36 @@ for (outcome in outcome_list) {
   # width=8.5,height=6,units = "in",path="figures")
 }
 
-##### Graphs of LES vs BPM by gender for figure 1A and 1C ####
+##### Graphs of LES vs CBCL by sex ####
+outcome_list <- c("yr4_cbcl_int","yr4_cbcl_ext")
+cbcl_les_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  cbcl_les_plot <-
+    ggplot(aes(x=yr3_total_bad_le,y=.data[[outcome]],
+               fill = sex
+    ),data=analysis_data) +
+    geom_point(aes(color=sex, shape = sex), size=2) +
+    geom_smooth(aes(linetype=sex),method="lm",color="black", se=FALSE) +
+    scale_linetype_manual(values = c("male"="31",
+                                     "female"="11")) +
+    scale_shape_manual(values=c(21,22)) +
+    scale_colour_grey(start=0.9,end=0) +
+    scale_fill_manual(values=c("grey40","grey85")) +
+    scale_x_continuous(expand = c(0,0),
+                       breaks = seq(0,16, by = 1),
+                       limits=c(-.5,16.5)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks=seq(30,90,by=10),
+                       limits=c(30,90)) +
+    theme_classic()
+  cbcl_les_plot_list[[outcome]] <- cbcl_les_plot
+  # Save plot
+  # ggsave(paste0("les_vs_",outcome,"_bysex.tiff"),
+  # width=8.5,height=6,units = "in",path="figures")
+}
+
+##### Graphs of LES vs BPM by gender ####
 outcome_list <- c("yr4_bpm_int","yr4_bpm_ext")
 bpm_les_plot_list <- list()
 for (outcome in outcome_list) {
@@ -684,7 +744,36 @@ for (outcome in outcome_list) {
   # width=8.5,height=6,units = "in",path="figures")
 }
 
-##### Graphs of DERS vs CBCL by gender for figure 1F and 1H ####
+##### Graphs of LES vs BPM by sex ####
+outcome_list <- c("yr4_bpm_int","yr4_bpm_ext")
+bpm_les_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  bpm_les_plot <-
+    ggplot(aes(x=yr3_total_bad_le,y=.data[[outcome]],
+               fill = sex
+    ),data=analysis_data) +
+    geom_point(aes(color=sex, shape = sex),size=2) +
+    geom_smooth(aes(linetype=sex),method="lm",color="black", se=FALSE) +
+    scale_linetype_manual(values = c("male"="31",
+                                     "female"="11")) +
+    scale_shape_manual(values=c(21,22)) +
+    scale_colour_grey(start=0.9,end=0) +
+    scale_fill_manual(values=c("grey40","grey85")) +
+    scale_x_continuous(expand = c(0,0),
+                       breaks = seq(0,16, by = 1),
+                       limits=c(-.5,16.5)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks=seq(40,75,by=5),
+                       limits=c(49,76)) +
+    theme_classic()
+  bpm_les_plot_list[[outcome]] <- bpm_les_plot
+  # Save plot
+  # ggsave(paste0("les_vs_",outcome,"_bysex.tiff"),
+  # width=8.5,height=6,units = "in",path="figures")
+}
+
+##### Graphs of DERS vs CBCL by gender ####
 outcome_list <- c("yr4_cbcl_int","yr4_cbcl_ext")
 cbcl_ders_plot_list <- list()
 for (outcome in outcome_list) {
@@ -719,7 +808,41 @@ for (outcome in outcome_list) {
   # width=8.3,height=6,units = "in",path="figures")
 }
 
-##### Graphs of DERS vs BPM by gender for figure 1E and 1G ####
+##### Graphs of DERS vs CBCL by sex ####
+outcome_list <- c("yr4_cbcl_int","yr4_cbcl_ext")
+cbcl_ders_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  cbcl_ders_plot <-
+    ggplot(aes(x=yr3_ders_total,y=.data[[outcome]],
+               linetype=sex,
+               shape = sex,
+               fill = sex
+    ),data=analysis_data) +
+    geom_point(alpha=.6, size = 2) +
+    geom_smooth(method="lm",
+                se=FALSE,
+                color="black") +
+    scale_linetype_manual(values = c("male"="31",
+                                     "female"="11")) +
+    scale_shape_manual(values=c(21,22,23)) +
+    scale_fill_manual(values=c("grey40","grey85")) +
+    scale_colour_grey(start=0.9,end=0) +
+    scale_x_continuous(expand = c(0,0),
+                       breaks=seq(20,130,10),
+                       limits = c(25,131)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks=seq(30,90,10),
+                       limits = c(30,90)) +
+    theme_classic() +
+    guides(shape = guide_legend(override.aes = list(size = 2)))
+  cbcl_ders_plot_list[[outcome]] <- cbcl_ders_plot
+  # Save plot
+  # ggsave(paste0("ders_vs_",outcome,"_bysex.tiff"),
+  # width=8.3,height=6,units = "in",path="figures")
+}
+
+##### Graphs of DERS vs BPM by gender ####
 outcome_list <- c("yr4_bpm_int","yr4_bpm_ext")
 bpm_ders_plot_list <- list()
 for (outcome in outcome_list) {
@@ -753,6 +876,38 @@ for (outcome in outcome_list) {
   #        width=8.3,height=6,units = "in",path="figures")
 }
 
+##### Graphs of DERS vs BPM by sex ####
+outcome_list <- c("yr4_bpm_int","yr4_bpm_ext")
+bpm_ders_plot_list <- list()
+for (outcome in outcome_list) {
+  # Create plot
+  bpm_ders_plot <- ggplot(aes(x=yr3_ders_total,y=.data[[outcome]],
+                              linetype=sex,
+                              shape = sex,
+                              fill = sex
+  ),data=analysis_data) +
+    geom_point(alpha=.6, size=2) +
+    geom_smooth(method="lm",
+                se=FALSE,
+                color="black") +
+    scale_linetype_manual(values = c("male"="31",
+                                     "female"="11")) +
+    scale_shape_manual(values=c(21,22,23)) +
+    scale_fill_manual(values=c("grey40","grey85")) +
+    scale_colour_grey(start=0.9,end=0) +
+    scale_x_continuous(expand = c(0,0),
+                       breaks=seq(20,130,10),
+                       limits = c(25,131)) +
+    scale_y_continuous(expand = c(0,0),
+                       breaks=seq(40,75,by=5),
+                       limits=c(49,76)) +
+    theme_classic() +
+    guides(shape = guide_legend(override.aes = list(size = 2)))
+  bpm_ders_plot_list[[outcome]] <- bpm_ders_plot
+  # Save plot
+  # ggsave(paste0("ders_vs_",outcome,"_bysex.tiff"),
+  #        width=8.3,height=6,units = "in",path="figures")
+}
 
 ## STEP ONE: BASIC GROUP DIFFERENCES AND REGRESSION ####
 
@@ -924,6 +1079,7 @@ bpm_int_les_ders_age_reg <- lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le + Z_yr3_ders
                                    (1|site),
                                  data=analysis_data)
 summary(bpm_int_les_ders_age_reg) # LES, DERS, and age all sig associated with BPM int
+round(confint(bpm_int_les_ders_age_reg),2)
 BIC(bpm_int_les_ders_age_reg)
 rsq(bpm_int_les_ders_age_reg, adj=TRUE) # full model = 0.050
 
@@ -933,6 +1089,7 @@ cbcl_int_les_ders_age_reg <- lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le + Z_yr3_de
                                     (1|site),
                                   data=analysis_data)
 summary(cbcl_int_les_ders_age_reg) # LES and DERS but not age sig associated with CBCL int
+round(confint(cbcl_int_les_ders_age_reg),2)
 BIC(cbcl_int_les_ders_age_reg)
 rsq(cbcl_int_les_ders_age_reg, adj=TRUE) # full model = 0.161
 
@@ -942,6 +1099,7 @@ bpm_ext_les_ders_age_reg <- lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le + Z_yr3_ders
                                    (1|site),
                                  data=analysis_data)
 summary(bpm_ext_les_ders_age_reg) # LES and DERS but not age sig associated with BPM ext
+round(confint(bpm_ext_les_ders_age_reg),2)
 BIC(bpm_ext_les_ders_age_reg)
 rsq(bpm_ext_les_ders_age_reg, adj=TRUE) # full model = 0.045
 
@@ -951,6 +1109,7 @@ cbcl_ext_les_ders_age_reg <- lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le + Z_yr3_de
                                     (1|site),
                                   data=analysis_data)
 summary(cbcl_ext_les_ders_age_reg) # LES, DERS, and age all sig associated with CBCL ext
+round(confint(cbcl_ext_les_ders_age_reg),2)
 BIC(cbcl_ext_les_ders_age_reg)
 rsq(cbcl_ext_les_ders_age_reg, adj=TRUE) # full model = 0.210
 
@@ -966,6 +1125,7 @@ ders_les_gendercisboy_reg <- lmer(Z_yr4_ders_total ~ Z_yr3_total_bad_le*genderid
                                     (1|site),
                                   data=analysis_data)
 summary(ders_les_gendercisboy_reg) 
+round(confint(ders_les_gendercisboy_reg),2)
 BIC(ders_les_gendercisboy_reg)
 anova(ders_les_gendercisboy_reg) # sig main effect LES and gender but not age or interaction
 rsq(ders_les_gendercisboy_reg,adj=TRUE) # full model = 0.027
@@ -979,6 +1139,7 @@ ders_les_sex_reg <- lmer(Z_yr4_ders_total ~ Z_yr3_total_bad_le*sex +
                            (1|site),
                          data=analysis_data)
 summary(ders_les_sex_reg) # sig main effect LES but not sex, age, or interaction
+round(confint(ders_les_sex_reg),2)
 BIC(ders_les_sex_reg)
 rsq(ders_les_sex_reg, adj=TRUE) # full model = 0.017
 
@@ -993,7 +1154,9 @@ bpm_int_les_gendercisboy_reg <-
          (1|site),  
        data=analysis_data, REML=FALSE)
 summary(bpm_int_les_gendercisboy_reg)
+round(confint(bpm_int_les_gendercisboy_reg),2)
 anova(bpm_int_les_gendercisboy_reg) 
+BIC(bpm_int_les_gendercisboy_reg)
 # sig main effect LES, gender, DERS, age, and interaction between LES and gender but not interaction between DERS and gender
 rsq(bpm_int_les_gendercisboy_reg,adj=TRUE) # full model = 0.110
 
@@ -1004,8 +1167,10 @@ bpm_int_les_gendercisgirl_reg <-
          (1|site),  
        data=analysis_data, REML=FALSE)
 summary(bpm_int_les_gendercisgirl_reg)
+round(confint(bpm_int_les_gendercisgirl_reg),2)
 anova(bpm_int_les_gendercisgirl_reg)
 # sig main effect LES, gender, DERS, age, and interaction between LES and gender but not interaction between DERS and gender
+BIC(bpm_int_les_gendercisgirl_reg)
 rsq(bpm_int_les_gendercisgirl_reg,adj=TRUE) # full model = 0.110
 
 #### CBCL internalizing ~ LES*gender + DERS*gender + age + (1|site) ####
@@ -1015,7 +1180,9 @@ cbcl_int_les_gendercisboy_reg <-
          (1|site),  
        data=analysis_data, REML=FALSE)
 summary(cbcl_int_les_gendercisboy_reg)
+round(confint(cbcl_int_les_gendercisboy_reg),2)
 anova(cbcl_int_les_gendercisboy_reg) # sig main effect LES, gender and DERS but not age or either interaction
+BIC(cbcl_int_les_gendercisboy_reg)
 rsq(cbcl_int_les_gendercisboy_reg,adj=TRUE) # full model = 0.184
 
 #### BPM externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
@@ -1025,7 +1192,9 @@ bpm_ext_les_gendercisboy_reg <-
          (1|site),  
        data=analysis_data, REML=FALSE)
 summary(bpm_ext_les_gendercisboy_reg)
+round(confint(bpm_ext_les_gendercisboy_reg),2)
 anova(bpm_ext_les_gendercisboy_reg) # sig main effects LES, gender, and DERS but not age or either interaction
+BIC(bpm_ext_les_gendercisboy_reg)
 rsq(bpm_ext_les_gendercisboy_reg,adj=TRUE) # full model = 0.056
 
 #### CBCL externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
@@ -1035,7 +1204,9 @@ cbcl_ext_les_gendercisboy_reg <-
          (1|site),  
        data=analysis_data, REML=FALSE)
 summary(cbcl_ext_les_gendercisboy_reg)
+round(confint(cbcl_ext_les_gendercisboy_reg),2)
 anova(cbcl_ext_les_gendercisboy_reg) # sig main effect LES, gender, DERS, and age but neither interaction
+BIC(cbcl_ext_les_gendercisboy_reg)
 rsq(cbcl_ext_les_gendercisboy_reg,adj=TRUE) # full model = 0.211
 
 
@@ -1050,6 +1221,8 @@ bpm_int_les_sex_reg <-
          (1|site),
        data=analysis_data, REML=FALSE)
 summary(bpm_int_les_sex_reg)
+round(confint(bpm_int_les_sex_reg),2)
+BIC(bpm_int_les_sex_reg)
 rsq(bpm_int_les_sex_reg,adj=TRUE)
 
 #### CBCL internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
@@ -1059,6 +1232,8 @@ cbcl_int_les_sex_reg <-
          (1|site),
        data=analysis_data, REML=FALSE)
 summary(cbcl_int_les_sex_reg) # sig main effect LES, sex and DERS but not age or either interaction
+round(confint(cbcl_int_les_sex_reg),2)
+BIC(cbcl_int_les_sex_reg)
 rsq(cbcl_int_les_sex_reg,adj=TRUE) # full model = 0.170
 
 #### BPM externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
@@ -1068,6 +1243,8 @@ bpm_ext_les_sex_reg <-
          (1|site),
        data=analysis_data, REML=FALSE)
 summary(bpm_ext_les_sex_reg)
+round(confint(bpm_ext_les_sex_reg),2)
+BIC(bpm_ext_les_sex_reg)
 rsq(bpm_ext_les_sex_reg,adj=TRUE)
 
 #### CBCL externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
@@ -1077,6 +1254,8 @@ cbcl_ext_les_sex_reg <-
          (1|site),
        data=analysis_data, REML=FALSE)
 summary(cbcl_ext_les_sex_reg) # sig main effect LES, DERS and age but not sex or either interaction
+round(confint(cbcl_ext_les_sex_reg),2)
+BIC(cbcl_ext_les_sex_reg)
 rsq(cbcl_ext_les_sex_reg,adj=TRUE) # full model = 0.208
 
 
