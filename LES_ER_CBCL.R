@@ -1154,10 +1154,10 @@ bpm_int_les_gendercisboy_reg <-
          (1|site),  
        data=analysis_data, REML=FALSE)
 summary(bpm_int_les_gendercisboy_reg)
-round(confint(bpm_int_les_gendercisboy_reg),2)
-anova(bpm_int_les_gendercisboy_reg) 
-BIC(bpm_int_les_gendercisboy_reg)
 # sig main effect LES, gender, DERS, age, and interaction between LES and gender but not interaction between DERS and gender
+round(confint(bpm_int_les_gendercisboy_reg),2)
+anova(bpm_int_les_gendercisboy_reg) # sig omnibus interaction between LES and gender
+BIC(bpm_int_les_gendercisboy_reg)
 rsq(bpm_int_les_gendercisboy_reg,adj=TRUE) # full model = 0.110
 
 # to get betas for gd vs cis girl
@@ -1185,6 +1185,18 @@ anova(cbcl_int_les_gendercisboy_reg) # sig main effect LES, gender and DERS but 
 BIC(cbcl_int_les_gendercisboy_reg)
 rsq(cbcl_int_les_gendercisboy_reg,adj=TRUE) # full model = 0.184
 
+# to get betas for gd vs cis girl
+cbcl_int_les_gendercisgirl_reg <- 
+  lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le*genderid_refcisgirl + Z_yr3_ders_total*genderid_refcisgirl +
+         Z_yr4_age + 
+         (1|site),  
+       data=analysis_data, REML=FALSE)
+summary(cbcl_int_les_gendercisgirl_reg)
+round(confint(cbcl_int_les_gendercisgirl_reg),2)
+anova(cbcl_int_les_gendercisgirl_reg) # sig main effect LES, gender and DERS but not age or either interaction
+BIC(cbcl_int_les_gendercisgirl_reg)
+rsq(cbcl_int_les_gendercisgirl_reg,adj=TRUE) # full model = 0.184
+
 #### BPM externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
 bpm_ext_les_gendercisboy_reg <- 
   lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
@@ -1196,6 +1208,18 @@ round(confint(bpm_ext_les_gendercisboy_reg),2)
 anova(bpm_ext_les_gendercisboy_reg) # sig main effects LES, gender, and DERS but not age or either interaction
 BIC(bpm_ext_les_gendercisboy_reg)
 rsq(bpm_ext_les_gendercisboy_reg,adj=TRUE) # full model = 0.056
+
+# to get betas for gd vs cis girl
+bpm_ext_les_gendercisgirl_reg <- 
+  lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le*genderid_refcisgirl + Z_yr3_ders_total*genderid_refcisgirl +
+         Z_yr4_age + 
+         (1|site),  
+       data=analysis_data, REML=FALSE)
+summary(bpm_ext_les_gendercisgirl_reg)
+round(confint(bpm_ext_les_gendercisgirl_reg),2)
+anova(bpm_ext_les_gendercisgirl_reg) # sig main effects LES, gender, and DERS but not age or either interaction
+BIC(bpm_ext_les_gendercisgirl_reg)
+rsq(bpm_ext_les_gendercisgirl_reg,adj=TRUE) # full model = 0.056
 
 #### CBCL externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
 cbcl_ext_les_gendercisboy_reg <- 
@@ -1209,6 +1233,17 @@ anova(cbcl_ext_les_gendercisboy_reg) # sig main effect LES, gender, DERS, and ag
 BIC(cbcl_ext_les_gendercisboy_reg)
 rsq(cbcl_ext_les_gendercisboy_reg,adj=TRUE) # full model = 0.211
 
+# to get betas for gd vs cis girl
+cbcl_ext_les_gendercisgirl_reg <- 
+  lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le*genderid_refcisgirl + Z_yr3_ders_total*genderid_refcisgirl +
+         Z_yr4_age + 
+         (1|site),  
+       data=analysis_data, REML=FALSE)
+summary(cbcl_ext_les_gendercisgirl_reg)
+round(confint(cbcl_ext_les_gendercisgirl_reg),2)
+anova(cbcl_ext_les_gendercisgirl_reg) # sig main effect LES, gender, DERS, and age but neither interaction
+BIC(cbcl_ext_les_gendercisgirl_reg)
+rsq(cbcl_ext_les_gendercisgirl_reg,adj=TRUE) # full model = 0.211
 
 ### Mixed effect linear regression to determine whether sex moderates ####
 ### relationship between LES, DERS, and CBCL or BPM using age as fixed effect
