@@ -30,6 +30,7 @@ mh_p_ders <- read_csv("data/mh_p_ders.csv")
 # 16373, 17952, 21439, 23991, 28582, 31278, 36700, 38672, 40583, 42272, and 
 # 46007 and from 20 total columns all ending in _m indicating they pertain to 
 # missing values, so it is okay to ignore this warning
+# problems(mh_p_cbcl)
 # unique(problems(mh_p_cbcl)$row)
 # colnames(mh_p_cbcl[,unique(problems(mh_p_cbcl)$col)])
 mh_p_cbcl <- read_csv("data/mh_p_cbcl.csv")
@@ -49,6 +50,7 @@ abcd_y_lt <- read_csv("data/abcd_y_lt.csv")
 # Note: warning will flag 76 problems total from 47 unique rows and columns 109
 # and 110 ie ple_homeless_fu_y and ple_homeless_fu2_y, neither of which is 
 # relevant for this analysis, so it is okay to ignore this warning
+# problems(mh_y_le)
 # unique(problems(mh_y_le)$row)
 # colnames(mh_y_le[,unique(problems(mh_y_le)$col)])
 mh_y_le <- read_csv("data/mh_y_le.csv")
@@ -65,8 +67,8 @@ genderdata <- gish_y_gi %>%
   mutate(sex_details = case_when(
     kbi_sex_assigned_at_birth==1 ~ "male",
     kbi_sex_assigned_at_birth==2 ~ "female",
-    kbi_sex_assigned_at_birth==777 ~ "dont_know",
-    kbi_sex_assigned_at_birth==999 ~ "refuse"
+    kbi_sex_assigned_at_birth==999 ~ "dont_know",
+    kbi_sex_assigned_at_birth==777 ~ "refuse"
   )) %>%
   # set "don't know" or "refuse" to be NA for sex
   mutate(sex = case_when(
@@ -151,7 +153,7 @@ genderdata %>%
   count(genderid)
 
 ### to get number of subjects with CBCL data in year 4 who refused to answer
-### at least one item for methods (okay if missing language)
+### at least one item (okay if missing language)
 mh_p_cbcl %>% group_by(eventname) %>% count()
 mh_p_cbcl %>% group_by(eventname) %>% 
   filter(if_any(all_of(c("cbcl_scr_syn_internal_t","cbcl_scr_syn_external_t")), is.na)) %>% count()
@@ -169,7 +171,7 @@ cbcldata <- mh_p_cbcl %>%
   )  
 
 ### to get number of subjects with CBCL data in year 4 who refused to answer
-### at least one item for methods (okay if missing language)
+### at least one item (okay if missing language)
 mh_y_bpm %>% group_by(eventname) %>% count()
 mh_y_bpm %>% group_by(eventname) %>% 
   filter(if_any(all_of(c("bpm_y_scr_internal_t","bpm_y_scr_external_t")), is.na)) %>% count()
@@ -190,7 +192,7 @@ bpmdata <- mh_y_bpm %>%
 ### Prepare DERS-P data for analysis ####
 
 ### to get number of subjects with DERS data in year 3 who refused to answer
-### at least one item for methods (okay if missing language)
+### at least one item (okay if missing language)
 mh_p_ders %>% group_by(eventname) %>% count()
 mh_p_ders %>% group_by(eventname) %>% 
   filter(if_any(-all_of(c("ders_p_select_language___1")), ~ . == 777)) %>% count()
@@ -261,25 +263,45 @@ dersdata <- mh_p_ders %>%
                      ders_upset_better_p == 2 ~ 4,
                      ders_upset_better_p == 3 ~ 3,
                      ders_upset_better_p == 4 ~ 2,
-                     ders_upset_better_p == 5 ~ 1)) %>%
+                     ders_upset_better_p == 5 ~ 1)) 
+
+ders_cols_to_sum <- dersdata %>%
+  select(-all_of(c(
+    "src_subject_id",
+    "eventname",
+    "ders_p_select_language___1",
+    "ders_attn_awareness_p",
+    "ders_feelings_attentive_p",
+    "ders_feelings_care_p",
+    "ders_upset_ack_p",
+    "ders_clear_feelings_p",
+    "ders_feelings_know_p",
+    "ders_upset_behavior_control_p",
+    "ders_upset_better_p"
+  ))) %>%
+  colnames()
+print(ders_cols_to_sum)
+# The following 29 columns should be part of the list to be summed:
+# "ders_emotion_overwhelm_p","ders_upset_angry_p","ders_upset_ashamed_p",
+# "ders_upset_behavior_p","ders_upset_concentrate_p","ders_upset_control_p",
+# "ders_upset_depressed_p","ders_upset_difficulty_p","ders_upset_embarrassed_p",
+# "ders_upset_emotion_overwhelm_p","ders_upset_esteem_p",
+# "ders_upset_feel_better_p","ders_upset_fixation_p","ders_upset_focus_p",
+# "ders_upset_guilty_p","ders_upset_irritation_p",
+# "ders_upset_long_time_better_p","ders_upset_lose_control_p",
+# "ders_upset_out_control_p","ders_upset_time_p","ders_upset_weak_p",
+# "rev_ders_attn_awareness_p","rev_ders_feelings_attentive_p",
+# "rev_ders_feelings_care_p","rev_ders_upset_ack_p","rev_ders_clear_feelings_p",
+# "rev_ders_feelings_know_p","rev_ders_upset_behavior_control_p","rev_ders_upset_better_p"
+
+dersdata <- dersdata %>%
   # add column to sum across all items (using using reverse-scored versions of
   # eight items above) and make one cumulative score
   mutate(ders_total = rowSums(
-    across(!all_of(
-      c("src_subject_id",
-        "eventname",
-        "ders_p_select_language___1",
-        "ders_attn_awareness_p",
-        "ders_feelings_attentive_p",
-        "ders_feelings_care_p",
-        "ders_upset_ack_p",
-        "ders_clear_feelings_p",
-        "ders_feelings_know_p",
-        "ders_upset_behavior_control_p",
-        "ders_upset_better_p"
-      ))))) %>%
+    across(all_of(ders_cols_to_sum)))) %>%
   # select only columns relevant to analysis
   select(src_subject_id,eventname,ders_total)
+
 
 #### See all unique values for each column in DERS-P data ####
 # see all unique values (can visually check for NA or errors)
@@ -302,7 +324,7 @@ dersdata %>%
 
 ### to get number of subjects with LES data in year 3 with NA for at least one
 ### item other than homelessness and knowing someone who attempted suicide
-### (which were only asked in year 4) for methods
+### (which were only asked in year 4)
 mh_y_le %>% group_by(eventname) %>% count()
 mh_y_le %>% group_by(eventname) %>% 
   filter(if_any(all_of(c("ple_died_y","ple_injured_y","ple_crime_y",
@@ -360,7 +382,7 @@ alldata <- genderdata %>%
                    c(src_subject_id,eventname,
                      site_id_l,interview_age)),
             by=c("src_subject_id","eventname")) %>%
-  # rename age column
+  # rename age and site columns
   rename(age = interview_age, site = site_id_l) %>%
   # add DERS-P data based on subject ID and data collection year
   left_join(dersdata,by=c("src_subject_id","eventname")) %>%
@@ -370,7 +392,6 @@ alldata <- genderdata %>%
   left_join(cbcldata,by=c("src_subject_id","eventname")) %>%
   # add BPM data based on subject ID and data collection year
   left_join(bpmdata,by=c("src_subject_id","eventname")) %>%
-  # Grand-mean center continuous variables
   mutate(across(
     c(age, ders_total, total_bad_le, 
       cbcl_int, cbcl_ext,
@@ -385,7 +406,8 @@ alldata <- genderdata %>%
 ### Get general overview of all data ####
 #### Get raw number and percentage for each gender group and data collection year ####
 # year 3 follow-up: cis boy = 5113 (51.7%), cis girl = 4462 (45.1%), gd = 308 (3.12%)
-# year 4 follow-up: cis boy = 2393 (51.95%), cis girl = 1964 (42.6%), gd = 255 (5.53%)
+# year 4 follow-up: cis boy = 2393 (51.9%), cis girl = 1964 (42.6%), gd = 255 (5.53%)
+# note that this does not include individuals who didn't understand or refused item
 alldata %>% 
   group_by(eventname) %>% 
   count(genderid) %>% 
@@ -509,17 +531,18 @@ analysis_data %>%
 
 ### Get summary stats for each variable ####
 sumstats <- 
-  analysis_data %>% #for table 2 column 1
-  # group_by(genderid) %>% #group by cis boy, cis girl, or nb and get n for each group (abstract, methods, table 2 columns 2-4)
+  analysis_data %>% 
+  # group_by(genderid) %>% #group by cis boy, cis girl, or nb and get n for each group
   # group_by(eventname) %>% #get average age at each time point (abstract)
-  group_by(gender_details) %>% #group by cis boy, cis girl, nb, trans boy, or trans girl for supplemental table 1
+  # group_by(gender_details) %>% #group by cis boy, cis girl, nb, trans boy, or trans girl for supplemental table 1
   # filter(!is.na(sex)) %>% #remove 22 subjects with NA sex (all don't know or refuse) for table 3 column 1
   # group_by(sex) %>% #group by male or female for table 3 columns 2 and 3
   # group_by(sex_details) %>% #group by sex including subjects with don't know or refuse for sex
   summarise(
     n = n(),
     across(
-      c("yr4_age","yr3_age",
+      c("yr4_age",
+        # "yr3_age",
         "yr3_total_bad_le","yr3_ders_total",
         "yr4_bpm_int","yr4_cbcl_int","yr4_bpm_ext","yr4_cbcl_ext"),
       list(
@@ -581,7 +604,7 @@ print(variable_histograms)
 
 ### Create correlation matrix for all variables from year 4 data for results and table 1 ####
 # Make correlation matrix
-# All variables are significantly correlated.
+# All variables are significantly correlated with each other except for age.
 corrmat <- 
   analysis_data %>%
   # select relevant columns
@@ -684,6 +707,7 @@ for (outcome in outcome_list) {
   # ggsave(paste0("les_vs_",outcome,"_bygender.tiff"),
   # width=8.5,height=6,units = "in",path="figures")
 }
+cbcl_les_plot_list
 
 ##### Graphs of LES vs CBCL by sex ####
 outcome_list <- c("yr4_cbcl_int","yr4_cbcl_ext")
@@ -713,6 +737,7 @@ for (outcome in outcome_list) {
   # ggsave(paste0("les_vs_",outcome,"_bysex.tiff"),
   # width=8.5,height=6,units = "in",path="figures")
 }
+cbcl_les_plot_list
 
 ##### Graphs of LES vs BPM by gender ####
 outcome_list <- c("yr4_bpm_int","yr4_bpm_ext")
@@ -743,6 +768,7 @@ for (outcome in outcome_list) {
   # ggsave(paste0("les_vs_",outcome,"_bygender.tiff"),
   # width=8.5,height=6,units = "in",path="figures")
 }
+bpm_les_plot_list
 
 ##### Graphs of LES vs BPM by sex ####
 outcome_list <- c("yr4_bpm_int","yr4_bpm_ext")
@@ -772,6 +798,7 @@ for (outcome in outcome_list) {
   # ggsave(paste0("les_vs_",outcome,"_bysex.tiff"),
   # width=8.5,height=6,units = "in",path="figures")
 }
+bpm_les_plot_list
 
 ##### Graphs of DERS vs CBCL by gender ####
 outcome_list <- c("yr4_cbcl_int","yr4_cbcl_ext")
@@ -807,6 +834,7 @@ for (outcome in outcome_list) {
   # ggsave(paste0("ders_vs_",outcome,"_bygender.tiff"),
   # width=8.3,height=6,units = "in",path="figures")
 }
+cbcl_ders_plot_list
 
 ##### Graphs of DERS vs CBCL by sex ####
 outcome_list <- c("yr4_cbcl_int","yr4_cbcl_ext")
@@ -841,6 +869,7 @@ for (outcome in outcome_list) {
   # ggsave(paste0("ders_vs_",outcome,"_bysex.tiff"),
   # width=8.3,height=6,units = "in",path="figures")
 }
+cbcl_ders_plot_list
 
 ##### Graphs of DERS vs BPM by gender ####
 outcome_list <- c("yr4_bpm_int","yr4_bpm_ext")
@@ -875,6 +904,7 @@ for (outcome in outcome_list) {
   # ggsave(paste0("ders_vs_",outcome,"_bygender.tiff"),
   #        width=8.3,height=6,units = "in",path="figures")
 }
+bpm_ders_plot_list
 
 ##### Graphs of DERS vs BPM by sex ####
 outcome_list <- c("yr4_bpm_int","yr4_bpm_ext")
@@ -908,12 +938,12 @@ for (outcome in outcome_list) {
   # ggsave(paste0("ders_vs_",outcome,"_bysex.tiff"),
   #        width=8.3,height=6,units = "in",path="figures")
 }
+bpm_ders_plot_list
 
 ## STEP ONE: BASIC GROUP DIFFERENCES AND REGRESSION ####
 
 ### Kruskal-Wallis (non-parametric version of one-way ANOVA) and Dunn test ie ####
-### pairwise Wilcoxon tests to determine whether variables differ based on 
-### gender for results, table 2 symbols, and supplemental table 1 symbols
+### pairwise Wilcoxon tests to determine whether variables differ based on gender
 
 #### Age (year 4)
 ##### cis boy, cis girl, or nb: chisq=3.874, p=0.144
@@ -971,7 +1001,7 @@ dunnTest(analysis_data$yr4_cbcl_ext, analysis_data$gender_details, method = "bh"
 
 
 ### Mann-Whitney U (non-parametric version of two-sample t-test) to determine ####
-### whether variables differ based on sex for results and table 3 symbols
+### whether variables differ based on sex 
 
 #### Age (year 4): W=1791327, p=0.158
 wilcox.test(yr4_age ~ sex, data = analysis_data)
@@ -1009,7 +1039,7 @@ rsq(ders_les_age_reg,adj=TRUE)
 ### Mixed effect linear regression to determine whether CBCL or BPM differ ####
 ### based on LES and/or DERS, using age as fixed effect covariate and site as random 
 ### intercept
-#### First check that all pairs of variables are related (with covariates of ####
+#### Checking that all pairs of variables are related (with covariates of
 #### age and site) to determine whether mediation analysis is reasonable
 
 ##### BPM internalizing ~ LES + age + (1|site) ####
@@ -1045,28 +1075,28 @@ bpm_int_ders_age_reg <- lmer(Z_yr4_bpm_int ~ Z_yr3_ders_total +
                                Z_yr4_age + 
                                (1|site),
                              data=analysis_data)
-summary(bpm_int_ders_age_reg) # LES and age are sig associated with BPM int
+summary(bpm_int_ders_age_reg) # DERS and age are sig associated with BPM int
 
 ##### CBCL internalizing ~ DERS + age + (1|site) ####
 cbcl_int_ders_age_reg <- lmer(Z_yr4_cbcl_int ~ Z_yr3_ders_total + 
                                 Z_yr4_age + 
                                 (1|site),
                               data=analysis_data)
-summary(cbcl_int_ders_age_reg) # LES but not age are sig associated with CBCL int
+summary(cbcl_int_ders_age_reg) # DERS but not age are sig associated with CBCL int
 
 ##### BPM externalizing ~ DERS + age + (1|site) ####
 bpm_ext_ders_age_reg <- lmer(Z_yr4_bpm_ext ~ Z_yr3_ders_total + 
                                Z_yr4_age + 
                                (1|site),
                              data=analysis_data)
-summary(bpm_ext_ders_age_reg) # LES but not age are sig associated with BPM ext
+summary(bpm_ext_ders_age_reg) # DERS but not age are sig associated with BPM ext
 
 ##### CBCL externalizing ~ DERS + age + (1|site) ####
 cbcl_ext_ders_age_reg <- lmer(Z_yr4_cbcl_ext ~ Z_yr3_ders_total + 
                                 Z_yr4_age + 
                                 (1|site),
                               data=analysis_data)
-summary(cbcl_ext_ders_age_reg) # LES and age are sig associated with CBCL ext
+summary(cbcl_ext_ders_age_reg) # DERS and age are sig associated with CBCL ext
 
 
 #### Second include both LES and DERS in same model of psychopathology #### 
@@ -1389,7 +1419,7 @@ parameterEstimates(cbclext_model, boot.ci.type = "bca.simple")
 
 ### Moderated mediation model (Hayes model 5) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
-### internalizing for results and figure 4A
+### internalizing 
 bpm_int_gender_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_int",
@@ -1459,7 +1489,7 @@ cbcl_int_gender_model15 <- PROCESS(
 
 ### Moderated mediation model (Hayes model 5) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
-### externalizing  for results and figure 4C
+### externalizing  
 bpm_ext_gender_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_ext",
@@ -1482,7 +1512,7 @@ bpm_ext_gender_model15 <- PROCESS(
 
 ### Moderated mediation model (Hayes model 5) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
-### externalizing  for results and figure 4D
+### externalizing  
 cbcl_ext_gender_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_cbcl_ext",
@@ -1505,7 +1535,7 @@ cbcl_ext_gender_model15 <- PROCESS(
 
 ### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
-### internalizing for results and figure 5A
+### internalizing 
 bpm_int_sex_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_int",
@@ -1528,7 +1558,7 @@ bpm_int_sex_model15 <- PROCESS(
 
 ### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
-### internalizing  for results and figure 5B
+### internalizing  
 cbcl_int_sex_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_cbcl_int",
@@ -1552,7 +1582,7 @@ cbcl_int_sex_model15 <- PROCESS(
 
 ### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
-### externalizing for results and figure 5C
+### externalizing 
 bpm_ext_sex_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_ext",
@@ -1575,7 +1605,7 @@ bpm_ext_sex_model15 <- PROCESS(
 
 ### Moderated mediation model (Hayes model 5) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
-### externalizing  for results and figure 5D
+### externalizing  
 cbcl_ext_sex_model15 <- PROCESS(
   analysis_data,
   y = "Z_yr4_cbcl_ext",
