@@ -12,7 +12,6 @@ library(psych) #for correlation matrices ie corr.test()
 library(lavaan) #for SEM
 library(misty) #for grand mean centering variables ie center()
 library(bruceR) #for conditional process modeling
-library(ABCDscores) #to fix summary score computation error in data release 5.1
 
 ### Prevent use of scientific notation ####
 options(scipen=999)
