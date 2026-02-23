@@ -12,6 +12,7 @@ library(psych) #for correlation matrices ie corr.test()
 library(lavaan) #for SEM
 library(misty) #for grand mean centering variables ie center()
 library(bruceR) #for conditional process modeling
+library(ABCDscores) #to fix summary score computation error in data release 5.1
 
 ### Prevent use of scientific notation ####
 options(scipen=999)
@@ -1512,15 +1513,16 @@ bpm_int_gender_model15 <- PROCESS(
   meds = c("Z_yr3_ders_total"),
   mods = c("genderid_refcisboy"),
   covs = c("Z_yr4_age"),
-  hlm.re.m = "site",
-  hlm.re.y = "site",
+  clusters = "site",
+  # hlm.re.m = "site",
+  # hlm.re.y = "site",
   # mod.path = c("x-y"),
   mod.path = c("x-y","m-y"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
-  center = FALSE,
-  std = FALSE,
+  # center = FALSE,
+  # std = FALSE,
   digits = 5)
 # all interactions: F=5.73, p<0.001
 # LES*gender interaction: F=10.64, p<0.001
@@ -1562,15 +1564,16 @@ cbcl_int_gender_model15 <- PROCESS(
   meds = c("Z_yr3_ders_total"),
   mods = c("genderid_refcisboy"),
   covs = c("Z_yr4_age"),
-  hlm.re.m = "site",
-  hlm.re.y = "site",
+  clusters = "site",
+  # hlm.re.m = "site",
+  # hlm.re.y = "site",
   # mod.path = c("x-y"),
   mod.path = c("x-y","m-y"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
-  center = FALSE,
-  std = FALSE,
+  # center = FALSE,
+  # std = FALSE,
   digits = 5)
 # all interactions: F=7.04, p<0.001
 # LES*gender interaction: F=2.09, p = 0.124
@@ -1635,15 +1638,16 @@ bpm_ext_gender_model15 <- PROCESS(
   meds = c("Z_yr3_ders_total"),
   mods = c("genderid_refcisboy"),
   covs = c("Z_yr4_age"),
-  hlm.re.m = "site",
-  hlm.re.y = "site",
+  clusters = "site",
+  # hlm.re.m = "site",
+  # hlm.re.y = "site",
   # mod.path = c("x-y"),
   mod.path = c("x-y","m-y"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
-  center = FALSE,
-  std = FALSE,
+  # center = FALSE,
+  # std = FALSE,
   digits = 5)
 # all interactions: F=0.77, p = 0.544
 # LES*gender interaction: F=1.43, p = 0.239
@@ -1662,15 +1666,16 @@ cbcl_ext_gender_model15 <- PROCESS(
   meds = c("Z_yr3_ders_total"),
   mods = c("genderid_refcisboy"),
   covs = c("Z_yr4_age"),
-  hlm.re.m = "site",
-  hlm.re.y = "site",
+  clusters = "site",
+  # hlm.re.m = "site",
+  # hlm.re.y = "site",
   # mod.path = c("x-y"),
   mod.path = c("x-y","m-y"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
-  center = FALSE,
-  std = FALSE,
+  # center = FALSE,
+  # std = FALSE,
   digits = 5)
 # all interactions: F=1.79, p = 0.129
 # LES*gender interaction: F=2.24, p = 0.107
@@ -1689,15 +1694,16 @@ bpm_int_sex_model15 <- PROCESS(
   meds = c("Z_yr3_ders_total"),
   mods = c("sex"),
   covs = c("Z_yr4_age"),
-  hlm.re.m = "site",
-  hlm.re.y = "site",
+  clusters = "site",
+  # hlm.re.m = "site",
+  # hlm.re.y = "site",
   # mod.path = c("x-y"),
   mod.path = c("x-y","m-y"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
-  center = FALSE,
-  std = FALSE,
+  # center = FALSE,
+  # std = FALSE,
   digits = 5)
 # all interactions: F=14.86, p<0.001
 # LES*sex interaction: F=25.71, p<0.001
@@ -1716,15 +1722,16 @@ cbcl_int_sex_model15 <- PROCESS(
   meds = c("Z_yr3_ders_total"),
   mods = c("sex"),
   covs = c("Z_yr4_age"),
-  hlm.re.m = "site",
-  hlm.re.y = "site",
+  clusters = "site",
+  # hlm.re.m = "site",
+  # hlm.re.y = "site",
   # mod.path = c("x-y"),
   mod.path = c("x-y","m-y"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
-  center = FALSE,
-  std = FALSE,
+  # center = FALSE,
+  # std = FALSE,
   digits = 5)
 # all interactions: F=12.88, p<0.001
 # LES*sex interaction: F=3.77, p = 0.052
@@ -1743,15 +1750,16 @@ bpm_ext_sex_model15 <- PROCESS(
   meds = c("Z_yr3_ders_total"),
   mods = c("sex"),
   covs = c("Z_yr4_age"),
-  hlm.re.m = "site",
-  hlm.re.y = "site",
+  clusters = "site",
+  # hlm.re.m = "site",
+  # hlm.re.y = "site",
   # mod.path = c("x-y"),
   mod.path = c("x-y","m-y"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
-  center = FALSE,
-  std = FALSE,
+  # center = FALSE,
+  # std = FALSE,
   digits = 5)
 # all interactions: F=1.10, p = 0.334
 # LES*sex interaction: F=2.02, p = 0.156
@@ -1770,15 +1778,16 @@ cbcl_ext_sex_model15 <- PROCESS(
   meds = c("Z_yr3_ders_total"),
   mods = c("sex"),
   covs = c("Z_yr4_age"),
-  hlm.re.m = "site",
-  hlm.re.y = "site",
+  clusters = "site",
+  # hlm.re.m = "site",
+  # hlm.re.y = "site",
   # mod.path = c("x-y"),
   mod.path = c("x-y","m-y"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
-  center = FALSE,
-  std = FALSE,
+  # center = FALSE,
+  # std = FALSE,
   digits = 5)
 # all interactions: F=2.64, p = 0.071
 # LES*sex interaction: F=2.92, p = 0.087
