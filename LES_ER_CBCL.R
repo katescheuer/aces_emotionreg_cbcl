@@ -1222,194 +1222,7 @@ round(confint(cbcl_ext_les_ders_age_reg),2)
 BIC(cbcl_ext_les_ders_age_reg)
 rsq(cbcl_ext_les_ders_age_reg, adj=TRUE) # full model = 0.195
 
-
-## STEP TWO: MODERATING EFFECTS OF GENDER OR SEX ####
-### Mixed effect linear regression to determine whether gender moderates ####
-### relationship between DERS and LES, use age as fixed effect covariate and
-### site as random intercept
-
-#### DERS ~ LES*gender + age + (1|site) ####
-ders_les_gendercisboy_reg <- lmer(Z_yr4_ders_total ~ Z_yr3_total_bad_le*genderid_refcisboy + 
-                                    Z_yr4_age + 
-                                    (1|site),
-                                  data=analysis_data)
-summary(ders_les_gendercisboy_reg) 
-round(confint(ders_les_gendercisboy_reg),2)
-BIC(ders_les_gendercisboy_reg)
-anova(ders_les_gendercisboy_reg) # sig main effect LES and gender but not age or interaction
-rsq(ders_les_gendercisboy_reg,adj=TRUE) # full model = 0.027
-
-### Mixed effect linear regression to determine whether sex moderates ####
-### relationship between DERS and LES, use age as fixed effect covariate and
-### site as random intercept
-#### DERS ~ LES*sex + age + (1|site) ####
-ders_les_sex_reg <- lmer(Z_yr4_ders_total ~ Z_yr3_total_bad_le*sex + 
-                           Z_yr4_age + 
-                           (1|site),
-                         data=analysis_data)
-summary(ders_les_sex_reg) # sig main effect LES and sex but not age or interaction
-round(confint(ders_les_sex_reg),2)
-BIC(ders_les_sex_reg)
-rsq(ders_les_sex_reg, adj=TRUE) # full model = 0.017
-
-### Mixed effect linear regression to determine whether gender moderates ####
-### relationship between LES, DERS, and CBCL or BPM using age as fixed effect
-### covariate and site as random intercept
-
-#### BPM internalizing ~ LES*gender + DERS*gender + age + (1|site) ####
-bpm_int_les_gendercisboy_reg <- 
-  lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
-         Z_yr4_age + 
-         (1|site),  
-       data=analysis_data, REML=FALSE)
-summary(bpm_int_les_gendercisboy_reg)
-# sig main effect LES, gender, DERS, age, and interaction between LES and gender but not interaction between DERS and gender
-round(confint(bpm_int_les_gendercisboy_reg),2)
-anova(bpm_int_les_gendercisboy_reg) # sig omnibus interaction between LES and gender
-BIC(bpm_int_les_gendercisboy_reg)
-rsq(bpm_int_les_gendercisboy_reg,adj=TRUE) # full model = 0.178
-
-# to get betas for gd vs cis girl
-bpm_int_les_gendercisgirl_reg <- 
-  lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le*genderid_refcisgirl + Z_yr3_ders_total*genderid_refcisgirl +
-         Z_yr4_age + 
-         (1|site),  
-       data=analysis_data, REML=FALSE)
-summary(bpm_int_les_gendercisgirl_reg)
-round(confint(bpm_int_les_gendercisgirl_reg),2)
-anova(bpm_int_les_gendercisgirl_reg)
-# sig main effect LES, gender, DERS, age, and interaction between LES and gender but not interaction between DERS and gender
-BIC(bpm_int_les_gendercisgirl_reg)
-rsq(bpm_int_les_gendercisgirl_reg,adj=TRUE) # full model = 0.178
-
-#### CBCL internalizing ~ LES*gender + DERS*gender + age + (1|site) ####
-cbcl_int_les_gendercisboy_reg <- 
-  lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
-         Z_yr4_age + 
-         (1|site),  
-       data=analysis_data, REML=FALSE)
-summary(cbcl_int_les_gendercisboy_reg)
-round(confint(cbcl_int_les_gendercisboy_reg),2)
-anova(cbcl_int_les_gendercisboy_reg) 
-# sig main effect LES, gender, DERS, and interaction between DERS and gender but not LES and gender or age [BUT NOT SIG GENDER*DERS IF T SCORE]
-BIC(cbcl_int_les_gendercisboy_reg)
-rsq(cbcl_int_les_gendercisboy_reg,adj=TRUE) # full model = 0.221
-
-# to get betas for gd vs cis girl
-cbcl_int_les_gendercisgirl_reg <- 
-  lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le*genderid_refcisgirl + Z_yr3_ders_total*genderid_refcisgirl +
-         Z_yr4_age + 
-         (1|site),  
-       data=analysis_data, REML=FALSE)
-summary(cbcl_int_les_gendercisgirl_reg)
-round(confint(cbcl_int_les_gendercisgirl_reg),2)
-anova(cbcl_int_les_gendercisgirl_reg) 
-# sig main effect LES, gender, DERS, and interaction between DERS and gender but not LES and gender or age [BUT NOT SIG GENDER*DERS IF T SCORE]
-BIC(cbcl_int_les_gendercisgirl_reg)
-rsq(cbcl_int_les_gendercisgirl_reg,adj=TRUE) # full model = 0.221
-
-#### BPM externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
-bpm_ext_les_gendercisboy_reg <- 
-  lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
-         Z_yr4_age + 
-         (1|site),  
-       data=analysis_data, REML=FALSE)
-summary(bpm_ext_les_gendercisboy_reg)
-round(confint(bpm_ext_les_gendercisboy_reg),2)
-anova(bpm_ext_les_gendercisboy_reg) # sig main effects LES, gender, and DERS but not age or either interaction
-BIC(bpm_ext_les_gendercisboy_reg)
-rsq(bpm_ext_les_gendercisboy_reg,adj=TRUE) # full model = 0.066
-
-# to get betas for gd vs cis girl
-bpm_ext_les_gendercisgirl_reg <- 
-  lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le*genderid_refcisgirl + Z_yr3_ders_total*genderid_refcisgirl +
-         Z_yr4_age + 
-         (1|site),  
-       data=analysis_data, REML=FALSE)
-summary(bpm_ext_les_gendercisgirl_reg)
-round(confint(bpm_ext_les_gendercisgirl_reg),2)
-anova(bpm_ext_les_gendercisgirl_reg) # sig main effects LES, gender, and DERS but not age or either interaction
-BIC(bpm_ext_les_gendercisgirl_reg)
-rsq(bpm_ext_les_gendercisgirl_reg,adj=TRUE) # full model = 0.066
-
-#### CBCL externalizing ~ LES*gender + DERS*gender + age + (1|site) ####
-cbcl_ext_les_gendercisboy_reg <- 
-  lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le*genderid_refcisboy + Z_yr3_ders_total*genderid_refcisboy +
-         Z_yr4_age + 
-         (1|site),  
-       data=analysis_data, REML=FALSE)
-summary(cbcl_ext_les_gendercisboy_reg)
-round(confint(cbcl_ext_les_gendercisboy_reg),2)
-anova(cbcl_ext_les_gendercisboy_reg) # sig main effect LES, gender, DERS, and age but neither interaction
-BIC(cbcl_ext_les_gendercisboy_reg)
-rsq(cbcl_ext_les_gendercisboy_reg,adj=TRUE) # full model = 0.198
-
-# to get betas for gd vs cis girl
-cbcl_ext_les_gendercisgirl_reg <- 
-  lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le*genderid_refcisgirl + Z_yr3_ders_total*genderid_refcisgirl +
-         Z_yr4_age + 
-         (1|site),  
-       data=analysis_data, REML=FALSE)
-summary(cbcl_ext_les_gendercisgirl_reg)
-round(confint(cbcl_ext_les_gendercisgirl_reg),2)
-anova(cbcl_ext_les_gendercisgirl_reg) # sig main effect LES, gender, DERS, and age but neither interaction
-BIC(cbcl_ext_les_gendercisgirl_reg)
-rsq(cbcl_ext_les_gendercisgirl_reg,adj=TRUE) # full model = 0.198
-
-### Mixed effect linear regression to determine whether sex moderates ####
-### relationship between LES, DERS, and CBCL or BPM using age as fixed effect
-### covariate and site as random intercept
-
-#### BPM internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
-bpm_int_les_sex_reg <- 
-  lmer(Z_yr4_bpm_int ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + 
-         Z_yr4_age + 
-         (1|site),
-       data=analysis_data, REML=FALSE)
-summary(bpm_int_les_sex_reg)
-# sig main effect LES, sex, DERS, age, and interaction between LES and sex but not interaction between DERS and sex
-round(confint(bpm_int_les_sex_reg),2)
-anova(bpm_int_les_sex_reg) #sig omnibus test of interaction between LES and sex
-BIC(bpm_int_les_sex_reg)
-rsq(bpm_int_les_sex_reg,adj=TRUE) # full model = 0.138
-
-#### CBCL internalizing ~ LES*sex + DERS*sex + age + (1|site) ####
-cbcl_int_les_sex_reg <- 
-  lmer(Z_yr4_cbcl_int ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + 
-         Z_yr4_age + 
-         (1|site),
-       data=analysis_data, REML=FALSE)
-summary(cbcl_int_les_sex_reg)
-anova(cbcl_int_les_sex_reg)
-# sig main effect LES, sex, DERS, interaction between LES and sex, interaction between DERS and sex but not age [BUT NEITHER IXN SIG IF T SCORE]
-round(confint(cbcl_int_les_sex_reg),2)
-BIC(cbcl_int_les_sex_reg)
-rsq(cbcl_int_les_sex_reg,adj=TRUE) # full model = 0.200
-
-#### BPM externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
-bpm_ext_les_sex_reg <-
-  lmer(Z_yr4_bpm_ext ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + 
-         Z_yr4_age + 
-         (1|site),
-       data=analysis_data, REML=FALSE)
-summary(bpm_ext_les_sex_reg) # sig main effect LES, sex and DERS but not age or either interaction
-round(confint(bpm_ext_les_sex_reg),2)
-BIC(bpm_ext_les_sex_reg)
-rsq(bpm_ext_les_sex_reg,adj=TRUE) # full model = 0.061
-
-#### CBCL externalizing ~ LES*sex + DERS*sex + age + (1|site) ####
-cbcl_ext_les_sex_reg <-
-  lmer(Z_yr4_cbcl_ext ~ Z_yr3_total_bad_le*sex + Z_yr3_ders_total*sex + 
-         Z_yr4_age + 
-         (1|site),
-       data=analysis_data, REML=FALSE)
-summary(cbcl_ext_les_sex_reg) # sig main effect LES, DERS and age but not sex or either interaction
-round(confint(cbcl_ext_les_sex_reg),2)
-BIC(cbcl_ext_les_sex_reg)
-rsq(cbcl_ext_les_sex_reg,adj=TRUE) # full model = 0.196
-
-
-## STEP THREE: MEDIATING EFFECT OF ER ON CBCL OR BPM ~ LES #### 
+## STEP TWO: MEDIATION OF EFFECT OF LES ON CBCL OR BPM VIA ER #### 
 
 ### Simple mediation model for bpm internalizing ####
 bpmint_model <-
@@ -1500,12 +1313,12 @@ parameterEstimates(cbclext_model, boot.ci.type = "bca.simple")
 # Estimates and p-values: a = 0.084, p<0.001; b = 0.383, p<0.001; c = 0.099, p<0.001; ab = 0.032, p<0.001
 
 
-## STEP FOUR: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION ####
+## STEP THREE: MODERATING EFFECT OF GENDER OR SEX ON MEDIATION ####
 
-### Moderated mediation model (Hayes model 15) to test whether gender ####
+### Moderated mediation model (Hayes model 59) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### internalizing 
-bpm_int_gender_model15 <- PROCESS(
+bpm_int_gender_model59 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_int",
   x = "Z_yr3_total_bad_le",
@@ -1516,47 +1329,53 @@ bpm_int_gender_model15 <- PROCESS(
   # hlm.re.m = "site",
   # hlm.re.y = "site",
   # mod.path = c("x-y"),
-  mod.path = c("x-y","m-y"),
+  # mod.path = c("x-y","m-y"),
+  mod.path = c("all"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
   # center = FALSE,
   # std = FALSE,
   digits = 5)
-# all interactions: F=5.73, p<0.001
-# LES*gender interaction: F=10.64, p<0.001
-# DERS*gender interaction: F=0.36, p = 0.695
-# c' (interaction sig): cis boy = 0.080, p<0.001, cis girl = 0.219, p<0.001, gd = 0.252, p<0.001
-# b (interaction not sig): cis boy = 0.115, p<0.001, cis girl = 0.132, p<0.001, gd = 0.166, p = 0.007
-# ab: cis boy = 0.010, p<0.001, cis girl = 0.011, p=0.001, gd = 0.014, p = 0.088
+# Path a:
+#    LES*gender interaction on DERS (X->M): F=0.91, p = 0.404
+#    cis boy: 0.073, p = 0.002; cis girl: 0.082, p < 0.001; gd: 0.161, p = 0.008
+# Path b: 
+#    DERS*gender interaction on BPM (M->Y): F=0.39, p = 0.678
+#    cis boy: 0.114, p < 0.001; cis girl: 0.130, p < 0.001; gd: 0.169, p = 0.007
+# Path c': 
+#    LES*gender interaction on BPM (X->Y): F=10.63, p < 0.001
+#    cis boy: 0.079, p < 0.001; cis girl: 0.218, p < 0.001; gd: 0.251, p < 0.001
+# Path ab:
+#    cis boy: 0.008, p = 0.008; cis girl: 0.011, p = 0.005; gd: 0.027, p = 0.068
 
 # are the conditional direct effects [c'] of X on Y significant different for
 # different groups? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.07960 - 0.21889)/(sqrt((0.02275^2)+(0.02319)^2)) = -4.287696
+#     Z = (0.07900 - 0.21811)/(sqrt((0.02274^2)+(0.02322)^2)) = -4.280255
 # cis boy (beta1) vs gd (beta2):
-#     Z = (0.07960 - 0.25246)/(sqrt((0.02275^2)+(0.05919)^2)) = -2.726004
+#     Z = (0.07900 - 0.25124)/(sqrt((0.02274^2)+(0.05909)^2)) = -2.720385
 # cis girl (beta1) vs gd (beta2):
-#     Z = (0.21889 - 0.25246)/(sqrt((0.02319^2)+(0.05919)^2)) = -0.5280736
+#     Z = (0.21811 - 0.25124)/(sqrt((0.02322^2)+(0.05909)^2)) = -0.5218263
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -4.287696, so pnorm(-abs(-4.287696))*2 = 0.00001805359
-# cis boy vs gd: Z = -2.726004, so pnorm(-abs(-2.726004))*2 = 0.006410622
-# cis girl vs gd: Z = -0.5280736, so pnorm(-abs(-0.5280736))*2 = 0.5974483
+# cis boy vs cis girl: Z = -4.280255, so pnorm(-abs(-4.280255))*2 = 0.00001866793
+# cis boy vs gd: Z = -2.720385, so pnorm(-abs(-2.720385))*2 = 0.006520595
+# cis girl vs gd: Z = -0.5218263, so pnorm(-abs(-0.5218263))*2 = 0.6017913
 # Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.00001805359,0.006410622,0.5974483),method="fdr")
+# p.adjust(c(0.00001866793,0.006520595,0.6017913),method="fdr")
 # So final p-values rounded to three places are:
 # cis boy vs cis girl: p < .001
 # cis boy vs gd: p = 0.010
-# cis girl vs gd: 0.597
+# cis girl vs gd: 0.602
 
-### Moderated mediation model (Hayes model 15) to test whether gender ####
+### Moderated mediation model (Hayes model 59) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
-### internalizing  for results and figure 4B
-cbcl_int_gender_model15 <- PROCESS(
+### internalizing 
+cbcl_int_gender_model59 <- PROCESS(
   analysis_data,
   y = "Z_yr4_cbcl_int",
   x = "Z_yr3_total_bad_le",
@@ -1567,70 +1386,77 @@ cbcl_int_gender_model15 <- PROCESS(
   # hlm.re.m = "site",
   # hlm.re.y = "site",
   # mod.path = c("x-y"),
-  mod.path = c("x-y","m-y"),
+  # mod.path = c("x-y","m-y"),
+  mod.path = c("all"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
   # center = FALSE,
   # std = FALSE,
   digits = 5)
-# all interactions: F=7.04, p<0.001
-# LES*gender interaction: F=2.09, p = 0.124
-# DERS*gender interaction: F=10.51, p<0.001
-# c' (interaction not sig): cis boy = 0.062, p = 0.003, cis girl = 0.097, p<0.001, gd = 0.173, p = 0.001
-# b (interaction sig): cis boy = 0.323, p<0.001, cis girl = 0.413, p<0.001, gd = 0.572, p<0.001
-# ab: cis boy = 0.027, p<0.001, cis girl = 0.035, p<0.001, gd = 0.048, p = 0.001
+# Path a:
+#    LES*gender interaction on DERS (X->M): F=0.91, p = 0.404
+#    cis boy: 0.073, p = 0.002; cis girl: 0.082, p < 0.001; gd: 0.161, p = 0.008
+# Path b: 
+#    DERS*gender interaction on BPM (M->Y): F=10.89, p < 0.001
+#    cis boy: 0.326, p < 0.001; cis girl: 0.413, p < 0.001; gd: 0.576, p < 0.001
+# Path c': 
+#    LES*gender interaction on BPM (X->Y): F=2.13, p = 0.119
+#    cis boy: 0.063, p = 0.003; cis girl: 0.099, p < 0.001; gd: 0.173, p = 0.001
+# Path ab:
+#    cis boy: 0.024, p = 0.002; cis girl: 0.034, p < 0.001; gd: 0.092, p = 0.009
+
 
 # are the effects [b] of M on Y significant different for
 # different groups? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.32607 - 0.41279)/(sqrt((0.01944^2)+(0.02260)^2)) = -2.90903
+#     Z = (0.32559 - 0.41275)/(sqrt((0.01942^2)+(0.02258)^2)) = -2.926558
 # cis boy (beta1) vs gd (beta2):
-#     Z = (0.32607 - 0.57162)/(sqrt((0.01944^2)+(0.05697)^2)) = -4.079211
+#     Z = (0.32559 - 0.57595)/(sqrt((0.01942^2)+(0.05688)^2)) = -4.165458
 # cis girl (beta1) vs gd (beta2):
-#     Z = (0.41279 - 0.57162)/(sqrt((0.02260^2)+(0.05697)^2)) = -2.591493
+#     Z = (0.41275 - 0.57595)/(sqrt((0.02258^2)+(0.05688)^2)) = -2.666755
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -2.90903, so pnorm(-abs(-2.90903))*2 = 0.003625521
-# cis boy vs gd: Z = -4.079211, so pnorm(-abs(-4.079211))*2 = 0.00004518881
-# cis girl vs gd: Z = -2.591493, so pnorm(-abs(-2.591493))*2 = 0.009556049
+# cis boy vs cis girl: Z = -2.926558, so pnorm(-abs(-2.926558))*2 = 0.003427356
+# cis boy vs gd: Z = -4.165458, so pnorm(-abs(-4.165458))*2 = 0.00003107281
+# cis girl vs gd: Z = -2.666755, so pnorm(-abs(-2.666755))*2 = 0.007658748
 # Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.003625521,0.00004518881,0.009556049),method="fdr")
+# p.adjust(c(0.003427356,0.00003107281,0.007658748),method="fdr")
 # So final p-values rounded to three places are:
 # cis boy vs cis girl: p = 0.005
 # cis boy vs gd: p < 0.001
-# cis girl vs gd: p = 0.010
+# cis girl vs gd: p = 0.007
 
 # are the indirect effects [ab] of X on Y through M significant different for
 # different groups? Use Z test to find out. 
 # Z = (beta1 - beta2 / (sqrt(SE1^2 + SE2^2)))
 # cis boy (beta1) vs cis girl (beta2): 
-#     Z = (0.02725 - 0.03450)/(sqrt((0.00649^2)+(0.00842)^2)) = -0.6819728
+#     Z = (0.02404 - 0.03406)/(sqrt((0.00794^2)+(0.01009)^2)) = -0.7804067
 # cis boy (beta1) vs gd (beta2):
-#     Z = (0.02725 - 0.04777)/(sqrt((0.00649^2)+(0.01491)^2)) = -1.261896
+#     Z = (0.02404 - 0.09238)/(sqrt((0.00794^2)+(0.03541)^2)) = -1.883201
 # cis girl (beta1) vs gd (beta2):
-#     Z = (0.03450 - 0.04777)/(sqrt((0.00842^2)+(0.01491)^2)) = -0.7749713
+#     Z = (0.03406 - 0.09238)/(sqrt((0.01009^2)+(0.03541)^2)) = -1.583943
 # to go from Z score to p-value, find probability of being outside absolute value
 # of Z score (because don't know if beta1 is smaller or larger than beta2) and 
 # then multiply that by 2 because two-tailed test. Can use default settings of
 # mean = 0 and sd = 1 in pnorm function because that is true of Z scores
-# cis boy vs cis girl: Z = -0.6819728, so pnorm(-abs(-0.6819728))*2 = 0.4952562
-# cis boy vs gd: Z = -1.261896, so pnorm(-abs(-1.261896))*2 = 0.2069862
-# cis girl vs gd: Z = -0.7749713, so pnorm(-abs(-0.7749713))*2 = 0.4383566
+# cis boy vs cis girl: Z = -0.7804067, so pnorm(-abs(-0.7804067))*2 = 0.4351515
+# cis boy vs gd: Z = -1.883201, so pnorm(-abs(-1.883201))*2 = 0.05967313
+# cis girl vs gd: Z = -1.583943, so pnorm(-abs(-1.583943))*2 = 0.1132067
 # Finally, we need to fdr correct for multiple tests:
-# p.adjust(c(0.4952562,0.2069862,0.4383566),method="fdr")
+# p.adjust(c(0.4351515,0.05967313,0.1132067),method="fdr")
 # So final p-values rounded to three places are:
-# cis boy vs cis girl: p = 0.495 (if a is the same and b is sig diff for all groups, why is this not sig diff?)
-# cis boy vs gd: p = 0.495 (if a is the same and b is sig diff for all groups, why is this not sig diff?)
-# cis girl vs gd: p = 0.495 (if a is the same and b is sig diff for all groups, why is this not sig diff?)
+# cis boy vs cis girl: p = 0.435
+# cis boy vs gd: p = 0.170
+# cis girl vs gd: p = 0.170
 
-### Moderated mediation model (Hayes model 15) to test whether gender ####
+### Moderated mediation model (Hayes model 59) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### externalizing  
-bpm_ext_gender_model15 <- PROCESS(
+bpm_ext_gender_model59 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_ext",
   x = "Z_yr3_total_bad_le",
@@ -1641,24 +1467,30 @@ bpm_ext_gender_model15 <- PROCESS(
   # hlm.re.m = "site",
   # hlm.re.y = "site",
   # mod.path = c("x-y"),
-  mod.path = c("x-y","m-y"),
+  # mod.path = c("x-y","m-y"),
+  mod.path = c("all"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
   # center = FALSE,
   # std = FALSE,
   digits = 5)
-# all interactions: F=0.77, p = 0.544
-# LES*gender interaction: F=1.43, p = 0.239
-# DERS*gender interaction: F=0.09, p = 0.915
-# c' (interaction not sig): cis boy = 0.109, p<0.001, cis girl = 0.161, p<0.001, gd = 0.092, p = 0.126
-# b (interaction not sig): cis boy = 0.168, p<0.001, cis girl = 0.159, p<0.001, gd = 0.144, p = 0.023
-# ab: cis boy = 0.014, p<0.001, cis girl = 0.013, p<0.001, gd = 0.012, p = 0.058
+# Path a:
+#    LES*gender interaction on DERS (X->M): F=0.91, p = 0.404
+#    cis boy: 0.073, p = 0.002; cis girl: 0.082, p < 0.001; gd: 0.161, p = 0.008
+# Path b: 
+#    DERS*gender interaction on BPM (M->Y): F=0.09, p = 0.914
+#    cis boy: 0.169, p < 0.001; cis girl: 0.161, p < 0.001; gd: 0.142, p = 0.024
+# Path c': 
+#    LES*gender interaction on BPM (X->Y): F=1.56, p = 0.210
+#    cis boy: 0.108, p < 0.001; cis girl: 0.161, p < 0.001; gd: 0.090, p = 0.131
+# Path ab:
+#    cis boy: 0.012, p = 0.004; cis girl: 0.013, p = 0.003; gd: 0.022, p = 0.102
 
-### Moderated mediation model (Hayes model 15) to test whether gender ####
+### Moderated mediation model (Hayes model 59) to test whether gender ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### externalizing  
-cbcl_ext_gender_model15 <- PROCESS(
+cbcl_ext_gender_model59 <- PROCESS(
   analysis_data,
   y = "Z_yr4_cbcl_ext",
   x = "Z_yr3_total_bad_le",
@@ -1669,24 +1501,30 @@ cbcl_ext_gender_model15 <- PROCESS(
   # hlm.re.m = "site",
   # hlm.re.y = "site",
   # mod.path = c("x-y"),
-  mod.path = c("x-y","m-y"),
+  # mod.path = c("x-y","m-y"),
+  mod.path = c("all"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
   # center = FALSE,
   # std = FALSE,
   digits = 5)
-# all interactions: F=1.79, p = 0.129
-# LES*gender interaction: F=2.24, p = 0.107
-# DERS*gender interaction: F=1.79, p = 0.129
-# c' (interaction not sig): cis boy = 0.130, p<0.001, cis girl = 0.072, p<0.001, gd = 0.074, p = 0.155
-# b (interaction not sig): cis boy = 0.394, p<0.001, cis girl = 0.353, p<0.001, gd = 0.401, p<0.001
-# ab: cis boy = 0.033, p<0.001, cis girl = 0.030, p<0.001, gd = 0.034, p<0.001
+# Path a:
+#    LES*gender interaction on DERS (X->M): F=0.91, p = 0.404
+#    cis boy: 0.073, p = 0.002; cis girl: 0.082, p < 0.001; gd: 0.161, p = 0.008
+# Path b: 
+#    DERS*gender interaction on BPM (M->Y): F=1.07, p = 0.344
+#    cis boy: 0.394, p < 0.001; cis girl: 0.355, p < 0.001; gd: 0.402, p < 0.001
+# Path c': 
+#    LES*gender interaction on BPM (X->Y): F=2.19, p = 0.112
+#    cis boy: 0.130, p < 0.001; cis girl: 0.072, p < 0.001; gd: 0.075, p = 0.146
+# Path ab:
+#    cis boy: 0.029, p = 0.002; cis girl: 0.029, p < 0.001; gd: 0.064, p = 0.012
 
-### Moderated mediation model (Hayes model 15) to test whether sex ####
+### Moderated mediation model (Hayes model 59) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### internalizing 
-bpm_int_sex_model15 <- PROCESS(
+bpm_int_sex_model59 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_int",
   x = "Z_yr3_total_bad_le",
@@ -1697,24 +1535,30 @@ bpm_int_sex_model15 <- PROCESS(
   # hlm.re.m = "site",
   # hlm.re.y = "site",
   # mod.path = c("x-y"),
-  mod.path = c("x-y","m-y"),
+  # mod.path = c("x-y","m-y"),
+  mod.path = c("all"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
   # center = FALSE,
   # std = FALSE,
   digits = 5)
-# all interactions: F=14.86, p<0.001
-# LES*sex interaction: F=25.71, p<0.001
-# DERS*sex interaction: F=2.45, p = 0.117
-# c' (interaction sig): female = 0.244, p<0.001, male = 0.081, p<0.001
-# b (interaction not sig): female = 0.167, p<0.001, male = 0.117, p<0.001
-# ab: female = 0.014, p<0.001, male = 0.010, p<0.001
+# Path a:
+#    LES*sex interaction on DERS (X->M): F=1.16, p = 0.281
+#    female: 0.102, p < 0.001; male: 0.067, p = 0.005
+# Path b: 
+#    DERS*sex interaction on BPM (M->Y): F=2.33, p = 0.127
+#    female: 0.165, p < 0.001; male: 0.116, p < 0.001
+# Path c': 
+#    LES*sex interaction on BPM (X->Y): F=25.69, p < 0.001
+#    female: 0.243, p < 0.001; male: 0.080, p < 0.001
+# Path ab:
+#    female: 0.017, p < 0.001; male: 0.008, p = 0.014
 
-### Moderated mediation model (Hayes model 15) to test whether sex ####
+### Moderated mediation model (Hayes model 59) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### internalizing  
-cbcl_int_sex_model15 <- PROCESS(
+cbcl_int_sex_model59 <- PROCESS(
   analysis_data,
   y = "Z_yr4_cbcl_int",
   x = "Z_yr3_total_bad_le",
@@ -1725,24 +1569,30 @@ cbcl_int_sex_model15 <- PROCESS(
   # hlm.re.m = "site",
   # hlm.re.y = "site",
   # mod.path = c("x-y"),
-  mod.path = c("x-y","m-y"),
+  # mod.path = c("x-y","m-y"),
+  mod.path = c("all"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
   # center = FALSE,
   # std = FALSE,
   digits = 5)
-# all interactions: F=12.88, p<0.001
-# LES*sex interaction: F=3.77, p = 0.052
-# DERS*sex interaction: F=20.31, p<0.001
-# c' (interaction not sig): female = 0.117, p<0.001, male = 0.061, p = 0.004
-# b (interaction sig): female = 0.456, p<0.001, male = 0.325, p<0.001
-# ab: female = 0.039, p<0.001, male = 0.028, p<0.001
+# Path a:
+#    LES*sex interaction on DERS (X->M): F=1.16, p = 0.281
+#    female: 0.102, p < 0.001; male: 0.067, p = 0.005
+# Path b: 
+#    DERS*sex interaction on BPM (M->Y): F=20.62, p < 0.001
+#    female: 0.456, p < 0.001; male: 0.325, p < 0.001
+# Path c': 
+#    LES*sex interaction on BPM (X->Y): F=3.96, p = 0.047
+#    female: 0.119, p < 0.001; male: 0.061, p < 0.001
+# Path ab:
+#    female: 0.046, p < 0.001; male: 0.021, p = 0.005
 
-### Moderated mediation model (Hayes model 15) to test whether sex ####
+### Moderated mediation model (Hayes model 59) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and BPM
 ### externalizing 
-bpm_ext_sex_model15 <- PROCESS(
+bpm_ext_sex_model59 <- PROCESS(
   analysis_data,
   y = "Z_yr4_bpm_ext",
   x = "Z_yr3_total_bad_le",
@@ -1753,24 +1603,30 @@ bpm_ext_sex_model15 <- PROCESS(
   # hlm.re.m = "site",
   # hlm.re.y = "site",
   # mod.path = c("x-y"),
-  mod.path = c("x-y","m-y"),
+  # mod.path = c("x-y","m-y"),
+  mod.path = c("all"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
   # center = FALSE,
   # std = FALSE,
   digits = 5)
-# all interactions: F=1.10, p = 0.334
-# LES*sex interaction: F=2.02, p = 0.156
-# DERS*sex interaction: F=0.29, p = 0.588
-# c' (interaction not sig): female = 0.155, p<0.001, male = 0.110, p<0.001
-# b (interaction not sig): female = 0.157, p<0.001, male = 0.174, p<0.001
-# ab: female = 0.013, p<0.001, male = 0.015, p<0.001
+# Path a:
+#    LES*sex interaction on DERS (X->M): F=1.16, p = 0.281
+#    female: 0.102, p < 0.001; male: 0.067, p = 0.005
+# Path b: 
+#    DERS*sex interaction on BPM (M->Y): F=0.26, p = 0.613
+#    female: 0.158, p < 0.001; male: 0.174, p < 0.001
+# Path c': 
+#    LES*sex interaction on BPM (X->Y): F=2.18, p = 0.140
+#    female: 0.155, p < 0.001; male: 0.109, p < 0.001
+# Path ab:
+#    female: 0.016, p < 0.001; male: 0.012, p = 0.008
 
-### Moderated mediation model (Hayes model 15) to test whether sex ####
+### Moderated mediation model (Hayes model 59) to test whether sex ####
 ### moderates mediating effect of DERS on relationship between LES and CBCL
 ### externalizing  
-cbcl_ext_sex_model15 <- PROCESS(
+cbcl_ext_sex_model59 <- PROCESS(
   analysis_data,
   y = "Z_yr4_cbcl_ext",
   x = "Z_yr3_total_bad_le",
@@ -1781,16 +1637,22 @@ cbcl_ext_sex_model15 <- PROCESS(
   # hlm.re.m = "site",
   # hlm.re.y = "site",
   # mod.path = c("x-y"),
-  mod.path = c("x-y","m-y"),
+  # mod.path = c("x-y","m-y"),
+  mod.path = c("all"),
   cov.path = c("both"),
   nsim = 1000,
   seed = 1234,
   # center = FALSE,
   # std = FALSE,
   digits = 5)
-# all interactions: F=2.64, p = 0.071
-# LES*sex interaction: F=2.92, p = 0.087
-# DERS*sex interaction: F=1.92, p = 0.166
-# c' (interaction not sig): female = 0.079, p<0.001, male = 0.126, p<0.001
-# b (interaction not sig): female = 0.360, p<0.001, male = 0.398, p<0.001
-# ab: female = 0.031, p<0.001, male = 0.034, p<0.001
+# Path a:
+#    LES*sex interaction on DERS (X->M): F=1.16, p = 0.281
+#    female: 0.102, p < 0.001; male: 0.067, p = 0.005
+# Path b: 
+#    DERS*sex interaction on BPM (M->Y): F=1.78, p = 0.183
+#    female: 0.362, p < 0.001; male: 0.398, p < 0.001
+# Path c': 
+#    LES*sex interaction on BPM (X->Y): F=2.83, p = 0.093
+#    female: 0.079, p < 0.001; male: 0.125, p < 0.001
+# Path ab:
+#    female: 0.037, p < 0.001; male: 0.026, p = 0.005
